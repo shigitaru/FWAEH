@@ -1,23 +1,57 @@
 {% extends "base.html" %}
 {% block title %}{{ t('campaign') }}{% endblock %}
 {% block content %}
-<div style="padding: 20px 30px;">
-    <div class="page-header">
-        <div class="section-title">{{ t('campaign') }}</div>
-        <div class="page-meta">
-            <span>{{ images|length }} {{ tc('result', images|length) }}</span>
-        </div>
-        <div class="page-hairline"></div>
-    </div>
-    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 60px;">
-        {% for img in images %}
-        <div>
-            <img src="{{ img.src }}" style="width: 100%; height: 65vh; object-fit: cover; display: block;" alt="">
-            <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; border-top: 1px solid var(--border); padding-top: 6px;">
-                <span>{{ img.ref }}</span><span>{{ img.location }}</span>
+<div class="campaign-page">
+    <header class="campaign-header">
+        <div class="page-header">
+            <div class="section-title">{{ t('campaign') }}</div>
+            <div class="page-meta">
+                <span class="campaign-tagline">{{ campaign_tagline }}</span>
+                {% if stories|length > 0 %}
+                <span class="page-meta-dot"></span>
+                <span>{{ stories|length }} {{ tc('campaign_story', stories|length) }}</span>
+                {% endif %}
             </div>
+            <div class="page-hairline"></div>
         </div>
+        <p class="campaign-intro">{{ campaign_intro }}</p>
+    </header>
+
+    {% if stories %}
+    <div class="campaign-looks">
+        {% for s in stories %}
+        <a href="{{ url_for('campaign_story', story_id=s.id) }}" class="campaign-look-link">
+            <article class="campaign-look {% if loop.index0 % 2 == 1 %}campaign-look--mirror{% endif %}">
+                <div class="campaign-look-gutter">
+                    <span class="campaign-look-idx">{{ '%02d'|format(loop.index) }}</span>
+                    <div class="campaign-look-line" aria-hidden="true"></div>
+                </div>
+                <figure class="campaign-figure">
+                    <div class="campaign-image-frame">
+                        {% if s.cover_url %}
+                        <img class="campaign-image campaign-image--index" src="{{ s.cover_url }}" alt="{{ s.headline }}" loading="lazy">
+                        {% else %}
+                        <div class="campaign-look-cover-placeholder" aria-hidden="true"></div>
+                        {% endif %}
+                    </div>
+                    <figcaption class="campaign-caption">
+                        <span class="campaign-caption-ref">{{ s.headline }}</span>
+                        {% if s.credits %}
+                        <span class="campaign-caption-dot"></span>
+                        <span class="campaign-caption-loc">{{ s.credits }}</span>
+                        {% endif %}
+                    </figcaption>
+                </figure>
+            </article>
+        </a>
         {% endfor %}
     </div>
+    {% else %}
+    <p class="campaign-empty">{{ t('campaign_no_stories') }}</p>
+    {% endif %}
+
+    <footer class="campaign-footer">
+        <a href="{{ url_for('collection') }}" class="campaign-cta">{{ t('campaign_cta') }}</a>
+    </footer>
 </div>
 {% endblock %}

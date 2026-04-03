@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ t('admin_campaign_title') }}{% endblock %}
+{% block content %}
+<div class="search-page admin-campaign-page">
+    <div class="admin-campaign-head">
+        <h2 class="section-title">{{ t('admin_campaign_title') }}</h2>
+        <a href="{{ url_for('admin_panel') }}" class="admin-campaign-back">{{ t('admin_campaign_back') }}</a>
+    </div>
+    {% if admin_status %}
+    <div class="admin-status admin-status-{{ admin_status.type }}">
+        <strong>{{ t('status_success') if admin_status.type == 'success' else t('status_error') }}:</strong>
+        <span>{{ admin_status.message }}</span>
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('admin_campaign') }}" method="POST" class="admin-form admin-campaign-form">
+        <div class="section-title">{{ t('admin_campaign_header_section') }}</div>
+        <div class="admin-campaign-text-grid">
+            <label class="admin-campaign-field">
+                <span class="admin-campaign-label">{{ t('admin_campaign_intro_en') }}</span>
+                <textarea name="intro_en" rows="3" class="search-input admin-campaign-textarea">{{ settings.intro_en }}</textarea>
+            </label>
+            <label class="admin-campaign-field">
+                <span class="admin-campaign-label">{{ t('admin_campaign_intro_ru') }}</span>
+                <textarea name="intro_ru" rows="3" class="search-input admin-campaign-textarea">{{ settings.intro_ru }}</textarea>
+            </label>
+            <label class="admin-campaign-field">
+                <span class="admin-campaign-label">{{ t('admin_campaign_tagline_en') }}</span>
+                <input class="search-input" type="text" name="tagline_en" value="{{ settings.tagline_en }}">
+            </label>
+            <label class="admin-campaign-field">
+                <span class="admin-campaign-label">{{ t('admin_campaign_tagline_ru') }}</span>
+                <input class="search-input" type="text" name="tagline_ru" value="{{ settings.tagline_ru }}">
+            </label>
+        </div>
+        <button type="submit" class="btn-primary admin-campaign-submit">{{ t('admin_campaign_save_header') }}</button>
+    </form>
+
+    <div class="admin-campaign-stories-block">
+        <div class="admin-campaign-stories-head">
+            <span class="section-title">{{ t('admin_campaign_stories') }}</span>
+            <a href="{{ url_for('admin_campaign_story_new') }}" class="admin-to-campaign">{{ t('admin_new_story') }}</a>
+        </div>
+        {% if stories %}
+        <ul class="admin-campaign-story-list">
+            {% for s in stories %}
+            <li>
+                <a href="{{ url_for('admin_campaign_story_edit', story_id=s.id) }}">{{ s.headline_en or s.headline_ru }}</a>
+                <span class="admin-campaign-story-meta">#{{ s.id }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="admin-campaign-hint">{{ t('campaign_no_stories') }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

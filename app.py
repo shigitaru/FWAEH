@@ -5,6 +5,7 @@ from flask import (
 import os
 import re
 import time
+import hashlib
 from datetime import datetime
 import pyodbc
 from uuid import uuid4
@@ -30,6 +31,7 @@ DB_CONNECTION_STRING = os.getenv(
     'MARS_Connection=no;'
 )
 UPLOAD_DIR = os.path.join(app.root_path, 'static', 'products', 'uploads')
+CAMPAIGN_UPLOAD_DIR = os.path.join(app.root_path, 'static', 'campaign', 'uploads')
 ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 AUTO_TRANSLATE_CACHE = {}
 
@@ -81,6 +83,17 @@ TRANSLATIONS = {
         'contact': 'Contact',
         'couture_title': 'Couture Archive',
         'couture_subtitle': 'Restricted access — special handling required',
+        'campaign_tagline': 'Editorial series',
+        'campaign_intro': 'Silhouette, material, and light — a visual sequence shot for Protocol Archive.',
+        'campaign_cta': 'Browse collection',
+        'campaign_story_one': 'story',
+        'campaign_story_many': 'stories',
+        'campaign_open_story': 'Open',
+        'campaign_story_back': 'Back to campaign',
+        'campaign_no_stories': 'No stories yet.',
+        'campaign_gallery': 'Gallery',
+        'campaign_lightbox_close': 'Close',
+        'campaign_image_zoom': 'View full size',
         'authenticated': 'All garments are authenticated',
         'min_condition': 'Minimum condition',
         'any_condition': 'Any',
@@ -125,6 +138,45 @@ TRANSLATIONS = {
         'category_rtw': 'RTW',
         'category_couture': 'Couture',
         'category_accessories': 'Accessories',
+        'admin_edit_campaign': 'Edit campaign page',
+        'admin_campaign_title': 'Campaign page',
+        'admin_campaign_intro_en': 'Intro (English)',
+        'admin_campaign_intro_ru': 'Intro (Russian)',
+        'admin_campaign_tagline_en': 'Tagline (English)',
+        'admin_campaign_tagline_ru': 'Tagline (Russian)',
+        'admin_campaign_looks': 'Looks',
+        'admin_campaign_ref': 'Label (e.g. Look 01)',
+        'admin_campaign_location': 'Location',
+        'admin_campaign_image': 'Image',
+        'admin_campaign_add_row': 'Add look',
+        'admin_campaign_save': 'Save campaign',
+        'admin_campaign_save_header': 'Save page header',
+        'admin_campaign_saved': 'Campaign saved',
+        'admin_campaign_need_look': 'Add at least one look with an image',
+        'admin_campaign_back': 'Back to products',
+        'admin_campaign_replace_hint': 'Upload a file to replace the current image.',
+        'admin_campaign_stories': 'Stories',
+        'admin_new_story': 'New story',
+        'admin_edit_story': 'Edit',
+        'admin_story_headline_en': 'Title (English)',
+        'admin_story_headline_ru': 'Title (Russian)',
+        'admin_story_body_en': 'Description (English)',
+        'admin_story_body_ru': 'Description (Russian)',
+        'admin_story_credits_en': 'Credits / collaboration (English)',
+        'admin_story_credits_ru': 'Credits / collaboration (Russian)',
+        'admin_story_images': 'Photos',
+        'admin_story_paste_hint': 'Paste images from clipboard (Ctrl+V) to add photos — no need to click «Add look» each time. Works when focus is not in a title or description field.',
+        'admin_story_save': 'Save story',
+        'admin_story_delete': 'Delete story',
+        'admin_story_delete_confirm': 'Delete this story and all its photos?',
+        'admin_story_created': 'Story created',
+        'admin_story_updated': 'Story updated',
+        'admin_story_deleted': 'Story deleted',
+        'admin_story_need_headline': 'Title is required',
+        'admin_story_need_image': 'Add at least one image',
+        'admin_story_back_list': 'Campaign overview',
+        'admin_campaign_settings_saved': 'Campaign header saved',
+        'admin_campaign_header_section': 'Page header (intro & tagline)',
     },
     'ru': {
         'enter': 'Войти',
@@ -172,6 +224,18 @@ TRANSLATIONS = {
         'contact': 'Контакты',
         'couture_title': 'Архив кутюр',
         'couture_subtitle': 'Ограниченный доступ — требуется особое обращение',
+        'campaign_tagline': 'Редакционная серия',
+        'campaign_intro': 'Силуэт, материал и свет — визуальный ряд для Protocol Archive.',
+        'campaign_cta': 'Перейти в коллекцию',
+        'campaign_story_one': 'история',
+        'campaign_story_few': 'истории',
+        'campaign_story_many': 'историй',
+        'campaign_open_story': 'Открыть',
+        'campaign_story_back': 'Назад к кампании',
+        'campaign_no_stories': 'Пока нет историй.',
+        'campaign_gallery': 'Галерея',
+        'campaign_lightbox_close': 'Закрыть',
+        'campaign_image_zoom': 'Открыть в полном размере',
         'authenticated': 'Все вещи аутентифицированы',
         'min_condition': 'Минимальное состояние',
         'any_condition': 'Любое',
@@ -216,6 +280,45 @@ TRANSLATIONS = {
         'category_rtw': 'RTW',
         'category_couture': 'Кутюр',
         'category_accessories': 'Аксессуары',
+        'admin_edit_campaign': 'Редактировать кампанию',
+        'admin_campaign_title': 'Страница «Кампания»',
+        'admin_campaign_intro_en': 'Вступительный текст (English)',
+        'admin_campaign_intro_ru': 'Вступительный текст (Русский)',
+        'admin_campaign_tagline_en': 'Подзаголовок (English)',
+        'admin_campaign_tagline_ru': 'Подзаголовок (Русский)',
+        'admin_campaign_looks': 'Кадры',
+        'admin_campaign_ref': 'Подпись (напр. Look 01)',
+        'admin_campaign_location': 'Локация',
+        'admin_campaign_image': 'Фото',
+        'admin_campaign_add_row': 'Добавить кадр',
+        'admin_campaign_save': 'Сохранить кампанию',
+        'admin_campaign_save_header': 'Сохранить шапку страницы',
+        'admin_campaign_saved': 'Кампания сохранена',
+        'admin_campaign_need_look': 'Нужен хотя бы один кадр с изображением',
+        'admin_campaign_back': 'К товарам',
+        'admin_campaign_replace_hint': 'Загрузите файл, чтобы заменить изображение.',
+        'admin_campaign_stories': 'Истории',
+        'admin_new_story': 'Новая история',
+        'admin_edit_story': 'Редактировать',
+        'admin_story_headline_en': 'Заголовок (English)',
+        'admin_story_headline_ru': 'Заголовок (Русский)',
+        'admin_story_body_en': 'Описание (English)',
+        'admin_story_body_ru': 'Описание (Русский)',
+        'admin_story_credits_en': 'Коллаборация / титры (English)',
+        'admin_story_credits_ru': 'Коллаборация / титры (Русский)',
+        'admin_story_images': 'Фотографии',
+        'admin_story_paste_hint': 'Вставьте фото из буфера (Ctrl+V) — строка добавится сама, без кнопки «Добавить кадр». Не вставляйте, когда курсор в заголовке или описании.',
+        'admin_story_save': 'Сохранить историю',
+        'admin_story_delete': 'Удалить историю',
+        'admin_story_delete_confirm': 'Удалить эту историю и все её фото?',
+        'admin_story_created': 'История создана',
+        'admin_story_updated': 'История обновлена',
+        'admin_story_deleted': 'История удалена',
+        'admin_story_need_headline': 'Нужен заголовок',
+        'admin_story_need_image': 'Добавьте хотя бы одно фото',
+        'admin_story_back_list': 'К обзору кампании',
+        'admin_campaign_settings_saved': 'Шапка кампании сохранена',
+        'admin_campaign_header_section': 'Шапка страницы (интро и подзаголовок)',
     }
 }
 
@@ -366,12 +469,6 @@ def _resolve_brand_css(name, db_css=None):
     key = (name or '').strip().lower()
     return BRAND_CSS_BY_NAME.get(key, 'brand-font-fallback')
 
-CAMPAIGN_IMAGES = [
-    {'src': 'https://images.unsplash.com/photo-1612336307429-8a898d10e223?q=80&w=2070&auto=format&fit=crop', 'ref': 'Look 01', 'location': 'Paris'},
-    {'src': 'https://images.unsplash.com/photo-1550614000-4b95d4ed79cf?q=80&w=2000&auto=format&fit=crop', 'ref': 'Look 02', 'location': 'Studio'},
-    {'src': 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop', 'ref': 'Look 03', 'location': 'Archive'},
-]
-
 CONDITION_LABELS = [
     {'score': 0, 'en': 'Any', 'ru': 'Любое'},
     {'score': 7, 'en': 'Good (7+)', 'ru': 'Хорошее (7+)'},
@@ -422,6 +519,55 @@ def _tv_ru_value_to_en_key(s_try):
 
 def _tv_has_cyrillic(text):
     return bool(re.search(r'[\u0400-\u04FF]', text))
+
+
+def _translate_for_display_cached(text, source_lang, target_lang):
+    """Кэшированный перевод для публичного показа (Google через deep-translator)."""
+    if not text or not str(text).strip():
+        return None
+    if not GoogleTranslator:
+        return None
+    key_src = hashlib.sha256(
+        f'{source_lang}|{target_lang}|{text}'.encode('utf-8')
+    ).hexdigest()
+    cache_key = f'cmpdisp:{key_src}'
+    if cache_key in AUTO_TRANSLATE_CACHE:
+        return AUTO_TRANSLATE_CACHE[cache_key]
+    try:
+        out = GoogleTranslator(source=source_lang, target=target_lang).translate(text)
+        if out:
+            AUTO_TRANSLATE_CACHE[cache_key] = out.strip()
+            return AUTO_TRANSLATE_CACHE[cache_key]
+    except Exception:
+        pass
+    try:
+        out = GoogleTranslator(source='auto', target=target_lang).translate(text)
+        if out:
+            AUTO_TRANSLATE_CACHE[cache_key] = out.strip()
+            return AUTO_TRANSLATE_CACHE[cache_key]
+    except Exception:
+        pass
+    return None
+
+
+def _campaign_bilingual_display(en_text, ru_text, want_lang):
+    """
+    Текст для языка интерфейса: сначала колонка en/ru, иначе перевод с другой колонки.
+    Так описание истории меняется при переключении EN/RU, даже если в админке заполнен один язык.
+    """
+    en_t = (en_text or '').strip()
+    ru_t = (ru_text or '').strip()
+    if want_lang == 'en':
+        if en_t:
+            return en_t
+        if ru_t:
+            return _translate_for_display_cached(ru_t, 'ru', 'en') or ru_t
+        return ''
+    if ru_t:
+        return ru_t
+    if en_t:
+        return _translate_for_display_cached(en_t, 'en', 'ru') or en_t
+    return ''
 
 
 def tv(value):
@@ -552,6 +698,186 @@ def _save_uploaded_image(file_storage):
     abs_path = os.path.join(UPLOAD_DIR, filename)
     file_storage.save(abs_path)
     return f'/static/products/uploads/{filename}'
+
+
+def _save_campaign_upload(file_storage):
+    if not file_storage or not file_storage.filename:
+        return None
+    original = secure_filename(file_storage.filename)
+    _, ext = os.path.splitext(original.lower())
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        return None
+    os.makedirs(CAMPAIGN_UPLOAD_DIR, exist_ok=True)
+    filename = f'{uuid4().hex}{ext}'
+    abs_path = os.path.join(CAMPAIGN_UPLOAD_DIR, filename)
+    file_storage.save(abs_path)
+    return f'/static/campaign/uploads/{filename}'
+
+
+def get_campaign_index_data():
+    """Главная страница кампании: интро + список историй с обложкой."""
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT intro_en, intro_ru, tagline_en, tagline_ru FROM CampaignSettings WHERE id=1')
+            srow = cur.fetchone()
+            cur.execute(
+                """
+                SELECT s.id, s.sort_order, s.headline_en, s.headline_ru, s.credits_en, s.credits_ru,
+                    (SELECT TOP 1 image_url FROM CampaignStoryImages i WHERE i.story_id = s.id ORDER BY i.sort_order, i.id) AS cover_url,
+                    (SELECT COUNT(*) FROM CampaignStoryImages i2 WHERE i2.story_id = s.id) AS img_count
+                FROM CampaignStories s
+                ORDER BY s.sort_order, s.id
+                """
+            )
+            story_rows = cur.fetchall()
+        lang = get_lang()
+        if srow:
+            intro = _campaign_bilingual_display(srow[0], srow[1], lang)
+            tagline = _campaign_bilingual_display(srow[2], srow[3], lang)
+        else:
+            intro, tagline = '', ''
+        if not intro.strip():
+            intro = t('campaign_intro')
+        if not tagline.strip():
+            tagline = t('campaign_tagline')
+        stories = []
+        for r in story_rows:
+            # Индексы: надёжнее чем r.id у pyodbc/драйвера ODBC
+            sid = int(r[0])
+            h_en, h_ru = r[2], r[3]
+            c_en, c_ru = r[4], r[5]
+            cover = r[6] or ''
+            img_count = int(r[7] or 0)
+            stories.append(
+                {
+                    'id': sid,
+                    'headline': _campaign_bilingual_display(h_en, h_ru, lang),
+                    'credits': _campaign_bilingual_display(c_en, c_ru, lang),
+                    'cover_url': cover,
+                    'img_count': img_count,
+                }
+            )
+        return {'campaign_intro': intro, 'campaign_tagline': tagline, 'stories': stories}
+    except Exception:
+        return {'campaign_intro': t('campaign_intro'), 'campaign_tagline': t('campaign_tagline'), 'stories': []}
+
+
+def get_campaign_story_detail(story_id):
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru
+                FROM CampaignStories WHERE id=?
+                """,
+                (story_id,),
+            )
+            srow = cur.fetchone()
+            if not srow:
+                return None
+            cur.execute(
+                'SELECT image_url FROM CampaignStoryImages WHERE story_id=? ORDER BY sort_order, id',
+                (story_id,),
+            )
+            img_rows = cur.fetchall()
+        lang = get_lang()
+        h_en, h_ru = (srow[0] or ''), (srow[1] or '')
+        b_en, b_ru = (srow[2] or ''), (srow[3] or '')
+        c_en, c_ru = (srow[4] or ''), (srow[5] or '')
+        return {
+            'id': story_id,
+            'headline': _campaign_bilingual_display(h_en, h_ru, lang),
+            'body': _campaign_bilingual_display(b_en, b_ru, lang),
+            'credits': _campaign_bilingual_display(c_en, c_ru, lang),
+            'images': [{'src': r[0]} for r in img_rows],
+        }
+    except Exception:
+        return None
+
+
+def _fetch_campaign_settings_admin():
+    d_en = TRANSLATIONS['en']
+    d_ru = TRANSLATIONS['ru']
+    defaults = {
+        'intro_en': d_en.get('campaign_intro', ''),
+        'intro_ru': d_ru.get('campaign_intro', ''),
+        'tagline_en': d_en.get('campaign_tagline', ''),
+        'tagline_ru': d_ru.get('campaign_tagline', ''),
+    }
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT intro_en, intro_ru, tagline_en, tagline_ru FROM CampaignSettings WHERE id=1')
+            srow = cur.fetchone()
+        if srow:
+            return {
+                'intro_en': (srow[0] or ''),
+                'intro_ru': (srow[1] or ''),
+                'tagline_en': (srow[2] or ''),
+                'tagline_ru': (srow[3] or ''),
+            }
+        return defaults.copy()
+    except Exception:
+        return defaults.copy()
+
+
+def _list_campaign_stories_admin():
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                'SELECT id, sort_order, headline_en, headline_ru FROM CampaignStories ORDER BY sort_order, id',
+            )
+            return [
+                {
+                    'id': int(r[0]),
+                    'sort_order': int(r[1]),
+                    'headline_en': r[2] or '',
+                    'headline_ru': r[3] or '',
+                }
+                for r in cur.fetchall()
+            ]
+    except Exception:
+        return []
+
+
+def _fetch_campaign_story_admin(story_id):
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, sort_order, headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru
+                FROM CampaignStories WHERE id=?
+                """,
+                (story_id,),
+            )
+            srow = cur.fetchone()
+            if not srow:
+                return None, []
+            cur.execute(
+                'SELECT image_url FROM CampaignStoryImages WHERE story_id=? ORDER BY sort_order, id',
+                (story_id,),
+            )
+            imgs = [{'url': r[0]} for r in cur.fetchall()]
+        return (
+            {
+                'id': int(srow[0]),
+                'sort_order': int(srow[1]),
+                'headline_en': srow[2] or '',
+                'headline_ru': srow[3] or '',
+                'body_en': srow[4] or '',
+                'body_ru': srow[5] or '',
+                'credits_en': srow[6] or '',
+                'credits_ru': srow[7] or '',
+            },
+            imgs,
+        )
+    except Exception:
+        return None, []
+
 
 def _attach_related_data(products):
     if not products:
@@ -1013,9 +1339,242 @@ def admin_edit_product(product_id):
     )
 
 
+def _insert_campaign_story_return_id(cur, params):
+    """
+    Вставка CampaignStories и получение id. SCOPE_IDENTITY() должен быть в том же T-SQL batch,
+    что и INSERT: отдельный execute() в pyodbc — это новый batch, и SCOPE_IDENTITY() даёт NULL.
+    """
+    cur.execute(
+        """
+        INSERT INTO CampaignStories (sort_order, headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
+        SELECT CAST(SCOPE_IDENTITY() AS INT);
+        """,
+        params,
+    )
+    sid = None
+    while True:
+        if cur.description:
+            row = cur.fetchone()
+            if row is not None and row[0] is not None:
+                sid = int(row[0])
+                break
+        if not cur.nextset():
+            break
+    if sid is None:
+        raise RuntimeError('CampaignStories insert: could not read new id')
+    return sid
+
+
+def _collect_story_image_urls_from_form():
+    existings = request.form.getlist('img_existing')
+    files = request.files.getlist('img_file')
+    n = max(len(existings), len(files), 1)
+    urls = []
+    for i in range(n):
+        old = (existings[i].strip() if i < len(existings) else '') or ''
+        fs = files[i] if i < len(files) else None
+        new_u = _save_campaign_upload(fs)
+        url = new_u or old
+        if url:
+            urls.append(url)
+    return urls
+
+
+@app.route('/admin/campaign', methods=['GET', 'POST'])
+def admin_campaign():
+    if request.method == 'POST':
+        intro_en = request.form.get('intro_en', '').strip()
+        intro_ru = request.form.get('intro_ru', '').strip()
+        tagline_en = request.form.get('tagline_en', '').strip()
+        tagline_ru = request.form.get('tagline_ru', '').strip()
+        try:
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT COUNT(*) FROM CampaignSettings WHERE id=1')
+                if cur.fetchone()[0]:
+                    cur.execute(
+                        'UPDATE CampaignSettings SET intro_en=?, intro_ru=?, tagline_en=?, tagline_ru=? WHERE id=1',
+                        (intro_en, intro_ru, tagline_en, tagline_ru),
+                    )
+                else:
+                    cur.execute(
+                        'INSERT INTO CampaignSettings (id, intro_en, intro_ru, tagline_en, tagline_ru) VALUES (1, ?, ?, ?, ?)',
+                        (intro_en, intro_ru, tagline_en, tagline_ru),
+                    )
+                conn.commit()
+            session['admin_status'] = {'type': 'success', 'message': t('admin_campaign_settings_saved')}
+        except Exception as exc:
+            session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+        return redirect(url_for('admin_campaign'))
+    settings = _fetch_campaign_settings_admin()
+    stories = _list_campaign_stories_admin()
+    admin_status = session.pop('admin_status', None)
+    return render_template(
+        'admin_campaign.html',
+        settings=settings,
+        stories=stories,
+        admin_status=admin_status,
+        active_page='admin',
+        cart_count=get_cart_count(),
+        t=t,
+    )
+
+
+@app.route('/admin/campaign/story/new', methods=['GET', 'POST'])
+def admin_campaign_story_new():
+    if request.method == 'POST':
+        headline_en = request.form.get('headline_en', '').strip()
+        headline_ru = request.form.get('headline_ru', '').strip()
+        if not headline_en and not headline_ru:
+            session['admin_status'] = {'type': 'error', 'message': t('admin_story_need_headline')}
+            return redirect(url_for('admin_campaign_story_new'))
+        urls = _collect_story_image_urls_from_form()
+        if not urls:
+            session['admin_status'] = {'type': 'error', 'message': t('admin_story_need_image')}
+            return redirect(url_for('admin_campaign_story_new'))
+        body_en = request.form.get('body_en', '').strip()
+        body_ru = request.form.get('body_ru', '').strip()
+        credits_en = request.form.get('credits_en', '').strip()
+        credits_ru = request.form.get('credits_ru', '').strip()
+        try:
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT COALESCE(MAX(sort_order), -1) + 1 FROM CampaignStories')
+                next_sort = int(cur.fetchone()[0])
+                sid = _insert_campaign_story_return_id(
+                    cur,
+                    (
+                        next_sort,
+                        headline_en or headline_ru,
+                        headline_ru or headline_en,
+                        body_en,
+                        body_ru,
+                        credits_en,
+                        credits_ru,
+                    ),
+                )
+                for i, url in enumerate(urls):
+                    cur.execute(
+                        'INSERT INTO CampaignStoryImages (story_id, sort_order, image_url) VALUES (?, ?, ?)',
+                        (sid, i, url),
+                    )
+                conn.commit()
+            session['admin_status'] = {'type': 'success', 'message': t('admin_story_created')}
+            return redirect(url_for('admin_campaign_story_edit', story_id=sid))
+        except Exception as exc:
+            session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+            return redirect(url_for('admin_campaign_story_new'))
+    admin_status = session.pop('admin_status', None)
+    return render_template(
+        'admin_campaign_story.html',
+        story=None,
+        images=[],
+        admin_status=admin_status,
+        active_page='admin',
+        cart_count=get_cart_count(),
+        t=t,
+    )
+
+
+@app.route('/admin/campaign/story/<int:story_id>', methods=['GET', 'POST'])
+def admin_campaign_story_edit(story_id):
+    if request.method == 'POST':
+        if request.form.get('delete_story'):
+            try:
+                with get_db_connection() as conn:
+                    cur = conn.cursor()
+                    cur.execute('DELETE FROM CampaignStories WHERE id=?', (story_id,))
+                    conn.commit()
+                session['admin_status'] = {'type': 'success', 'message': t('admin_story_deleted')}
+            except Exception as exc:
+                session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+            return redirect(url_for('admin_campaign'))
+        headline_en = request.form.get('headline_en', '').strip()
+        headline_ru = request.form.get('headline_ru', '').strip()
+        if not headline_en and not headline_ru:
+            session['admin_status'] = {'type': 'error', 'message': t('admin_story_need_headline')}
+            return redirect(url_for('admin_campaign_story_edit', story_id=story_id))
+        urls = _collect_story_image_urls_from_form()
+        if not urls:
+            session['admin_status'] = {'type': 'error', 'message': t('admin_story_need_image')}
+            return redirect(url_for('admin_campaign_story_edit', story_id=story_id))
+        body_en = request.form.get('body_en', '').strip()
+        body_ru = request.form.get('body_ru', '').strip()
+        credits_en = request.form.get('credits_en', '').strip()
+        credits_ru = request.form.get('credits_ru', '').strip()
+        try:
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    UPDATE CampaignStories SET headline_en=?, headline_ru=?, body_en=?, body_ru=?, credits_en=?, credits_ru=?
+                    WHERE id=?
+                    """,
+                    (
+                        headline_en or headline_ru,
+                        headline_ru or headline_en,
+                        body_en,
+                        body_ru,
+                        credits_en,
+                        credits_ru,
+                        story_id,
+                    ),
+                )
+                cur.execute('DELETE FROM CampaignStoryImages WHERE story_id=?', (story_id,))
+                for i, url in enumerate(urls):
+                    cur.execute(
+                        'INSERT INTO CampaignStoryImages (story_id, sort_order, image_url) VALUES (?, ?, ?)',
+                        (story_id, i, url),
+                    )
+                conn.commit()
+            session['admin_status'] = {'type': 'success', 'message': t('admin_story_updated')}
+        except Exception as exc:
+            session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+        return redirect(url_for('admin_campaign_story_edit', story_id=story_id))
+    story, images = _fetch_campaign_story_admin(story_id)
+    if not story:
+        session['admin_status'] = {'type': 'error', 'message': t('admin_product_not_found')}
+        return redirect(url_for('admin_campaign'))
+    admin_status = session.pop('admin_status', None)
+    return render_template(
+        'admin_campaign_story.html',
+        story=story,
+        images=images,
+        admin_status=admin_status,
+        active_page='admin',
+        cart_count=get_cart_count(),
+        t=t,
+    )
+
+
 @app.route('/campaign')
 def campaign():
-    return render_template('campaign.html', images=CAMPAIGN_IMAGES, active_page='campaign', cart_count=get_cart_count(), t=t)
+    data = get_campaign_index_data()
+    return render_template(
+        'campaign.html',
+        stories=data['stories'],
+        campaign_intro=data['campaign_intro'],
+        campaign_tagline=data['campaign_tagline'],
+        active_page='campaign',
+        cart_count=get_cart_count(),
+        t=t,
+        tc=tc,
+    )
+
+
+@app.route('/campaign/story/<int:story_id>')
+def campaign_story(story_id):
+    story = get_campaign_story_detail(story_id)
+    if not story:
+        return 'Not found', 404
+    return render_template(
+        'campaign_story.html',
+        story=story,
+        active_page='campaign',
+        cart_count=get_cart_count(),
+        t=t,
+    )
 
 @app.route('/about')
 def about():

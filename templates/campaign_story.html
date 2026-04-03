@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ story.headline }} — {{ t('campaign') }}{% endblock %}
+{% block content %}
+<div class="campaign-story-page campaign-story-page--lookbook">
+    <a href="{{ url_for('campaign') }}" class="campaign-story-back">{{ t('campaign_story_back') }}</a>
+
+    <header class="campaign-story-lookbook-header">
+        <h1 class="campaign-story-lookbook-title">{{ story.headline }}</h1>
+        {% if story.credits %}
+        <p class="campaign-story-lookbook-sub">{{ story.credits }}</p>
+        {% endif %}
+    </header>
+
+    <div class="campaign-story-filmstrip{% if story.images|length == 1 %} campaign-story-filmstrip--single{% endif %}" data-campaign-gallery>
+        {% for img in story.images %}
+        <figure class="campaign-story-film-cell">
+            <button type="button" class="campaign-story-thumb-btn campaign-story-film-btn" data-gallery-src="{{ img.src }}" aria-label="{{ t('campaign_image_zoom') }}">
+                <span class="campaign-story-film-frame">
+                    <img class="campaign-story-film-img" src="{{ img.src }}" alt="" {% if loop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+                </span>
+            </button>
+        </figure>
+        {% endfor %}
+    </div>
+
+    {% if story.body %}
+    <div class="campaign-story-body campaign-story-body--lookbook">{{ story.body }}</div>
+    {% endif %}
+</div>
+
+<div id="campaign-gallery-lightbox" class="campaign-lightbox" hidden role="dialog" aria-modal="true" aria-label="{{ t('campaign_gallery') }}">
+    <button type="button" class="campaign-lightbox-backdrop" data-lightbox-close aria-label="{{ t('campaign_lightbox_close') }}"></button>
+    <div class="campaign-lightbox-content">
+        <button type="button" class="campaign-lightbox-close" data-lightbox-close aria-label="{{ t('campaign_lightbox_close') }}">&times;</button>
+        <img src="" alt="{{ story.headline }}" class="campaign-lightbox-img" id="campaign-lightbox-img">
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    var root = document.querySelector('[data-campaign-gallery]');
+    var lb = document.getElementById('campaign-gallery-lightbox');
+    var lbImg = document.getElementById('campaign-lightbox-img');
+    if (!root || !lb || !lbImg) return;
+
+    function openLightbox(src) {
+        lbImg.src = src;
+        lb.removeAttribute('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+        lb.setAttribute('hidden', '');
+        lbImg.removeAttribute('src');
+        document.body.style.overflow = '';
+    }
+
+    root.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-gallery-src]');
+        if (!btn || !root.contains(btn)) return;
+        var src = btn.getAttribute('data-gallery-src');
+        if (src) openLightbox(src);
+    });
+
+    lb.addEventListener('click', function (e) {
+        if (e.target.hasAttribute('data-lightbox-close')) closeLightbox();
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !lb.hasAttribute('hidden')) closeLightbox();
+    });
+})();
+</script>
+{% endblock %}

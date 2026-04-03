@@ -1,4 +1,4 @@
-﻿# FWAEH — аренда вещей (Flask)
+﻿# Аренда вещей (Flask)
 
 Веб-приложение: каталог, корзина, админка для товаров. Бэкенд: **Microsoft SQL Server** и **Flask**.
 
@@ -14,7 +14,7 @@ pip install -r requirements.txt
 $env:DB_NAME = "ProtocolArchive"
 $env:DB_SERVER = "localhost\SQLEXPRESS"
 python scripts/init_db.py
-python app.py
+python app.pyimage.png
 ```
 
 Подставьте свой экземпляр SQL Server вместо `localhost\SQLEXPRESS`. Сайт: http://127.0.0.1:5000
@@ -90,12 +90,16 @@ $env:DB_CONNECTION_STRING = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=local
 
 ## 5. Создать базу и таблицы
 
-Скрипт создаёт базу (если её ещё нет), **четыре таблицы** и начальный набор брендов для админки:
+Скрипт создаёт базу (если её ещё нет), таблицы и начальный набор брендов для админки:
 
 - `Brands`
 - `Products`
 - `ProductImages`
 - `ProductSizes`
+- `CampaignSettings` — тексты страницы «Кампания» (EN/RU)
+- `CampaignStories` — истории кампании (заголовок, описание, коллаборация EN/RU)
+- `CampaignStoryImages` — фото внутри каждой истории
+- `CampaignLooks` — устаревшая таблица; при первом запуске `init_db` данные переносятся в истории, если историй ещё нет
 
 Из папки **`rental_app`**:
 
@@ -140,7 +144,7 @@ flask run --port 5000
 - `app.py` — приложение Flask, маршруты
 - `scripts/init_db.py` — создание БД и таблиц
 - `templates/` — HTML-шаблоны
-- `static/` — стили, картинки; загрузки товаров — `static/products/uploads/`
+- `static/` — стили, картинки; загрузки товаров — `static/products/uploads/`; кампания — `static/campaign/uploads/`
 
 ---
 

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}{% if story %}{{ t('admin_edit_story') }}{% else %}{{ t('admin_new_story') }}{% endif %} — {{ t('admin_campaign_title') }}{% endblock %}
+{% block content %}
+<div class="search-page admin-campaign-page">
+    <div class="admin-campaign-head">
+        <h2 class="section-title">{% if story %}{{ t('admin_edit_story') }} #{{ story.id }}{% else %}{{ t('admin_new_story') }}{% endif %}</h2>
+        <a href="{{ url_for('admin_campaign') }}" class="admin-campaign-back">{{ t('admin_story_back_list') }}</a>
+    </div>
+    {% if admin_status %}
+    <div class="admin-status admin-status-{{ admin_status.type }}">
+        <strong>{{ t('status_success') if admin_status.type == 'success' else t('status_error') }}:</strong>
+        <span>{{ admin_status.message }}</span>
+    </div>
+    {% endif %}
+
+    <form action="{% if story %}{{ url_for('admin_campaign_story_edit', story_id=story.id) }}{% else %}{{ url_for('admin_campaign_story_new') }}{% endif %}" method="POST" enctype="multipart/form-data" class="admin-form admin-campaign-form">
+        <div class="admin-campaign-text-grid">
+            <label class="admin-campaign-field">
+                <span class="admin-campaign-label">{{ t('admin_story_headline_en') }}</span>
+                <input class="search-input" type="text" name="headline_en" value="{{ story.headline_en if story else '' }}">
+            </label>
+            <label class="admin-campaign-field">
+                <span class="admin-campaign-label">{{ t('admin_story_headline_ru') }}</span>
+                <input class="search-input" type="text" name="headline_ru" value="{{ story.headline_ru if story else '' }}">
+            </label>
+            <label class="admin-campaign-field admin-campaign-field-full">
+                <span class="admin-campaign-label">{{ t('admin_story_body_en') }}</span>
+                <textarea name="body_en" rows="5" class="search-input admin-campaign-textarea">{{ story.body_en if story else '' }}</textarea>
+            </label>
+            <label class="admin-campaign-field admin-campaign-field-full">
+                <span class="admin-campaign-label">{{ t('admin_story_body_ru') }}</span>
+                <textarea name="body_ru" rows="5" class="search-input admin-campaign-textarea">{{ story.body_ru if story else '' }}</textarea>
+            </label>
+            <label class="admin-campaign-field">
+                <span class="admin-campaign-label">{{ t('admin_story_credits_en') }}</span>
+                <input class="search-input" type="text" name="credits_en" value="{{ story.credits_en if story else '' }}" placeholder="e.g. With … · Photography …">
+            </label>
+            <label class="admin-campaign-field">
+                <span class="admin-campaign-label">{{ t('admin_story_credits_ru') }}</span>
+                <input class="search-input" type="text" name="credits_ru" value="{{ story.credits_ru if story else '' }}">
+            </label>
+        </div>
+
+        <div class="section-title admin-campaign-looks-title">{{ t('admin_story_images') }}</div>
+        <p class="admin-campaign-hint">{{ t('admin_campaign_replace_hint') }}</p>
+        <p class="admin-campaign-hint admin-story-paste-hint">{{ t('admin_story_paste_hint') }}</p>
+
+        <div id="story-img-rows" class="story-img-paste-zone" tabindex="0" aria-label="{{ t('admin_story_images') }}">
+            {% if images %}
+            {% for im in images %}
+            <div class="campaign-admin-row" data-campaign-row>
+                <input type="hidden" name="img_existing" value="{{ im.url }}">
+                <div class="campaign-admin-row-grid campaign-admin-row-grid-img">
+                    <label class="campaign-file-wrap">
+                        <span class="campaign-file-btn">{{ t('admin_campaign_image') }}</span>
+                        <input type="file" name="img_file" accept=".jpg,.jpeg,.png,.webp,.gif">
+                    </label>
+                </div>
+                <div class="campaign-admin-preview"><img src="{{ im.url }}" alt=""></div>
+                <button type="button" class="campaign-remove-row" data-remove-row aria-label="Remove">&times;</button>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="campaign-admin-row" data-campaign-row>
+                <input type="hidden" name="img_existing" value="">
+                <div class="campaign-admin-row-grid campaign-admin-row-grid-img">
+                    <label class="campaign-file-wrap">
+                        <span class="campaign-file-btn">{{ t('admin_campaign_image') }}</span>
+                        <input type="file" name="img_file" accept=".jpg,.jpeg,.png,.webp,.gif">
+                    </label>
+                </div>
+                <button type="button" class="campaign-remove-row" data-remove-row aria-label="Remove">&times;</button>
+            </div>
+            {% endif %}
+        </div>
+
+        <button type="button" id="story-img-add" class="category-pill admin-campaign-add">{{ t('admin_campaign_add_row') }}</button>
+        <div class="admin-story-actions">
+            <button type="submit" class="btn-primary admin-campaign-submit">{{ t('admin_story_save') }}</button>
+            {% if story %}
+            <button type="submit" name="delete_story" value="1" class="admin-story-delete" onclick="return confirm({{ t('admin_story_delete_confirm')|tojson }});">{{ t('admin_story_delete') }}</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<template id="story-img-template">
+    <div class="campaign-admin-row" data-campaign-row>
+        <input type="hidden" name="img_existing" value="">
+        <div class="campaign-admin-row-grid campaign-admin-row-grid-img">
+            <label class="campaign-file-wrap">
+                <span class="campaign-file-btn">{{ t('admin_campaign_image') }}</span>
+                <input type="file" name="img_file" accept=".jpg,.jpeg,.png,.webp,.gif">
+            </label>
+        </div>
+        <button type="button" class="campaign-remove-row" data-remove-row aria-label="Remove">&times;</button>
+    </div>
+</template>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+    var container = document.getElementById('story-img-rows');
+    var tpl = document.getElementById('story-img-template');
+    var addBtn = document.getElementById('story-img-add');
+    if (!container || !tpl || !addBtn) return;
+
+    function showPreview(row, file) {
+        if (!file || !window.URL || !window.URL.createObjectURL) return;
+        var prev = row.querySelector('.campaign-admin-preview');
+        if (!prev) {
+            prev = document.createElement('div');
+            prev.className = 'campaign-admin-preview';
+            var rm = row.querySelector('.campaign-remove-row');
+            if (rm) row.insertBefore(prev, rm);
+            else row.appendChild(prev);
+        }
+        prev.innerHTML = '<img src="' + window.URL.createObjectURL(file) + '" alt="">';
+    }
+
+    function setFileOnInput(input, file) {
+        if (!input || !file) return false;
+        try {
+            var dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function addRow() {
+        var frag = tpl.content.cloneNode(true);
+        container.appendChild(frag);
+        var row = container.lastElementChild;
+        bindRow(row);
+        return row;
+    }
+
+    function lastRowIsEmptySlot() {
+        var rows = container.querySelectorAll('[data-campaign-row]');
+        if (!rows.length) return null;
+        var last = rows[rows.length - 1];
+        var inp = last.querySelector('input[type="file"]');
+        var hid = last.querySelector('input[name="img_existing"]');
+        if (!inp || inp.files.length) return null;
+        if (hid && String(hid.value || '').trim()) return null;
+        return last;
+    }
+
+    function assignFileToRow(row, file) {
+        var inp = row.querySelector('input[type="file"]');
+        if (!setFileOnInput(inp, file)) return;
+        showPreview(row, file);
+    }
+
+    function bindRow(row){
+        var rm = row.querySelector('[data-remove-row]');
+        if (rm) {
+            rm.addEventListener('click', function(){
+                if (container.querySelectorAll('[data-campaign-row]').length <= 1) return;
+                row.remove();
+            });
+        }
+        var fileInp = row.querySelector('input[type="file"]');
+        if (fileInp) {
+            fileInp.addEventListener('change', function(){
+                if (this.files && this.files[0]) showPreview(row, this.files[0]);
+            });
+        }
+    }
+
+    container.querySelectorAll('[data-campaign-row]').forEach(bindRow);
+
+    addBtn.addEventListener('click', function(){
+        addRow();
+    });
+
+    function clipboardImageFiles(ev) {
+        var out = [];
+        var cd = ev.clipboardData;
+        if (!cd) return out;
+        if (cd.files && cd.files.length) {
+            for (var i = 0; i < cd.files.length; i++) {
+                if (cd.files[i].type.indexOf('image/') === 0) out.push(cd.files[i]);
+            }
+        }
+        if (!out.length && cd.items && cd.items.length) {
+            for (var j = 0; j < cd.items.length; j++) {
+                if (cd.items[j].type && cd.items[j].type.indexOf('image/') === 0) {
+                    var f = cd.items[j].getAsFile();
+                    if (f) out.push(f);
+                }
+            }
+        }
+        return out;
+    }
+
+    document.addEventListener('paste', function(ev) {
+        var files = clipboardImageFiles(ev);
+        if (!files.length) return;
+        var ae = document.activeElement;
+        if (ae) {
+            var tag = (ae.tagName || '').toLowerCase();
+            if (tag === 'textarea') return;
+            if (tag === 'input' && (ae.type === 'text' || ae.type === 'search' || ae.type === 'url' || ae.type === 'email')) return;
+        }
+        ev.preventDefault();
+        files.forEach(function(file, idx) {
+            if (idx === 0) {
+                var reuse = lastRowIsEmptySlot();
+                if (reuse) {
+                    assignFileToRow(reuse, file);
+                    return;
+                }
+            }
+            assignFileToRow(addRow(), file);
+        });
+    });
+})();
+</script>
+{% endblock %}
