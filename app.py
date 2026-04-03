@@ -18,10 +18,11 @@ app = Flask(__name__)
 app.secret_key = 'protocol-archive-2024'
 
 DB_NAME = os.getenv('DB_NAME', 'ProtocolArchive')
+DB_SERVER = os.getenv('DB_SERVER', r'SHIGITARU\SQLEXPRESS')
 DB_CONNECTION_STRING = os.getenv(
     'DB_CONNECTION_STRING',
     f'DRIVER={{ODBC Driver 17 for SQL Server}};'
-    f'SERVER=SHIGITARU\\SQLEXPRESS;'
+    f'SERVER={DB_SERVER};'
     f'DATABASE={DB_NAME};'
     'Trusted_Connection=yes;'
     'Encrypt=yes;'

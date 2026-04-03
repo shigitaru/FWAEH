@@ -1,7 +1,8 @@
+import os
 import pyodbc
 
-DB_NAME = "ProtocolArchive"
-SERVER = r"SHIGITARU\SQLEXPRESS"
+DB_NAME = os.getenv("DB_NAME", "ProtocolArchive")
+SERVER = os.getenv("DB_SERVER", r"SHIGITARU\SQLEXPRESS")
 
 MASTER_CONN_STR = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
