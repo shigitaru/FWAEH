@@ -47,13 +47,17 @@
     function openLightbox(src) {
         lbImg.src = src;
         lb.removeAttribute('hidden');
+        document.documentElement.style.overflow = 'hidden';
         document.body.style.overflow = 'hidden';
     }
     function closeLightbox() {
         lb.setAttribute('hidden', '');
         lbImg.removeAttribute('src');
+        document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
     }
+
+    window.addEventListener('pagehide', closeLightbox);
 
     root.addEventListener('click', function (e) {
         var btn = e.target.closest('[data-gallery-src]');

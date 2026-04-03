@@ -21,6 +21,8 @@
             <a href="{{ url_for('collection') }}" class="splash-enter">{{ t('enter') }}</a>
         </div>
     </div>
-    <script>if(localStorage.getItem('theme')==='dark'){document.body.setAttribute('data-theme','dark');}</script>
+    <script>
+    (function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
+    </script>
 </body>
 </html>

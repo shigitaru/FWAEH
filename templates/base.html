@@ -2,8 +2,16 @@
 <html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Protocol Archive{% endblock %}</title>
+    <script>
+    (function () {
+        try {
+            if (localStorage.getItem('theme') === 'dark')
+                document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+    })();
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -33,7 +41,7 @@
         </div>
     </header>
 
-    <main style="padding-top: 75px; min-height: calc(100vh - 75px);">
+    <main class="site-main">
         {% block content %}{% endblock %}
     </main>
 
@@ -62,7 +70,72 @@
             });
         }
         setInterval(updateClock,37);updateClock();
-        (function(){var t=document.getElementById('theme-toggle'),s=localStorage.getItem('theme');if(s==='dark'){document.body.setAttribute('data-theme','dark');t.textContent='\u263E';}t.addEventListener('click',function(){var d=document.body.getAttribute('data-theme')==='dark';if(d){document.body.removeAttribute('data-theme');localStorage.setItem('theme','light');t.textContent='\u2600';}else{document.body.setAttribute('data-theme','dark');localStorage.setItem('theme','dark');t.textContent='\u263E';}});})();
+        (function(){
+            var t=document.getElementById('theme-toggle'), root=document.documentElement, s=null;
+            try { s=localStorage.getItem('theme'); } catch (e) {}
+            if(s==='dark'){root.setAttribute('data-theme','dark');if(t)t.textContent='\u263E';}
+            if(t)t.addEventListener('click',function(){
+                var d=root.getAttribute('data-theme')==='dark';
+                if(d){root.removeAttribute('data-theme');try{localStorage.setItem('theme','light');}catch(e){}t.textContent='\u2600';}
+                else{root.setAttribute('data-theme','dark');try{localStorage.setItem('theme','dark');}catch(e){}t.textContent='\u263E';}
+            });
+        })();
+        /* Сброс scroll-lock (лайтбокс и т.п.) при уходе и при возврате из bfcache — иначе на мобильных «залипает» вёрстка */
+        window.addEventListener('pagehide', function () {
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+        });
+        (function () {
+            function paWidth() {
+                var w = document.documentElement.clientWidth || window.innerWidth || 0;
+                if (w <= 0 && window.visualViewport) w = Math.round(window.visualViewport.width) || 0;
+                return w;
+            }
+            function syncPaLayout() {
+                var w = paWidth();
+                var root = document.documentElement;
+                if (w <= 0) return;
+                root.classList.add('pa-js-layout');
+                root.classList.toggle('pa-wide-store', w >= 1024);
+                root.classList.toggle('pa-store-1col', w <= 768);
+                root.classList.toggle('pa-compact-header', w <= 1100);
+                root.classList.toggle('pa-tiny-header', w <= 420);
+                if (w <= 420) root.style.setProperty('--site-header-offset', '138px');
+                else if (w <= 1100) root.style.setProperty('--site-header-offset', '124px');
+                else root.style.removeProperty('--site-header-offset');
+            }
+            function armResizeObserver() {
+                if (!window.ResizeObserver || !document.body) return;
+                try {
+                    var ro = new ResizeObserver(syncPaLayout);
+                    ro.observe(document.body);
+                } catch (e) {}
+            }
+            window.addEventListener('resize', syncPaLayout, { passive: true });
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', syncPaLayout, { passive: true });
+            }
+            window.addEventListener('pageshow', function (e) {
+                if (e.persisted) {
+                    document.documentElement.style.overflow = '';
+                    document.body.style.overflow = '';
+                }
+                syncPaLayout();
+            });
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    syncPaLayout();
+                    armResizeObserver();
+                });
+            } else {
+                syncPaLayout();
+                armResizeObserver();
+            }
+            window.addEventListener('load', syncPaLayout);
+            [0, 32, 100, 300, 750].forEach(function (ms) {
+                setTimeout(syncPaLayout, ms);
+            });
+        })();
     </script>
     {% block scripts %}{% endblock %}
 </body>
