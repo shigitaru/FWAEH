@@ -6,7 +6,7 @@
         {% set gallery = product.images if product.images else [product.image] %}
         <div class="product-gallery {% if gallery|length > 1 %}has-thumbs{% endif %}">
             {% if gallery|length > 1 %}
-            <div class="product-thumbs-rail">
+            <div class="product-thumbs-rail" id="product-thumbs-rail">
                 <div class="product-thumbs" id="product-thumbs">
                     {% for img in gallery %}
                     <button type="button" class="product-thumb {% if loop.first %}active{% endif %}" data-index="{{ loop.index0 }}" data-src="{{ img }}" aria-label="Show image {{ loop.index }}">
@@ -65,7 +65,7 @@ var p={{ product.price }},mx={{ product.max_days }},inp=document.getElementById(
 total=document.getElementById('total-display'),btns=document.querySelectorAll('.step-btn'),
 mainImg=document.getElementById('main-product-image'),
 thumbs=Array.prototype.slice.call(document.querySelectorAll('.product-thumb')),
-thumbsRail=document.getElementById('product-thumbs'),
+thumbsRail=document.getElementById('product-thumbs-rail'),
 prevBtn=document.getElementById('gallery-prev'),
 nextBtn=document.getElementById('gallery-next'),
 images=thumbs.length ? thumbs.map(function(t){ return t.dataset.src; }) : [mainImg.src],
