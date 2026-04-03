@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ t('bag') }}{% endblock %}
+{% block content %}
+<div class="cart-page">
+    <div class="section-title">{{ t('your_bag') }} ({{ cart_count }})</div>
+    {% if cart_items %}
+        {% for item in cart_items %}
+        <div class="cart-item">
+            <div class="cart-item-image-wrap">
+                <img src="{{ item.image }}" alt="{{ item.name }}">
+            </div>
+            <div class="cart-item-info">
+                <div class="cart-item-name">{{ item.name }}</div>
+                <div class="cart-item-meta">
+                    {{ item.serial }} — {{ item.brand }}<br>
+                    {% if item.size %}
+                    {{ t('size') }}: {{ item.size }}<br>
+                    {% endif %}
+                    {{ t('period') }}: {{ item.days }} {{ t('days_label') }}
+                </div>
+            </div>
+            <div class="cart-item-right">
+                <div class="cart-item-price">${{ item.total_price }}</div>
+                <a href="{{ url_for('remove_from_cart', cart_id=item.cart_id) }}" class="cart-remove-link">{{ t('remove') }}</a>
+            </div>
+        </div>
+        {% endfor %}
+        <div class="cart-total-row total-display">
+            <span>{{ t('total') }}</span>
+            <span>${{ total }}</span>
+        </div>
+        <button type="button" class="btn-primary cart-checkout-btn" onclick="alert('Redirecting to secure payment...')">{{ t('checkout') }}</button>
+        <div class="cart-clear-wrap">
+            <a href="{{ url_for('clear_cart') }}" class="cart-clear-link">{{ t('clear_bag') }}</a>
+        </div>
+    {% else %}
+        <div class="empty-state">{{ t('bag_empty') }}<br><br><a href="{{ url_for('collection') }}" class="btn-outline">{{ t('browse') }}</a></div>
+    {% endif %}
+</div>
+{% endblock %}

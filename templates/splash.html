@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protocol Archive</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="splash-screen">
+        <img src="{{ splash_image }}" class="splash-bg" alt="">
+        <div class="splash-content">
+            <div class="splash-logo">Protocol Archive</div>
+            <div class="splash-meta">
+                <span>ARCHIVE</span>
+                <span class="splash-dot"></span>
+                <span>{{ t('authenticated') }}</span>
+                <span class="splash-dot"></span>
+                <span>{{ t('rental_service') }}</span>
+            </div>
+            <a href="{{ url_for('collection') }}" class="splash-enter">{{ t('enter') }}</a>
+        </div>
+    </div>
+    <script>if(localStorage.getItem('theme')==='dark'){document.body.setAttribute('data-theme','dark');}</script>
+</body>
+</html>

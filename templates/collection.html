@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ t('collection') }}{% endblock %}
+{% block content %}
+<div style="padding: 20px 30px 0;">
+    <div class="page-header">
+        <div class="section-title">{{ t('collection') }}</div>
+        <div class="page-meta">
+            <span>{{ products|length }} {{ tc('result', products|length) }}</span>
+            {% if active_brand %}
+            <span class="page-meta-dot"></span>
+            <span>{{ t('filtered_by') }} <strong style="color: var(--text); font-weight: 500;">{{ active_brand }}</strong></span>
+            {% endif %}
+        </div>
+        <div class="page-hairline"></div>
+    </div>
+    {% if active_brand %}
+    <div style="margin: 10px 0 12px; color: var(--text-secondary); font-size: 12px;">
+        <a href="{{ url_for('collection') }}" style="text-decoration: underline;">{{ t('clear') }}</a>
+    </div>
+    {% endif %}
+</div>
+{% if products %}
+<div class="product-grid">
+    {% for p in products %}
+    <a href="{{ url_for('product_detail', product_id=p.id) }}" class="product-card">
+        <div class="product-card-image-wrap">
+            <img class="product-card-image primary" src="{{ p.image }}" alt="{{ p.name }}">
+            {% if p.images and p.images|length > 1 %}
+            <img class="product-card-image secondary" src="{{ p.images[1] }}" alt="{{ p.name }} alternate view">
+            {% endif %}
+        </div>
+            <div class="product-card-info">
+                <div class="product-card-brand">{{ p.brand }}</div>
+                <div class="product-card-name">{{ p.name }}</div>
+                {% if p.sizes and p.sizes|length == 1 %}
+                <div class="product-card-sizes">{{ t('size') }}: {{ p.sizes[0] }}</div>
+                {% elif p.sizes and p.sizes|length > 1 %}
+                <div class="product-card-sizes">{{ t('card_sizes') }}: {{ p.sizes | join(', ') }}</div>
+                {% endif %}
+                <div class="product-card-price">${{ p.price }} {{ t('per_day') }}</div>
+            </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">{{ t('no_items') }}</div>
+{% endif %}
+{% endblock %}

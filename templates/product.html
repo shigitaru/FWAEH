@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<div class="product-detail">
+    <div class="product-detail-image">
+        {% set gallery = product.images if product.images else [product.image] %}
+        <div class="product-gallery {% if gallery|length > 1 %}has-thumbs{% endif %}">
+            {% if gallery|length > 1 %}
+            <div class="product-thumbs-rail">
+                <div class="product-thumbs" id="product-thumbs">
+                    {% for img in gallery %}
+                    <button type="button" class="product-thumb {% if loop.first %}active{% endif %}" data-index="{{ loop.index0 }}" data-src="{{ img }}" aria-label="Show image {{ loop.index }}">
+                        <img src="{{ img }}" alt="{{ product.name }} view {{ loop.index }}">
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% if gallery|length > 1 %}
+            <button type="button" class="gallery-arrow gallery-arrow-left" id="gallery-prev" aria-label="Previous image">&#8249;</button>
+            {% endif %}
+            <img id="main-product-image" class="main-product-image" src="{{ gallery[0] }}" alt="{{ product.name }}">
+            {% if gallery|length > 1 %}
+            <button type="button" class="gallery-arrow gallery-arrow-right" id="gallery-next" aria-label="Next image">&#8250;</button>
+            {% endif %}
+        </div>
+    </div>
+    <div class="product-detail-info">
+        <div class="detail-serial">{{ product.serial }}</div>
+        <div class="product-card-brand" style="margin-bottom: 6px;">{{ product.brand }}</div>
+        <h1 class="detail-name">{{ product.name }}</h1>
+        <div class="detail-price">${{ product.price }} {{ t('per_day') }}</div>
+        <div class="spec-table">
+            <div class="spec-row"><span class="label">{{ t('material') }}</span><span class="value">{{ tv(product.material) }}</span></div>
+            <div class="spec-row"><span class="label">{{ t('made_in') }}</span><span class="value">{{ tv(product.origin) }}</span></div>
+            <div class="spec-row"><span class="label">{{ t('condition') }}</span><span class="value">{{ tv(product.condition) }} ({{ product.condition_score }}/10)</span></div>
+        </div>
+        <form action="{{ url_for('add_to_cart') }}" method="POST">
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+            <div class="form-label">{{ t('size') }}</div>
+            <div class="size-options">
+                {% for size in product.sizes %}
+                <label><input type="radio" name="size" value="{{ size }}" {% if loop.first %}checked{% endif %}><span>{{ size }}</span></label>
+                {% endfor %}
+            </div>
+            <div class="form-label">{{ t('rental_period') }}</div>
+            <div class="days-input-wrap">
+                <div class="days-stepper">
+                    <button type="button" class="step-btn" data-step="-1" aria-label="Decrease days">-</button>
+                    <input type="number" name="days" id="days-input" class="days-input" value="{{ selected_days }}" min="1" max="{{ product.max_days }}">
+                    <button type="button" class="step-btn" data-step="1" aria-label="Increase days">+</button>
+                </div>
+                <span class="days-max">{{ t('max') }}: {{ product.max_days }} {{ t('days_label') }}</span>
+            </div>
+            <div class="total-display"><span>{{ t('total') }}</span><span>$<span id="total-display">{{ total_price }}</span></span></div>
+            <button type="submit" class="btn-primary">{{ t('add_to_bag') }}</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+var p={{ product.price }},mx={{ product.max_days }},inp=document.getElementById('days-input'),
+total=document.getElementById('total-display'),btns=document.querySelectorAll('.step-btn'),
+mainImg=document.getElementById('main-product-image'),
+thumbs=Array.prototype.slice.call(document.querySelectorAll('.product-thumb')),
+thumbsRail=document.getElementById('product-thumbs'),
+prevBtn=document.getElementById('gallery-prev'),
+nextBtn=document.getElementById('gallery-next'),
+images=thumbs.length ? thumbs.map(function(t){ return t.dataset.src; }) : [mainImg.src],
+currentIndex=0;
+
+function setDays(v){
+    var d=parseInt(v,10)||1;
+    if(d<1)d=1;
+    if(d>mx)d=mx;
+    inp.value=d;
+    total.innerText=p*d;
+}
+
+inp.addEventListener('input',function(){ setDays(this.value); });
+btns.forEach(function(btn){
+    btn.addEventListener('click',function(){
+        setDays((parseInt(inp.value,10)||1)+parseInt(this.dataset.step,10));
+    });
+});
+function setImage(index){
+    if(!images.length) return;
+    if(index<0) index=images.length-1;
+    if(index>=images.length) index=0;
+    currentIndex=index;
+    mainImg.classList.add('is-fading');
+    mainImg.src=images[currentIndex];
+    thumbs.forEach(function(t){ t.classList.remove('active'); });
+    if(thumbs[currentIndex]){
+        thumbs[currentIndex].classList.add('active');
+        if(thumbsRail){
+            var thumbEl=thumbs[currentIndex];
+            var railTop=thumbsRail.scrollTop;
+            var railBottom=railTop+thumbsRail.clientHeight;
+            var thumbTop=thumbEl.offsetTop;
+            var thumbBottom=thumbTop+thumbEl.offsetHeight;
+            if(thumbTop<railTop){
+                thumbsRail.scrollTop=thumbTop-8;
+            }else if(thumbBottom>railBottom){
+                thumbsRail.scrollTop=thumbBottom-thumbsRail.clientHeight+8;
+            }
+        }
+    }
+}
+mainImg.addEventListener('load',function(){
+    this.classList.remove('is-fading');
+});
+
+thumbs.forEach(function(thumb){
+    thumb.addEventListener('click',function(){
+        setImage(parseInt(this.dataset.index,10) || 0);
+    });
+});
+if(prevBtn){ prevBtn.addEventListener('click',function(){ setImage(currentIndex-1); }); }
+if(nextBtn){ nextBtn.addEventListener('click',function(){ setImage(currentIndex+1); }); }
+setDays(inp.value);
+setImage(0);
+})();
+</script>
+{% endblock %}

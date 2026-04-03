@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ t('search') }}{% endblock %}
+{% block content %}
+<div class="search-page">
+    <form action="{{ url_for('search') }}" method="GET" id="search-form">
+        <input type="text" name="q" value="{{ query }}" placeholder="{{ t('search_placeholder') }}" class="search-input" autofocus>
+
+        <div class="search-filters">
+            <div class="form-label">{{ t('min_condition') }}</div>
+            <div class="condition-filter">
+                {% for cl in condition_labels %}
+                <label>
+                    <input type="radio" name="min_condition" value="{{ cl.score }}"
+                        {% if min_condition == cl.score %}checked{% endif %}
+                        onchange="document.getElementById('search-form').submit();">
+                    <span>{{ cl[current_lang] }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </form>
+
+    {% if results %}
+    <div class="search-results">
+        <div class="section-title">{{ results|length }} {{ tc('result', results|length) }}</div>
+        <div class="product-grid search-grid">
+            {% for p in results %}
+            <a href="{{ url_for('product_detail', product_id=p.id) }}" class="product-card">
+                <div class="product-card-image-wrap">
+                    <img class="product-card-image primary" src="{{ p.image }}" alt="{{ p.name }}">
+                    {% if p.images and p.images|length > 1 %}
+                    <img class="product-card-image secondary" src="{{ p.images[1] }}" alt="{{ p.name }} alternate view">
+                    {% endif %}
+                </div>
+                <div class="product-card-info">
+                    <div class="product-card-brand">{{ p.brand }}</div>
+                    <div class="product-card-name">{{ p.name }}</div>
+                    {% if p.sizes and p.sizes|length == 1 %}
+                    <div class="product-card-sizes">{{ t('size') }}: {{ p.sizes[0] }}</div>
+                    {% elif p.sizes and p.sizes|length > 1 %}
+                    <div class="product-card-sizes">{{ t('card_sizes') }}: {{ p.sizes | join(', ') }}</div>
+                    {% endif %}
+                    <div class="product-card-price">${{ p.price }} {{ t('per_day') }} · {{ tv(p.condition) }} ({{ p.condition_score }}/10)</div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif query %}
+    <div class="empty-state">{{ t('no_results') }} "{{ query }}"</div>
+    {% endif %}
+
+    <div class="search-brands">
+        <div class="section-title">{{ t('shop_by_brand') }}</div>
+        <div class="brands-grid">
+            {% for brand in brands %}
+            <a href="{{ url_for('collection', brand=brand.slug) }}" class="brand-card"><span class="{{ brand.css_class }}">{{ brand.name }}</span></a>
+            {% endfor %}
+            <a href="{{ url_for('collection') }}" class="brand-card"><span class="all-brands-link">{{ t('all_brands') }}</span></a>
+        </div>
+    </div>
+</div>
+{% endblock %}

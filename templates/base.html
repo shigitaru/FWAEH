@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Protocol Archive{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}<div class="flash-notification">{{ messages[0] }}</div>{% endif %}
+    {% endwith %}
+
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="logo-block">
+                <a href="{{ url_for('collection') }}" class="logo">Protocol Archive</a>
+                <span class="header-clock" id="live-clock">00:00:00.000</span>
+            </div>
+            <nav class="header-nav">
+                <a href="{{ url_for('collection') }}" class="{% if active_page == 'collection' %}active{% endif %}">{{ t('collection') }}</a>
+                <a href="{{ url_for('couture') }}" class="{% if active_page == 'couture' %}active{% endif %}">{{ t('couture') }}</a>
+                <a href="{{ url_for('campaign') }}" class="{% if active_page == 'campaign' %}active{% endif %}">{{ t('campaign') }}</a>
+                <a href="{{ url_for('about') }}" class="{% if active_page == 'about' %}active{% endif %}">{{ t('about') }}</a>
+            </nav>
+            <div class="header-right">
+                <a href="{{ url_for('search') }}">{{ t('search') }}</a>
+                <a href="{{ url_for('admin_panel') }}">{{ t('admin') }}</a>
+                <a href="{{ url_for('cart') }}">{{ t('bag') }} ({{ cart_count }})</a>
+                <a href="{{ url_for('set_lang', lang='ru' if current_lang == 'en' else 'en') }}" class="lang-toggle">{{ 'RU' if current_lang == 'en' else 'EN' }}</a>
+                <button class="theme-toggle" id="theme-toggle">☀</button>
+            </div>
+        </div>
+    </header>
+
+    <main style="padding-top: 75px; min-height: calc(100vh - 75px);">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <span>&copy; {{ current_year }} Protocol Archive</span>
+        <span>{{ t('authenticated') }}</span>
+    </footer>
+
+    <script>
+        function formatClock(n, mode){
+            var hh = String(n.getHours()).padStart(2,'0');
+            var mm = String(n.getMinutes()).padStart(2,'0');
+            var ss = String(n.getSeconds()).padStart(2,'0');
+            var ms = String(n.getMilliseconds()).padStart(3,'0');
+            if (mode === 'short') return hh + ':' + mm;
+            if (mode === 'medium') return hh + ':' + mm + ':' + ss;
+            return hh + ':' + mm + ':' + ss + '.' + ms;
+        }
+        function updateClock(){
+            var n=new Date();
+            var header = document.getElementById('live-clock');
+            if (header) header.textContent = formatClock(n, 'full');
+            document.querySelectorAll('[data-live-clock]').forEach(function(el){
+                var mode = el.getAttribute('data-live-clock') || 'medium';
+                el.textContent = formatClock(n, mode);
+            });
+        }
+        setInterval(updateClock,37);updateClock();
+        (function(){var t=document.getElementById('theme-toggle'),s=localStorage.getItem('theme');if(s==='dark'){document.body.setAttribute('data-theme','dark');t.textContent='\u263E';}t.addEventListener('click',function(){var d=document.body.getAttribute('data-theme')==='dark';if(d){document.body.removeAttribute('data-theme');localStorage.setItem('theme','light');t.textContent='\u2600';}else{document.body.setAttribute('data-theme','dark');localStorage.setItem('theme','dark');t.textContent='\u263E';}});})();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

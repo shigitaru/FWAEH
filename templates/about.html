@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ t('about') }}{% endblock %}
+{% block content %}
+<div class="about-page-container">
+    <div class="about-content">
+        <div class="page-header" style="margin-bottom: 26px;">
+            <div class="section-title">{{ t('about') }}</div>
+            <div class="page-meta">
+                <span>Protocol Archive</span>
+            </div>
+            <div class="page-hairline"></div>
+        </div>
+        <h2>{{ t('rental_service') }}</h2>
+        <p>{{ t('rental_desc') }}</p>
+        
+        <h2>{{ t('duration') }}</h2>
+        <p>{{ t('duration_desc') }}</p>
+        
+        <h2>{{ t('care') }}</h2>
+        <p>{{ t('care_desc') }}</p>
+        
+        <h2 style="margin-top: 60px; color: var(--text-muted);">{{ t('contact') }}</h2>
+        <p style="letter-spacing: 0.05em; font-weight: 400;">hello@protocolarchive.com</p>
+    </div>
+</div>
+{% endblock %}
