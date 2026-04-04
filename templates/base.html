@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>{% block title %}Protocol Archive{% endblock %}</title>
+    <title>{% block title %}Protocol-Archive{% endblock %}</title>
+    <link rel="preload" href="{{ url_for('static', filename='fonts/SignThat-Regular.ttf') }}" as="font" type="font/ttf" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&amp;family=Archivo+Black&amp;family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700&amp;family=Cinzel:wght@400;600&amp;family=Cormorant+Garamond:wght@500;600&amp;family=Great+Vibes&amp;family=Space+Grotesk:wght@500;700&amp;display=swap">
     <script>
     (function () {
         try {
@@ -21,22 +23,33 @@
 
     <header class="site-header">
         <div class="header-inner">
-            <div class="logo-block">
-                <a href="{{ url_for('collection') }}" class="logo">Protocol Archive</a>
-                <span class="header-clock" id="live-clock">00:00:00.000</span>
-            </div>
-            <nav class="header-nav">
+            <nav class="header-nav" aria-label="Main">
                 <a href="{{ url_for('collection') }}" class="{% if active_page == 'collection' %}active{% endif %}">{{ t('collection') }}</a>
                 <a href="{{ url_for('couture') }}" class="{% if active_page == 'couture' %}active{% endif %}">{{ t('couture') }}</a>
                 <a href="{{ url_for('campaign') }}" class="{% if active_page == 'campaign' %}active{% endif %}">{{ t('campaign') }}</a>
                 <a href="{{ url_for('about') }}" class="{% if active_page == 'about' %}active{% endif %}">{{ t('about') }}</a>
             </nav>
+            <div class="header-brand">
+                <a href="{{ url_for('collection') }}" class="logo logo-roll" aria-label="Protocol-Archive">
+                    <span class="logo-roll-viewport">
+                        <span class="logo-roll-track">
+                            <span class="logo-roll-cell">Protocol-Archive</span>
+                            <span class="logo-roll-cell logo-roll-cell--mark">
+                                <img src="{{ url_for('static', filename='header-logo-mark.png') }}" alt="" class="header-logo-mark-img" width="118" height="91" decoding="async">
+                            </span>
+                        </span>
+                    </span>
+                </a>
+            </div>
             <div class="header-right">
-                <a href="{{ url_for('search') }}">{{ t('search') }}</a>
-                <a href="{{ url_for('admin_panel') }}">{{ t('admin') }}</a>
-                <a href="{{ url_for('cart') }}">{{ t('bag') }} ({{ cart_count }})</a>
-                <a href="{{ url_for('set_lang', lang='ru' if current_lang == 'en' else 'en') }}" class="lang-toggle">{{ 'RU' if current_lang == 'en' else 'EN' }}</a>
-                <button class="theme-toggle" id="theme-toggle">☀</button>
+                <span class="header-clock" id="live-clock">00:00:00.000</span>
+                <div class="header-utils">
+                    <a href="{{ url_for('search') }}">{{ t('search') }}</a>
+                    <a href="{{ url_for('admin_panel') }}">{{ t('admin') }}</a>
+                    <a href="{{ url_for('cart') }}">{{ t('bag') }} ({{ cart_count }})</a>
+                    <a href="{{ url_for('set_lang', lang='ru' if current_lang == 'en' else 'en') }}" class="lang-toggle">{{ 'RU' if current_lang == 'en' else 'EN' }}</a>
+                    <button type="button" class="theme-toggle" id="theme-toggle">☀</button>
+                </div>
             </div>
         </div>
     </header>
@@ -46,7 +59,7 @@
     </main>
 
     <footer class="site-footer">
-        <span>&copy; {{ current_year }} Protocol Archive</span>
+        <span>&copy; {{ current_year }} <span class="site-brand-name">Protocol-Archive</span></span>
         <span>{{ t('authenticated') }}</span>
     </footer>
 
@@ -101,7 +114,7 @@
                 root.classList.toggle('pa-compact-header', w <= 1100);
                 root.classList.toggle('pa-tiny-header', w <= 420);
                 if (w <= 420) root.style.setProperty('--site-header-offset', '138px');
-                else if (w <= 1100) root.style.setProperty('--site-header-offset', '124px');
+                else if (w <= 1100) root.style.setProperty('--site-header-offset', '132px');
                 else root.style.removeProperty('--site-header-offset');
             }
             function armResizeObserver() {
@@ -134,6 +147,34 @@
             window.addEventListener('load', syncPaLayout);
             [0, 32, 100, 300, 750].forEach(function (ms) {
                 setTimeout(syncPaLayout, ms);
+            });
+        })();
+        /* Скролл: полное название → буква A (как у Maison Margiela) */
+        (function () {
+            var root = document.documentElement;
+            var TH_ON = 56;
+            var TH_OFF = 28;
+            var raf = 0;
+            function y() {
+                return window.scrollY || root.scrollTop || 0;
+            }
+            function tick() {
+                raf = 0;
+                var scrollY = y();
+                var compact = root.classList.contains('pa-brand-scroll');
+                if (compact) {
+                    if (scrollY <= TH_OFF) root.classList.remove('pa-brand-scroll');
+                } else {
+                    if (scrollY >= TH_ON) root.classList.add('pa-brand-scroll');
+                }
+            }
+            function onScroll() {
+                if (!raf) raf = requestAnimationFrame(tick);
+            }
+            window.addEventListener('scroll', onScroll, { passive: true });
+            tick();
+            window.addEventListener('pageshow', function () {
+                tick();
             });
         })();
     </script>

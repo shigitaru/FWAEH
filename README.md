@@ -14,7 +14,7 @@ pip install -r requirements.txt
 $env:DB_NAME = "ProtocolArchive"
 $env:DB_SERVER = "localhost\SQLEXPRESS"
 python scripts/init_db.py
-python app.pyimage.png
+python app.py
 ```
 
 Подставьте свой экземпляр SQL Server вместо `localhost\SQLEXPRESS`. Сайт: http://127.0.0.1:5000
@@ -121,9 +121,18 @@ python app.py
 
 Откройте в браузере **http://127.0.0.1:5000**
 
-Альтернатива:
+Альтернатива (из **`rental_app`**, venv активен):
 
-```bash
+**PowerShell**
+
+```powershell
+$env:FLASK_APP = "app.py"
+flask run --port 5000
+```
+
+**CMD**
+
+```bat
 set FLASK_APP=app.py
 flask run --port 5000
 ```
@@ -144,7 +153,7 @@ flask run --port 5000
 - `app.py` — приложение Flask, маршруты
 - `scripts/init_db.py` — создание БД и таблиц
 - `templates/` — HTML-шаблоны
-- `static/` — стили, картинки; загрузки товаров — `static/products/uploads/`; кампания — `static/campaign/uploads/`
+- `static/` — `style.css`, сплэш `splash.jpg`, знак в шапке `header-logo-mark.png`, шрифт бренда `fonts/SignThat-Regular.ttf`; загрузки товаров — `static/products/uploads/`; кампания — `static/campaign/uploads/`
 
 ---
 

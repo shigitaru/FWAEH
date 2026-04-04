@@ -1,4 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Archivo+Black&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700&family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@500;600&family=Space+Grotesk:wght@500;700&display=swap');
+/* Google Fonts подключаются в base.html / splash.html (до style.css), иначе @import здесь
+   блокировал бы парсинг и откладывал @font-face Sign That → мигание запасного скрипта у лого */
+
+/* Sign That — локальные файлы в static/fonts/ (скопированы из твоего набора) */
+@font-face {
+    font-family: 'Sign That';
+    src: url('fonts/SignThat-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -10,6 +20,7 @@ html {
 }
 
 :root {
+    --font-brand: 'Sign That', 'Great Vibes', cursive;
     --bg: #ffffff; --bg-alt: #fafafa; --text: #1a1a1a;
     --text-secondary: #888888; --text-muted: #bbbbbb;
     --border: #eeeeee; --border-strong: #dddddd;
@@ -47,14 +58,22 @@ button, input { font-family: inherit; }
     box-sizing: border-box;
 }
 .header-inner { 
-    padding: 16px max(30px, env(safe-area-inset-right, 0)) 16px max(30px, env(safe-area-inset-left, 0));
-    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px max(30px, env(safe-area-inset-right, 0)) 14px max(30px, env(safe-area-inset-left, 0));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: clamp(12px, 2vw, 28px);
     max-width: 100%;
     box-sizing: border-box;
     width: 100%;
 }
 .header-inner > * {
     min-width: 0;
+}
+.header-brand {
+    justify-self: center;
+    text-align: center;
+    --logo-roll-h: clamp(40px, 9.5vw, 54px);
 }
 .site-main {
     padding-top: calc(var(--site-header-offset) + env(safe-area-inset-top, 0px));
@@ -72,31 +91,112 @@ button, input { font-family: inherit; }
         min-height: calc(100dvh - var(--site-header-offset) - env(safe-area-inset-top, 0px));
     }
 }
-.logo-block, .header-right { flex: 1; display: flex; }
-.logo-block { flex-direction: column; flex-shrink: 1; }
 .header-right {
-    justify-content: flex-end;
-    gap: 15px;
-    align-items: center;
-    flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
     max-width: 100%;
+}
+.header-utils {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px 15px;
 }
 
 .logo {
-    font-size: 13px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
+    font-family: var(--font-brand);
+    font-size: clamp(17px, 3.8vw, 22px);
+    letter-spacing: 0.02em;
+    text-transform: none;
     font-weight: 400;
     max-width: 100%;
     overflow-wrap: break-word;
+    line-height: 1.15;
 }
-.header-clock { font-size: 10px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+/* Ролл бренда при скролле: Protocol-Archive → растр из logo123.psd (header-logo-mark.png) */
+.logo.logo-roll {
+    line-height: 1;
+    max-width: min(100%, 92vw);
+}
+.logo-roll-viewport {
+    display: block;
+    height: var(--logo-roll-h);
+    overflow: hidden;
+}
+.logo-roll-track {
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.55s cubic-bezier(0.33, 1, 0.68, 1);
+    will-change: transform;
+}
+html.pa-brand-scroll .logo-roll-track {
+    transform: translateY(-50%);
+}
+.logo-roll-cell {
+    flex: 0 0 var(--logo-roll-h);
+    height: var(--logo-roll-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-brand);
+    font-size: clamp(17px, 3.8vw, 22px);
+    letter-spacing: 0.02em;
+    font-weight: 400;
+    line-height: 1;
+}
+.logo-roll-cell--mark {
+    padding-inline: 4px;
+    line-height: 0;
+}
+.header-logo-mark-img {
+    display: block;
+    width: clamp(32px, 7.5vw, 42px);
+    height: auto;
+    max-height: clamp(32px, 7.5vw, 42px);
+    object-fit: contain;
+    flex-shrink: 0;
+    -webkit-user-drag: none;
+    user-select: none;
+}
+[data-theme="dark"] .header-logo-mark-img {
+    filter: brightness(0) invert(1);
+}
+@media (prefers-reduced-motion: reduce) {
+    .logo-roll-track {
+        transition-duration: 0.01ms;
+    }
+}
+.site-brand-name {
+    font-family: var(--font-brand);
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-weight: 400;
+}
+.site-footer .site-brand-name {
+    font-size: 14px;
+}
+.page-meta .site-brand-name {
+    font-size: clamp(20px, 5vw, 28px);
+    letter-spacing: 0.02em;
+}
+.header-clock {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
 
 .header-nav {
     display: flex;
-    gap: 28px;
-    flex: 2;
-    justify-content: center;
+    flex-wrap: wrap;
+    gap: clamp(12px, 2vw, 24px);
+    justify-content: flex-start;
+    align-items: center;
     min-width: 0;
 }
 .header-nav a { 
@@ -109,61 +209,70 @@ button, input { font-family: inherit; }
     background: none; border: 1px solid var(--border-strong); 
     color: var(--text-secondary); font-size: 11px; padding: 5px 10px; cursor: pointer; 
 }
-.header-right a {
+.header-utils a {
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-size: 12px;
     color: var(--text-secondary);
     transition: color 0.2s;
 }
-.header-right a:hover {
+.header-utils a:hover {
     color: var(--text);
 }
 
 @media (max-width: 1100px) {
     :root {
-        --site-header-offset: 124px;
+        --site-header-offset: 132px;
     }
     .header-inner {
-        flex-wrap: wrap;
+        grid-template-columns: 1fr;
+        row-gap: 12px;
         padding: 12px max(14px, env(safe-area-inset-right, 0)) 14px max(14px, env(safe-area-inset-left, 0));
-        gap: 6px 12px;
-        row-gap: 10px;
-        align-items: center;
+        align-items: stretch;
     }
-    .logo-block {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
-    .header-right {
-        flex: 1 1 auto;
-        gap: 8px 10px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        min-width: 0;
-    }
-    .header-right a,
-    .header-right .theme-toggle,
-    .header-right .lang-toggle {
-        font-size: 10px;
-        letter-spacing: 0.06em;
+    .header-brand {
+        order: 1;
+        justify-self: center;
     }
     .header-nav {
-        order: 3;
-        flex: 1 1 100%;
-        justify-content: center;
-        flex-wrap: wrap;
+        order: 2;
+        justify-content: flex-start;
         gap: 10px 14px;
         padding-top: 10px;
-        margin-top: 2px;
         border-top: 1px solid var(--border);
+        margin: 0;
+        width: 100%;
     }
     .header-nav a {
         font-size: 11px;
         letter-spacing: 0.06em;
     }
+    .header-right {
+        order: 3;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+    }
     .header-clock {
-        display: none;
+        display: block;
+        margin: 0;
+    }
+    .header-utils {
+        flex: 1;
+        justify-content: flex-end;
+        gap: 8px 10px;
+        min-width: 0;
+    }
+    .header-utils a,
+    .header-utils .theme-toggle,
+    .header-utils .lang-toggle {
+        font-size: 10px;
+        letter-spacing: 0.06em;
     }
 }
 @media (max-width: 420px) {
@@ -175,8 +284,8 @@ button, input { font-family: inherit; }
         padding-right: max(12px, env(safe-area-inset-right, 0));
     }
     .logo {
-        font-size: 11px;
-        letter-spacing: 0.12em;
+        font-size: clamp(15px, 5vw, 19px);
+        letter-spacing: 0.02em;
     }
 }
 
@@ -186,53 +295,62 @@ button, input { font-family: inherit; }
  * дубликаты ниже совпадают с брейкпоинтами и перекрывают витрину при pa-js-layout.
  */
 html.pa-compact-header .header-inner {
-    flex-wrap: wrap;
+    grid-template-columns: 1fr;
+    row-gap: 12px;
     padding: 12px max(14px, env(safe-area-inset-right, 0)) 14px max(14px, env(safe-area-inset-left, 0));
-    gap: 6px 12px;
-    row-gap: 10px;
-    align-items: center;
+    align-items: stretch;
 }
-html.pa-compact-header .logo-block {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-html.pa-compact-header .header-right {
-    flex: 1 1 auto;
-    gap: 8px 10px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    min-width: 0;
-}
-html.pa-compact-header .header-right a,
-html.pa-compact-header .header-right .theme-toggle,
-html.pa-compact-header .header-right .lang-toggle {
-    font-size: 10px;
-    letter-spacing: 0.06em;
+html.pa-compact-header .header-brand {
+    order: 1;
+    justify-self: center;
 }
 html.pa-compact-header .header-nav {
-    order: 3;
-    flex: 1 1 100%;
-    justify-content: center;
-    flex-wrap: wrap;
+    order: 2;
+    justify-content: flex-start;
     gap: 10px 14px;
     padding-top: 10px;
-    margin-top: 2px;
     border-top: 1px solid var(--border);
+    margin: 0;
+    width: 100%;
 }
 html.pa-compact-header .header-nav a {
     font-size: 11px;
     letter-spacing: 0.06em;
 }
+html.pa-compact-header .header-right {
+    order: 3;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
 html.pa-compact-header .header-clock {
-    display: none;
+    display: block;
+    margin: 0;
+}
+html.pa-compact-header .header-utils {
+    flex: 1;
+    justify-content: flex-end;
+    gap: 8px 10px;
+    min-width: 0;
+}
+html.pa-compact-header .header-utils a,
+html.pa-compact-header .header-utils .theme-toggle,
+html.pa-compact-header .header-utils .lang-toggle {
+    font-size: 10px;
+    letter-spacing: 0.06em;
 }
 html.pa-tiny-header .header-inner {
     padding-left: max(12px, env(safe-area-inset-left, 0));
     padding-right: max(12px, env(safe-area-inset-right, 0));
 }
 html.pa-tiny-header .logo {
-    font-size: 11px;
-    letter-spacing: 0.12em;
+    font-size: clamp(15px, 5vw, 19px);
+    letter-spacing: 0.02em;
 }
 html.pa-js-layout:not(.pa-wide-store) .product-grid:not(.admin-product-grid) > .product-card {
     max-width: 100%;
@@ -266,7 +384,9 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
 }
 .splash-bg { 
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-    object-fit: cover; filter: grayscale(100%) contrast(1.05); opacity: 0.62; 
+    object-fit: cover; filter: grayscale(100%) contrast(1.05); opacity: 0.62;
+    pointer-events: none;
+    z-index: 0;
 }
 .splash-screen::before{
     content:"";
@@ -295,33 +415,54 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     z-index: 6;
     pointer-events: none;
 }
-.splash-content { position: relative; z-index: 10; text-align: center; color: #fff; }
+.splash-content {
+    position: relative;
+    z-index: 10;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: min(92vw, 520px);
+    margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 28px);
+    box-sizing: border-box;
+    text-align: center;
+}
+/* Скрипт даёт «тяжесть» слева (завиток у p): сдвиг вправо совмещает оптический центр с мета-строкой и ENTER */
 .splash-logo { 
-    font-family: 'Cinzel', serif;
-    font-size: 18px;
-    letter-spacing: 0.34em;
-    text-transform: uppercase; 
-    margin-bottom: 10px;
+    font-family: var(--font-brand);
+    font-size: clamp(28px, 8vw, 44px);
+    letter-spacing: 0.02em;
+    text-transform: none;
+    margin: 0 0 clamp(22px, 5vw, 40px);
+    padding-bottom: 0.12em;
     font-weight: 400;
     text-shadow: 0 10px 45px rgba(0,0,0,0.45);
     opacity: 0;
+    /* выше 1.05 — иначе у скрипта хвосты (p, y…) упираются в строку ниже */
+    line-height: 1.22;
+    box-sizing: border-box;
     animation:
-        splashFade 700ms ease 650ms both,
+        splashFadeLogo 700ms ease 650ms both,
         splashGlow 2200ms ease-in-out 1400ms infinite;
 }
 .splash-meta{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
     color: rgba(255,255,255,0.55);
     font-size: 10px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
     font-variant-numeric: tabular-nums;
     opacity: 0;
     animation: splashFade 900ms ease 950ms both;
+    max-width: 100%;
+    text-align: center;
 }
 .splash-dot{
     width:4px;
@@ -332,22 +473,31 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
 }
 /* Убрал рамку, сделал шрифт тоньше и прозрачнее */
 .splash-enter { 
-    font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; 
-    color: rgba(255, 255, 255, 0.4); border: none; background: transparent; 
-    cursor: pointer; transition: color 0.3s, transform 0.3s; padding: 10px;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase; 
+    color: rgba(255, 255, 255, 0.4);
+    border: none;
+    background: transparent; 
+    cursor: pointer;
+    transition: color 0.3s, transform 0.3s;
+    padding: 10px 16px;
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    gap: 12px;
     opacity: 0;
     animation: splashFade 900ms ease 1250ms both;
+    text-decoration: none;
 }
 .splash-enter::after{
-    content:"";
-    width: 34px;
+    content: "";
+    width: min(120px, 42vw);
     height: 1px;
     background: rgba(255,255,255,0.22);
-    display:inline-block;
-    transform: translateY(0.5px);
+    display: block;
+    flex-shrink: 0;
     transition: background 0.3s, width 0.3s;
 }
 .splash-enter:hover {
@@ -356,12 +506,23 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
 }
 .splash-enter:hover::after{
     background: rgba(255,255,255,0.45);
-    width: 46px;
+    width: min(140px, 48vw);
 }
 
 @keyframes splashFade{
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes splashFadeLogo{
+    from {
+        opacity: 0;
+        transform: translate(clamp(18px, 4.2vw, 42px), 6px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(clamp(18px, 4.2vw, 42px), 0);
+    }
 }
 
 @keyframes splashGlow{
@@ -375,7 +536,13 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     .splash-enter {
         animation: none !important;
         opacity: 1 !important;
+    }
+    .splash-meta,
+    .splash-enter {
         transform: none !important;
+    }
+    .splash-logo {
+        transform: translate(clamp(18px, 4.2vw, 42px), 0) !important;
     }
 }
 

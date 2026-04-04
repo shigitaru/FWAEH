@@ -367,8 +367,7 @@ VALUE_TRANSLATIONS = {
     }
 }
 
-# ИСПРАВЛЕНО: Теперь используем локальный файл splash.jpg из папки static
-SPLASH_IMAGE = '/static/splash.jpg'
+SPLASH_IMAGE = 'splash.jpg'
 
 PRODUCTS = [
     {
@@ -1027,8 +1026,11 @@ def set_lang(lang):
 
 @app.route('/')
 def splash():
-    # Передаем URL локального изображения в шаблон
-    return render_template('splash.html', splash_image=SPLASH_IMAGE, t=t)
+    return render_template(
+        'splash.html',
+        splash_image=url_for('static', filename=SPLASH_IMAGE),
+        t=t,
+    )
 
 @app.route('/collection')
 def collection():

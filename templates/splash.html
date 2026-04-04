@@ -2,15 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Protocol Archive</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Protocol-Archive</title>
+    <link rel="preload" href="{{ url_for('static', filename='fonts/SignThat-Regular.ttf') }}" as="font" type="font/ttf" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&amp;family=Archivo+Black&amp;family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700&amp;family=Cinzel:wght@400;600&amp;family=Cormorant+Garamond:wght@500;600&amp;family=Great+Vibes&amp;family=Space+Grotesk:wght@500;700&amp;display=swap">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="splash-screen">
         <img src="{{ splash_image }}" class="splash-bg" alt="">
         <div class="splash-content">
-            <div class="splash-logo">Protocol Archive</div>
+            <div class="splash-logo">Protocol-Archive</div>
             <div class="splash-meta">
                 <span>ARCHIVE</span>
                 <span class="splash-dot"></span>
