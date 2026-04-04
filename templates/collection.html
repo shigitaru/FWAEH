@@ -1,6 +1,19 @@
 {% extends "base.html" %}
+{% import 'macros/store_product.html' as store with context %}
+{% block html_attrs %}{% if show_hero %} class="pa-hero-home"{% endif %}{% endblock %}
 {% block title %}{{ t('collection') }}{% endblock %}
 {% block content %}
+{% if show_hero %}
+<section class="collection-hero" aria-label="{{ t('hero_title') }}">
+    <img class="collection-hero-bg" src="{{ hero_image }}" alt="" decoding="async">
+    <div class="collection-hero-inner">
+        <h1 class="collection-hero-title">{{ t('hero_title') }}</h1>
+        <a href="#collection-grid" class="collection-hero-cta">{{ t('hero_cta') }}</a>
+        <p class="collection-hero-service">{{ t('hero_service_line') }}</p>
+        <p class="collection-hero-slogan">{{ t('hero_slogan') }}</p>
+    </div>
+</section>
+{% endif %}
 <div class="listing-page-lead">
     <div class="page-header">
         <div class="section-title">{{ t('collection') }}</div>
@@ -15,34 +28,17 @@
     </div>
     {% if active_brand %}
     <div style="margin: 10px 0 12px; color: var(--text-secondary); font-size: 12px;">
-        <a href="{{ url_for('collection') }}" style="text-decoration: underline;">{{ t('clear') }}</a>
+        <a href="{{ clear_listing_url }}" style="text-decoration: underline;">{{ t('clear') }}</a>
     </div>
     {% endif %}
 </div>
 {% if products %}
-<div class="product-grid">
+<div class="product-grid" id="collection-grid">
     {% for p in products %}
-    <a href="{{ url_for('product_detail', product_id=p.id) }}" class="product-card">
-        <div class="product-card-image-wrap">
-            <img class="product-card-image primary" src="{{ p.image }}" alt="{{ p.name }}">
-            {% if p.images and p.images|length > 1 %}
-            <img class="product-card-image secondary" src="{{ p.images[1] }}" alt="{{ p.name }} alternate view">
-            {% endif %}
-        </div>
-            <div class="product-card-info">
-                <div class="product-card-brand">{{ p.brand }}</div>
-                <div class="product-card-name">{{ p.name }}</div>
-                {% if p.sizes and p.sizes|length == 1 %}
-                <div class="product-card-sizes">{{ t('size') }}: {{ p.sizes[0] }}</div>
-                {% elif p.sizes and p.sizes|length > 1 %}
-                <div class="product-card-sizes">{{ t('card_sizes') }}: {{ p.sizes | join(', ') }}</div>
-                {% endif %}
-                <div class="product-card-price">${{ p.price }} {{ t('per_day') }}</div>
-            </div>
-    </a>
+    {{ store.store_product_card(p) }}
     {% endfor %}
 </div>
 {% else %}
-<div class="empty-state">{{ t('no_items') }}</div>
+<div class="empty-state" id="collection-grid">{{ t('no_items') }}</div>
 {% endif %}
 {% endblock %}

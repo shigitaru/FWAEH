@@ -1,0 +1,28 @@
+{% macro store_product_card(p, price_extra=None) -%}
+<div class="product-card-outer">
+    <a href="{{ url_for('product_detail', product_id=p.id) }}" class="product-card">
+        <div class="product-card-image-wrap">
+            <img class="product-card-image primary" src="{{ p.image }}" alt="{{ p.name }}">
+            {% if p.images and p.images|length > 1 %}
+            <img class="product-card-image secondary" src="{{ p.images[1] }}" alt="{{ p.name }} alternate view">
+            {% endif %}
+        </div>
+        <div class="product-card-info">
+            <div class="product-card-brand">{{ p.brand }}</div>
+            <div class="product-card-name">{{ p.name }}</div>
+            {% if p.sizes and p.sizes|length == 1 %}
+            <div class="product-card-sizes">{{ t('size') }}: {{ p.sizes[0] }}</div>
+            {% elif p.sizes and p.sizes|length > 1 %}
+            <div class="product-card-sizes">{{ t('card_sizes') }}: {{ p.sizes | join(', ') }}</div>
+            {% endif %}
+            <div class="product-card-price">${{ p.price }} {{ t('per_day') }}{% if price_extra %} · {{ price_extra }}{% endif %}</div>
+        </div>
+    </a>
+    <button type="button" class="wishlist-toggle{% if p.id in wishlist_ids %} is-active{% endif %}"
+        data-product-id="{{ p.id }}"
+        aria-pressed="{{ 'true' if p.id in wishlist_ids else 'false' }}"
+        aria-label="{% if p.id in wishlist_ids %}{{ t('aria_remove_wishlist') }}{% else %}{{ t('aria_add_wishlist') }}{% endif %}">
+        <svg class="wishlist-heart-svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 21s-7-4.6-9.6-9.2C-.2 8.4 2.6 4 7.5 4c2.4 0 4 1.2 4.5 3C12.5 5.2 14 4 16.5 4 21.4 4 24.2 8.4 21.6 11.8 19 16.4 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+    </button>
+</div>
+{%- endmacro %}

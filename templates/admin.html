@@ -54,21 +54,28 @@
         <div class="section-title">{{ products|length }} {{ t('products') }}</div>
         <div class="product-grid search-grid admin-product-grid">
             {% for p in products %}
-            <a href="{{ url_for('admin_edit_product', product_id=p.id) }}" class="product-card">
-                <div class="product-card-image-wrap">
-                    <img class="product-card-image primary" src="{{ p.image }}" alt="{{ p.name }}">
-                </div>
-                <div class="product-card-info">
-                    <div class="product-card-brand">{{ p.brand }}</div>
-                    <div class="product-card-name">{{ p.name }}</div>
-                    {% if p.sizes and p.sizes|length == 1 %}
-                    <div class="product-card-sizes">{{ t('size') }}: {{ p.sizes[0] }}</div>
-                    {% elif p.sizes and p.sizes|length > 1 %}
-                    <div class="product-card-sizes">{{ t('card_sizes') }}: {{ p.sizes | join(', ') }}</div>
-                    {% endif %}
-                    <div class="product-card-price">#{{ p.id }} · {{ p.serial }} · ${{ p.price }}</div>
-                </div>
-            </a>
+            <div class="admin-product-card-shell">
+                <a href="{{ url_for('admin_edit_product', product_id=p.id) }}" class="product-card">
+                    <div class="product-card-image-wrap">
+                        <img class="product-card-image primary" src="{{ p.image }}" alt="{{ p.name }}">
+                    </div>
+                    <div class="product-card-info">
+                        <div class="product-card-brand">{{ p.brand }}</div>
+                        <div class="product-card-name">{{ p.name }}</div>
+                        {% if p.sizes and p.sizes|length == 1 %}
+                        <div class="product-card-sizes">{{ t('size') }}: {{ p.sizes[0] }}</div>
+                        {% elif p.sizes and p.sizes|length > 1 %}
+                        <div class="product-card-sizes">{{ t('card_sizes') }}: {{ p.sizes | join(', ') }}</div>
+                        {% endif %}
+                        <div class="product-card-price">#{{ p.id }} · {{ p.serial }} · ${{ p.price }}</div>
+                    </div>
+                </a>
+                <form method="post" action="{{ url_for('admin_delete_product', product_id=p.id) }}" class="admin-product-delete-form">
+                    <button type="submit" class="admin-product-delete-btn" title="{{ t('admin_delete_product') }}" aria-label="{{ t('admin_delete_product') }}" onclick="return confirm({{ t('admin_delete_product_confirm')|tojson }});">
+                        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h5v2H3V5h5l1-2zm0 6h2v9H9V9zm4 0h2v9h-2V9zM5 9h2v10a2 2 0 002 2h8a2 2 0 002-2V9h2v10a4 4 0 01-4 4H9a4 4 0 01-4-4V9z" fill="currentColor"/></svg>
+                    </button>
+                </form>
+            </div>
             {% endfor %}
         </div>
     </div>

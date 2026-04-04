@@ -10,10 +10,13 @@ from datetime import datetime
 import pyodbc
 from uuid import uuid4
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 try:
     from deep_translator import GoogleTranslator
 except Exception:
     GoogleTranslator = None
+
+from seed_defaults import fallback_products_list
 
 app = Flask(__name__)
 app.secret_key = 'protocol-archive-2024'
@@ -39,11 +42,56 @@ AUTO_TRANSLATE_CACHE = {}
 TRANSLATIONS = {
     'en': {
         'enter': 'Enter',
-        'collection': 'Collection',
+        'collection': 'Items',
         'couture': 'Couture',
         'campaign': 'Campaign',
         'about': 'About',
         'search': 'Search',
+        'menu': 'Menu',
+        'menu_close': 'Close',
+        'menu_help': 'Can we help you?',
+        'account': 'Account',
+        'aria_account': 'My account',
+        'account_title': 'My account',
+        'account_signed_in': 'Signed in as',
+        'account_logout': 'Sign out',
+        'account_login_title': 'Sign in',
+        'account_register_title': 'Create an account',
+        'acc_email': 'Email',
+        'acc_password': 'Password',
+        'acc_password_confirm': 'Confirm password',
+        'acc_display_name': 'Name',
+        'acc_submit_login': 'Sign in',
+        'acc_submit_register': 'Register',
+        'acc_err_email_invalid': 'Enter a valid email address.',
+        'acc_err_password_short': 'Password must be at least 8 characters.',
+        'acc_err_password_mismatch': 'Passwords do not match.',
+        'acc_err_name': 'Enter your name.',
+        'acc_err_email_used': 'This email is already registered.',
+        'acc_err_credentials': 'Incorrect email or password.',
+        'acc_ok_register': 'Account created. You are signed in.',
+        'acc_ok_login': 'Welcome back.',
+        'acc_db_unavailable': 'Account service is temporarily unavailable.',
+        'acc_login_required': 'Please sign in to use this.',
+        'acc_couture_members_only': 'Couture is available to signed-in members only.',
+        'acc_couture_cart_login': 'Sign in to add couture pieces to your bag.',
+        'members_title': 'Member area',
+        'members_intro': 'Tools and access reserved for registered clients.',
+        'members_tile_couture': 'Couture archive',
+        'members_tile_couture_desc': 'Restricted looks and special handling.',
+        'members_tile_wishlist': 'Wishlist',
+        'members_tile_wishlist_desc': 'Saved pieces in one place.',
+        'members_tile_cart': 'Your bag',
+        'members_tile_cart_desc': 'Review items before checkout.',
+        'members_tile_campaign': 'Campaign',
+        'members_tile_campaign_desc': 'Editorial series and stories.',
+        'members_tile_items': 'All items',
+        'members_tile_items_desc': 'Full ready-to-wear selection.',
+        'members_perks_title': 'Member benefits',
+        'members_perk_1': 'Access to the couture archive and product pages.',
+        'members_perk_2': 'Priority handling noted on rental requests.',
+        'members_perk_3': 'Personal hub for bag, wishlist, and discovery.',
+        'members_open': 'Member area',
         'bag': 'Bag',
         'search_placeholder': 'Search by name, brand or code...',
         'shop_by_brand': 'Shop by brand',
@@ -70,10 +118,15 @@ TRANSLATIONS = {
         'checkout': 'Proceed to checkout',
         'bag_empty': 'Your bag is empty',
         'browse': 'Browse collection',
+        'back_to_items': 'Back to items',
+        'back_to_couture': 'Back to couture',
         'material': 'Material',
         'made_in': 'Made in',
         'condition': 'Condition',
         'added': 'Added',
+        'added_to_bag_title': 'Added to your bag',
+        'view_bag': 'View bag',
+        'close': 'Close',
         'rental_service': 'Rental service',
         'rental_desc': 'We offer authenticated designer garments for short-term rental. Each piece is carefully inspected, cleaned, and prepared by our in-house atelier before delivery.',
         'duration': 'Duration',
@@ -128,11 +181,15 @@ TRANSLATIONS = {
         'admin_cancel': 'Back to admin',
         'admin_product_updated': 'Admin: product updated',
         'admin_product_not_found': 'Admin: product not found',
+        'admin_delete_product': 'Delete product',
+        'admin_product_deleted': 'Product deleted',
+        'admin_delete_product_confirm': 'Delete this product and all its photos? This cannot be undone.',
         'admin_serial_exists': 'Admin: this serial is already used by another product',
         'admin_current_images': 'Current images (upload below to replace or add)',
         'admin_view_product': 'View on site',
         'admin_clear_extra_images': 'Remove all extra images (keep main only)',
         'admin_remove_images_hint': 'Check photos to remove, then Save changes',
+        'admin_drag_photos_hint': 'Drag photos by the handle to reorder. The first photo is the main image on the product page.',
         'admin_cannot_remove_last_image': 'You must keep at least one image',
         'admin_remove_photo': 'Remove',
         'category_rtw': 'RTW',
@@ -177,14 +234,69 @@ TRANSLATIONS = {
         'admin_story_back_list': 'Campaign overview',
         'admin_campaign_settings_saved': 'Campaign header saved',
         'admin_campaign_header_section': 'Page header (intro & tagline)',
+        'hero_title': 'Protocol Archive',
+        'hero_cta': 'Discover items',
+        'hero_service_line': 'Authenticated designer clothing rental',
+        'hero_slogan': 'Curated pieces. Short-term wear. Archive precision.',
+        'wishlist': 'Wishlist',
+        'wishlist_empty': 'No saved pieces yet',
+        'aria_wishlist_page': 'Wishlist',
+        'aria_add_wishlist': 'Add to wishlist',
+        'aria_remove_wishlist': 'Remove from wishlist',
+        'aria_bag': 'Shopping bag',
     },
     'ru': {
         'enter': 'Войти',
-        'collection': 'Коллекция',
+        'collection': 'Вещи',
         'couture': 'Кутюр',
         'campaign': 'Кампания',
         'about': 'О нас',
         'search': 'Поиск',
+        'menu': 'Меню',
+        'menu_close': 'Закрыть',
+        'menu_help': 'Нужна помощь?',
+        'account': 'Аккаунт',
+        'aria_account': 'Личный кабинет',
+        'account_title': 'Личный кабинет',
+        'account_signed_in': 'Вы вошли как',
+        'account_logout': 'Выйти',
+        'account_login_title': 'Вход',
+        'account_register_title': 'Регистрация',
+        'acc_email': 'Email',
+        'acc_password': 'Пароль',
+        'acc_password_confirm': 'Повторите пароль',
+        'acc_display_name': 'Имя',
+        'acc_submit_login': 'Войти',
+        'acc_submit_register': 'Зарегистрироваться',
+        'acc_err_email_invalid': 'Укажите корректный email.',
+        'acc_err_password_short': 'Пароль не короче 8 символов.',
+        'acc_err_password_mismatch': 'Пароли не совпадают.',
+        'acc_err_name': 'Укажите имя.',
+        'acc_err_email_used': 'Этот email уже зарегистрирован.',
+        'acc_err_credentials': 'Неверный email или пароль.',
+        'acc_ok_register': 'Аккаунт создан. Вы вошли.',
+        'acc_ok_login': 'С возвращением.',
+        'acc_db_unavailable': 'Сервис аккаунтов временно недоступен.',
+        'acc_login_required': 'Войдите в аккаунт, чтобы пользоваться этим.',
+        'acc_couture_members_only': 'Раздел кутюр доступен только зарегистрированным участникам.',
+        'acc_couture_cart_login': 'Войдите, чтобы добавить кутюр в корзину.',
+        'members_title': 'Зона участника',
+        'members_intro': 'Доступ и функции для зарегистрированных клиентов.',
+        'members_tile_couture': 'Архив кутюр',
+        'members_tile_couture_desc': 'Закрытая витрина и особое сопровождение.',
+        'members_tile_wishlist': 'Избранное',
+        'members_tile_wishlist_desc': 'Сохранённые вещи в одном месте.',
+        'members_tile_cart': 'Корзина',
+        'members_tile_cart_desc': 'Проверьте состав перед оформлением.',
+        'members_tile_campaign': 'Кампания',
+        'members_tile_campaign_desc': 'Редакционные серии и истории.',
+        'members_tile_items': 'Все вещи',
+        'members_tile_items_desc': 'Полная подборка ready-to-wear.',
+        'members_perks_title': 'Возможности для участников',
+        'members_perk_1': 'Доступ к архиву кутюр и карточкам изделий.',
+        'members_perk_2': 'Приоритетная обработка заявок на аренду.',
+        'members_perk_3': 'Личный центр: корзина, избранное и навигация.',
+        'members_open': 'Зона участника',
         'bag': 'Корзина',
         'search_placeholder': 'Название, бренд или артикул...',
         'shop_by_brand': 'Бренды',
@@ -211,10 +323,15 @@ TRANSLATIONS = {
         'checkout': 'Оформить',
         'bag_empty': 'Корзина пуста',
         'browse': 'Смотреть коллекцию',
+        'back_to_items': 'Назад к вещам',
+        'back_to_couture': 'Назад в кутюр',
         'material': 'Материал',
         'made_in': 'Производство',
         'condition': 'Состояние',
         'added': 'Добавлено',
+        'added_to_bag_title': 'Добавлено в корзину',
+        'view_bag': 'Открыть корзину',
+        'close': 'Закрыть',
         'rental_service': 'Сервис аренды',
         'rental_desc': 'Мы предоставляем аутентифицированную дизайнерскую одежду для краткосрочной аренды. Каждая вещь проходит тщательную проверку и подготовку.',
         'duration': 'Сроки',
@@ -270,11 +387,15 @@ TRANSLATIONS = {
         'admin_cancel': 'Назад в админку',
         'admin_product_updated': 'Админ: товар обновлён',
         'admin_product_not_found': 'Админ: товар не найден',
+        'admin_delete_product': 'Удалить товар',
+        'admin_product_deleted': 'Товар удалён',
+        'admin_delete_product_confirm': 'Удалить этот товар и все его фото? Действие нельзя отменить.',
         'admin_serial_exists': 'Админ: такой артикул уже у другого товара',
         'admin_current_images': 'Текущие фото (загрузите ниже, чтобы заменить или добавить)',
         'admin_view_product': 'Смотреть на сайте',
         'admin_clear_extra_images': 'Удалить все дополнительные фото (главное оставить)',
         'admin_remove_images_hint': 'Отметьте фото для удаления и нажмите «Сохранить»',
+        'admin_drag_photos_hint': 'Перетаскивайте фото за ручку, чтобы поменять порядок. Первое фото — главное на карточке товара.',
         'admin_cannot_remove_last_image': 'Нужно оставить хотя бы одно фото',
         'admin_remove_photo': 'Удалить',
         'category_rtw': 'RTW',
@@ -319,6 +440,16 @@ TRANSLATIONS = {
         'admin_story_back_list': 'К обзору кампании',
         'admin_campaign_settings_saved': 'Шапка кампании сохранена',
         'admin_campaign_header_section': 'Шапка страницы (интро и подзаголовок)',
+        'hero_title': 'Protocol Archive',
+        'hero_cta': 'Смотреть вещи',
+        'hero_service_line': 'Сервис аренды аутентичной дизайнерской одежды',
+        'hero_slogan': 'Отобранные вещи. Краткий срок. Дух архива.',
+        'wishlist': 'Избранное',
+        'wishlist_empty': 'Пока нет сохранённых вещей',
+        'aria_wishlist_page': 'Избранное',
+        'aria_add_wishlist': 'Добавить в избранное',
+        'aria_remove_wishlist': 'Убрать из избранного',
+        'aria_bag': 'Корзина',
     }
 }
 
@@ -364,87 +495,22 @@ VALUE_TRANSLATIONS = {
         # Материалы (частые варианты из админки; регистр не важен — см. tv())
         'True Leather': 'Натуральная кожа',
         'Leather': 'Кожа',
+        'Steel': 'Сталь',
+        'japanese organic denim': 'Японский органический деним',
     }
 }
 
 SPLASH_IMAGE = 'splash.jpg'
 
-PRODUCTS = [
-    {
-        'id': 1, 'category': 'rtw', 'serial': 'PA-0510',
-        'brand': 'Maison Margiela', 'name': 'Oversized wool coat',
-        'price': 180, 'max_days': 14, 'condition_score': 9,
-        'material': '100% Virgin Wool', 'origin': 'Italy', 'condition': 'Excellent',
-        'sizes': ['S', 'M', 'L', 'XL'],
-        'image': 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?q=80&w=1974&auto=format&fit=crop'
-    },
-    {
-        'id': 2, 'category': 'rtw', 'serial': 'PA-0511',
-        'brand': 'Balenciaga', 'name': 'Deconstructed blazer',
-        'price': 150, 'max_days': 10, 'condition_score': 8,
-        'material': 'Wool Gabardine', 'origin': 'Italy', 'condition': 'Very good',
-        'sizes': ['XS', 'S', 'M', 'L', 'XL'],
-        'image': 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=2071&auto=format&fit=crop'
-    },
-    {
-        'id': 3, 'category': 'rtw', 'serial': 'PA-1206',
-        'brand': 'Rick Owens', 'name': 'Kiss Heels',
-        'price': 95, 'max_days': 7, 'condition_score': 7,
-        'material': 'Calfskin Leather', 'origin': 'Italy', 'condition': 'Good',
-        'sizes': ['EU 40', 'EU 42', 'EU 43', 'EU 44'],
-        'image': '/static/products/kiss-heels-1.png',
-        'images': [
-            '/static/products/kiss-heels-1.png',
-            '/static/products/kiss-heels-2.png',
-            '/static/products/kiss-heels-3.png',
-        ]
-    },
-    {
-        'id': 4, 'category': 'rtw', 'serial': 'PA-0512',
-        'brand': 'Yohji Yamamoto', 'name': 'Silk shirt dress',
-        'price': 200, 'max_days': 7, 'condition_score': 10,
-        'material': '100% Mulberry Silk', 'origin': 'Japan', 'condition': 'Pristine',
-        'sizes': ['XS', 'S', 'M'],
-        'image': 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?q=80&w=1974&auto=format&fit=crop'
-    },
-    {
-        'id': 5, 'category': 'rtw', 'serial': 'PA-0513',
-        'brand': 'Vetements', 'name': 'Oversized bomber',
-        'price': 120, 'max_days': 14, 'condition_score': 9,
-        'material': 'Recycled Nylon', 'origin': 'Italy', 'condition': 'Excellent',
-        'sizes': ['S', 'M', 'L'],
-        'image': 'https://images.unsplash.com/photo-1550614000-4b95d4ed79cf?q=80&w=2000&auto=format&fit=crop'
-    },
-    {
-        'id': 6, 'category': 'rtw', 'serial': 'PA-0556',
-        'brand': 'Comme des Garçons', 'name': 'Layered jacket',
-        'price': 90, 'max_days': 10, 'condition_score': 7,
-        'material': 'Cotton / Polyester', 'origin': 'Japan', 'condition': 'Good',
-        'sizes': ['S', 'M', 'L'],
-        'image': 'https://images.unsplash.com/photo-1520639888713-7851133b1ed0?q=80&w=1974&auto=format&fit=crop'
-    },
-    {
-        'id': 7, 'category': 'couture', 'serial': 'PA-C001',
-        'brand': 'Maison Margiela', 'name': 'Artisanal recicla gown',
-        'price': 900, 'max_days': 3, 'condition_score': 10,
-        'material': 'Reclaimed vintage textiles', 'origin': 'France', 'condition': 'Museum grade',
-        'sizes': ['One size'],
-        'image': 'https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?q=80&w=2071&auto=format&fit=crop'
-    },
-    {
-        'id': 8, 'category': 'couture', 'serial': 'PA-C002',
-        'brand': 'Schiaparelli', 'name': 'Golden vein gown',
-        'price': 1200, 'max_days': 3, 'condition_score': 10,
-        'material': 'Silk & Brass', 'origin': 'France', 'condition': 'Exhibition piece',
-        'sizes': ['One size'],
-        'image': 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=1983&auto=format&fit=crop'
-    },
-]
+PRODUCTS = fallback_products_list()
 
 BRANDS = [
     {'name': 'Maison Margiela', 'slug': 'Maison Margiela', 'css_class': 'brand-margiela'},
     {'name': 'Balenciaga', 'slug': 'Balenciaga', 'css_class': 'brand-balenciaga'},
+    {'name': 'Balenciaga Coture', 'slug': 'Balenciaga Coture', 'css_class': 'brand-balenciaga'},
     {'name': 'Rick Owens', 'slug': 'Rick Owens', 'css_class': 'brand-rickowens'},
+    {'name': 'YZY', 'slug': 'YZY', 'css_class': 'brand-yzy'},
+    {'name': 'Raf Simons', 'slug': 'Raf Simons', 'css_class': 'brand-raf-simons'},
     {'name': 'Yohji Yamamoto', 'slug': 'Yohji Yamamoto', 'css_class': 'brand-yohji'},
     {'name': 'Vetements', 'slug': 'Vetements', 'css_class': 'brand-vetements'},
     {'name': 'Comme des Garçons', 'slug': 'Comme des Garçons', 'css_class': 'brand-cdg'},
@@ -638,6 +704,101 @@ def get_cart_total():
     return sum(item['total_price'] for item in get_cart())
 
 
+def get_wishlist_ids():
+    raw = session.get('wishlist') or []
+    out = []
+    for x in raw:
+        try:
+            out.append(int(x))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+ACC_EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
+
+def get_current_user():
+    uid = session.get('user_id')
+    if uid is None:
+        return None
+    try:
+        uid_int = int(uid)
+    except (TypeError, ValueError):
+        return None
+    return {
+        'id': uid_int,
+        'email': session.get('user_email') or '',
+        'display_name': session.get('user_display_name') or '',
+    }
+
+
+def _clear_user_session():
+    for k in ('user_id', 'user_email', 'user_display_name'):
+        session.pop(k, None)
+    session.modified = True
+
+
+def ensure_app_users_table():
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            IF OBJECT_ID('AppUsers', 'U') IS NULL
+            CREATE TABLE AppUsers (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                email NVARCHAR(255) NOT NULL UNIQUE,
+                password_hash NVARCHAR(500) NOT NULL,
+                display_name NVARCHAR(120) NOT NULL,
+                created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+            );
+            """
+        )
+        conn.commit()
+
+
+def _user_fetch_by_email(email_norm):
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            'SELECT id, email, password_hash, display_name FROM AppUsers WHERE email = ?',
+            (email_norm,),
+        )
+        return cur.fetchone()
+
+
+def _user_insert(email_norm, password_plain, display_name):
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO AppUsers (email, password_hash, display_name)
+            OUTPUT INSERTED.id
+            VALUES (?, ?, ?)
+            """,
+            (email_norm, generate_password_hash(password_plain), display_name),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        return int(row[0])
+
+
+def _collection_listing_data(for_home=False):
+    q = request.args.get('q', '')
+    brand = request.args.get('brand', '')
+    min_cond = int(request.args.get('min_condition', 0))
+    products = filter_products(category='rtw', query=q, brand=brand, min_condition=min_cond)
+    clear_listing_url = url_for('home' if for_home else 'collection')
+    return {
+        'products': products,
+        'active_brand': brand,
+        'search_query': q,
+        'min_condition': min_cond,
+        'condition_labels': CONDITION_LABELS,
+        'clear_listing_url': clear_listing_url,
+    }
+
+
 def _nullable_str(value):
     """Пустая строка → None для колонок БД (material, origin, condition), чтобы можно было «очистить» поле."""
     if value is None:
@@ -660,26 +821,47 @@ def _fetch_product_image_rows(product_id):
         return []
 
 
-def _rebuild_product_images_after_removal(cur, product_id, remove_ids):
-    """Удаляет выбранные фото из ProductImages, перенумеровывает sort_order, обновляет main_image в Products."""
-    if not remove_ids:
-        return
+def _apply_admin_product_image_changes(cur, product_id, remove_ids, ordered_ids, uploaded_main, extra_images):
+    """Удаление отмеченных, порядок из формы (drag), новая главная при загрузке, доп. файлы в конец."""
     cur.execute(
-        'SELECT id, image_url FROM ProductImages WHERE product_id=? ORDER BY sort_order, id',
+        'SELECT id, image_url, sort_order FROM ProductImages WHERE product_id=? ORDER BY sort_order, id',
         (product_id,),
     )
     rows = cur.fetchall()
-    remove_set = set(remove_ids)
-    kept = [r for r in rows if r.id not in remove_set]
-    if not kept:
+    remove_set = set(remove_ids or [])
+    remaining = [r for r in rows if int(r.id) not in remove_set]
+    if not remaining:
         raise ValueError('__LAST_IMAGE__')
+    by_id = {int(r.id): r.image_url for r in remaining}
+
+    id_order = []
+    seen = set()
+    for oid in ordered_ids or []:
+        if oid in by_id and oid not in seen:
+            id_order.append(oid)
+            seen.add(oid)
+    for r in sorted(remaining, key=lambda x: (x.sort_order, x.id)):
+        rid = int(r.id)
+        if rid not in seen:
+            id_order.append(rid)
+            seen.add(rid)
+
+    urls = [by_id[i] for i in id_order]
+    if uploaded_main:
+        urls = [uploaded_main] + (urls[1:] if urls else [])
+    for u in extra_images or []:
+        urls.append(u)
+    if not urls:
+        raise ValueError('__LAST_IMAGE__')
+
     cur.execute('DELETE FROM ProductImages WHERE product_id=?', (product_id,))
-    for i, r in enumerate(kept):
+    for i, u in enumerate(urls):
         cur.execute(
             'INSERT INTO ProductImages (product_id, image_url, sort_order) VALUES (?, ?, ?)',
-            (product_id, r.image_url, i),
+            (product_id, u, i),
         )
-    cur.execute('UPDATE Products SET main_image=? WHERE id=?', (kept[0].image_url, product_id))
+    cur.execute('UPDATE Products SET main_image=? WHERE id=?', (urls[0], product_id))
+    return urls[0]
 
 
 def get_db_connection():
@@ -1022,26 +1204,41 @@ def filter_products(category=None, query=None, brand=None, min_condition=0):
 def set_lang(lang):
     if lang in TRANSLATIONS:
         session['lang'] = lang
-    return redirect(request.referrer or url_for('collection'))
+    return redirect(request.referrer or url_for('home'))
 
 @app.route('/')
-def splash():
+def home():
+    kw = _collection_listing_data(for_home=True)
     return render_template(
-        'splash.html',
-        splash_image=url_for('static', filename=SPLASH_IMAGE),
+        'collection.html',
+        show_hero=True,
+        hero_image=url_for('static', filename=SPLASH_IMAGE),
+        active_page='collection',
+        cart_count=get_cart_count(),
         t=t,
+        tv=tv,
+        **kw,
     )
 
 @app.route('/collection')
 def collection():
-    q = request.args.get('q', '')
-    brand = request.args.get('brand', '')
-    min_cond = int(request.args.get('min_condition', 0))
-    products = filter_products(category='rtw', query=q, brand=brand, min_condition=min_cond)
-    return render_template('collection.html', products=products, active_brand=brand, search_query=q, active_page='collection', cart_count=get_cart_count(), t=t, tv=tv, min_condition=min_cond, condition_labels=CONDITION_LABELS)
+    kw = _collection_listing_data(for_home=False)
+    return render_template(
+        'collection.html',
+        show_hero=True,
+        hero_image=url_for('static', filename=SPLASH_IMAGE),
+        active_page='collection',
+        cart_count=get_cart_count(),
+        t=t,
+        tv=tv,
+        **kw,
+    )
 
 @app.route('/couture')
 def couture():
+    if not get_current_user():
+        flash(t('acc_couture_members_only'), 'error')
+        return redirect(url_for('account'))
     products = filter_products(category='couture')
     return render_template('couture.html', products=products, active_page='couture', cart_count=get_cart_count(), t=t, tv=tv)
 
@@ -1050,10 +1247,61 @@ def product_detail(product_id):
     product = find_product(product_id)
     if not product:
         return 'Not found', 404
+    if product.get('category') == 'couture' and not get_current_user():
+        flash(t('acc_couture_members_only'), 'error')
+        return redirect(url_for('account'))
     days = int(request.args.get('days', 1))
     days = min(max(days, 1), product['max_days'])
     total = product['price'] * days
     return render_template('product.html', product=product, selected_days=days, total_price=total, active_page='product', cart_count=get_cart_count(), t=t, tv=tv)
+
+
+@app.route('/wishlist/toggle', methods=['POST'])
+def wishlist_toggle():
+    if not request.is_json:
+        return jsonify(ok=False, error='json'), 400
+    payload = request.get_json(silent=True) or {}
+    try:
+        product_id = int(payload.get('product_id'))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error='bad_id'), 400
+    if not find_product(product_id):
+        return jsonify(ok=False, error='not_found'), 404
+    ids = list(get_wishlist_ids())
+    if product_id in ids:
+        ids = [i for i in ids if i != product_id]
+        in_wish = False
+    else:
+        ids.append(product_id)
+        in_wish = True
+    session['wishlist'] = ids
+    session.modified = True
+    return jsonify(ok=True, in_wishlist=in_wish, count=len(ids))
+
+
+@app.route('/wishlist')
+def wishlist_page():
+    ids = get_wishlist_ids()
+    products = []
+    for pid in ids:
+        p = find_product(pid)
+        if p:
+            products.append(p)
+    return render_template(
+        'wishlist.html',
+        products=products,
+        active_page='wishlist',
+        cart_count=get_cart_count(),
+        t=t,
+        tv=tv,
+    )
+
+
+def _cart_add_wants_json():
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return True
+    return request.accept_mimetypes.best_match(['application/json', 'text/html']) == 'application/json'
+
 
 @app.route('/cart/add', methods=['POST'])
 def add_to_cart():
@@ -1062,7 +1310,14 @@ def add_to_cart():
     size = request.form.get('size', '')
     product = find_product(product_id)
     if not product:
-        return redirect(url_for('collection'))
+        if _cart_add_wants_json():
+            return jsonify(ok=False, error='not_found'), 404
+        return redirect(url_for('home'))
+    if product.get('category') == 'couture' and not get_current_user():
+        if _cart_add_wants_json():
+            return jsonify(ok=False, error='login_required'), 403
+        flash(t('acc_couture_cart_login'), 'error')
+        return redirect(url_for('account'))
     days = min(max(days, 1), product['max_days'])
     cart = get_cart()
     cart.append({
@@ -1078,8 +1333,10 @@ def add_to_cart():
         'image': product['image'],
     })
     session['cart'] = cart
-    flash(f'{t("added")} — {product["name"]}')
-    return redirect(url_for('cart'))
+    if _cart_add_wants_json():
+        return jsonify(ok=True, cart_count=len(cart), product_name=product['name'])
+    flash(product['name'], 'cart_added')
+    return redirect(url_for('product_detail', product_id=product_id, days=days))
 
 @app.route('/cart/remove/<int:cart_id>')
 def remove_from_cart(cart_id):
@@ -1095,6 +1352,101 @@ def cart():
 def clear_cart():
     session['cart'] = []
     return redirect(url_for('cart'))
+
+
+@app.route('/account', methods=['GET'])
+def account():
+    return render_template(
+        'account.html',
+        active_page='account',
+        cart_count=get_cart_count(),
+        t=t,
+    )
+
+
+@app.route('/account/login', methods=['POST'])
+def account_login():
+    email = (request.form.get('email') or '').strip().lower()
+    password = request.form.get('password') or ''
+    if not email or not password:
+        flash(t('acc_err_credentials'), 'error')
+        return redirect(url_for('account'))
+    try:
+        ensure_app_users_table()
+        row = _user_fetch_by_email(email)
+    except Exception:
+        flash(t('acc_db_unavailable'), 'error')
+        return redirect(url_for('account'))
+    if not row or not check_password_hash(row[2], password):
+        flash(t('acc_err_credentials'), 'error')
+        return redirect(url_for('account'))
+    session['user_id'] = int(row[0])
+    session['user_email'] = row[1]
+    session['user_display_name'] = row[3]
+    session.modified = True
+    flash(t('acc_ok_login'), 'success')
+    return redirect(url_for('account'))
+
+
+@app.route('/account/register', methods=['POST'])
+def account_register():
+    email = (request.form.get('email') or '').strip().lower()
+    password = request.form.get('password') or ''
+    password2 = request.form.get('password_confirm') or ''
+    display_name = (request.form.get('display_name') or '').strip()
+    if not display_name:
+        flash(t('acc_err_name'), 'error')
+        return redirect(url_for('account'))
+    if len(display_name) > 120:
+        display_name = display_name[:120]
+    if not ACC_EMAIL_RE.match(email):
+        flash(t('acc_err_email_invalid'), 'error')
+        return redirect(url_for('account'))
+    if len(password) < 8:
+        flash(t('acc_err_password_short'), 'error')
+        return redirect(url_for('account'))
+    if password != password2:
+        flash(t('acc_err_password_mismatch'), 'error')
+        return redirect(url_for('account'))
+    try:
+        ensure_app_users_table()
+        if _user_fetch_by_email(email):
+            flash(t('acc_err_email_used'), 'error')
+            return redirect(url_for('account'))
+        new_id = _user_insert(email, password, display_name)
+    except Exception as e:
+        err = str(e).upper()
+        if '23000' in str(e) or 'UNIQUE' in err or '2627' in str(e):
+            flash(t('acc_err_email_used'), 'error')
+            return redirect(url_for('account'))
+        flash(t('acc_db_unavailable'), 'error')
+        return redirect(url_for('account'))
+    session['user_id'] = new_id
+    session['user_email'] = email
+    session['user_display_name'] = display_name
+    session.modified = True
+    flash(t('acc_ok_register'), 'success')
+    return redirect(url_for('account'))
+
+
+@app.route('/account/logout', methods=['POST'])
+def account_logout():
+    _clear_user_session()
+    return redirect(url_for('account'))
+
+
+@app.route('/members')
+def members():
+    if not get_current_user():
+        flash(t('acc_login_required'), 'error')
+        return redirect(url_for('account'))
+    return render_template(
+        'members.html',
+        active_page='members',
+        cart_count=get_cart_count(),
+        t=t,
+    )
+
 
 @app.route('/search')
 def search():
@@ -1201,6 +1553,23 @@ def admin_panel():
     )
 
 
+@app.route('/admin/product/<int:product_id>/delete', methods=['POST'])
+def admin_delete_product(product_id):
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id FROM Products WHERE id = ?', (product_id,))
+            if not cur.fetchone():
+                session['admin_status'] = {'type': 'error', 'message': t('admin_product_not_found')}
+                return redirect(url_for('admin_panel'))
+            cur.execute('DELETE FROM Products WHERE id = ?', (product_id,))
+            conn.commit()
+        session['admin_status'] = {'type': 'success', 'message': t('admin_product_deleted')}
+    except Exception as exc:
+        session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+    return redirect(url_for('admin_panel'))
+
+
 @app.route('/admin/product/<int:product_id>/edit', methods=['GET', 'POST'])
 def admin_edit_product(product_id):
     product = find_product(product_id)
@@ -1233,6 +1602,12 @@ def admin_edit_product(product_id):
                     remove_ids.append(int(x))
                 except ValueError:
                     pass
+            ordered_ids = []
+            for x in request.form.getlist('image_order_id'):
+                try:
+                    ordered_ids.append(int(x))
+                except ValueError:
+                    pass
             uploaded_main = _save_uploaded_image(request.files.get('main_image_file'))
             extra_images = []
             for img in request.files.getlist('extra_image_files'):
@@ -1241,18 +1616,15 @@ def admin_edit_product(product_id):
                     extra_images.append(saved)
             with get_db_connection() as conn:
                 cur = conn.cursor()
-                if remove_ids:
-                    try:
-                        _rebuild_product_images_after_removal(cur, product_id, remove_ids)
-                    except ValueError as ve:
-                        if str(ve) == '__LAST_IMAGE__':
-                            session['admin_status'] = {'type': 'error', 'message': t('admin_cannot_remove_last_image')}
-                            return redirect(url_for('admin_edit_product', product_id=product_id))
-                        raise
-                cur.execute('SELECT main_image FROM Products WHERE id=?', (product_id,))
-                er = cur.fetchone()
-                existing_main = er[0] if er and er[0] is not None else product['image']
-                main_image = uploaded_main or existing_main
+                try:
+                    main_image = _apply_admin_product_image_changes(
+                        cur, product_id, remove_ids, ordered_ids, uploaded_main, extra_images
+                    )
+                except ValueError as ve:
+                    if str(ve) == '__LAST_IMAGE__':
+                        session['admin_status'] = {'type': 'error', 'message': t('admin_cannot_remove_last_image')}
+                        return redirect(url_for('admin_edit_product', product_id=product_id))
+                    raise
                 if not main_image:
                     session['admin_status'] = {'type': 'error', 'message': t('admin_required_main_image')}
                     return redirect(url_for('admin_edit_product', product_id=product_id))
@@ -1285,32 +1657,6 @@ def admin_edit_product(product_id):
                         material, origin, condition, main_image, product_id,
                     ),
                 )
-                cur.execute(
-                    'SELECT id FROM ProductImages WHERE product_id=? AND sort_order=0',
-                    (product_id,),
-                )
-                if cur.fetchone():
-                    cur.execute(
-                        'UPDATE ProductImages SET image_url=? WHERE product_id=? AND sort_order=0',
-                        (main_image, product_id),
-                    )
-                else:
-                    cur.execute(
-                        'INSERT INTO ProductImages (product_id, image_url, sort_order) VALUES (?, ?, ?)',
-                        (product_id, main_image, 0),
-                    )
-                cur.execute(
-                    'SELECT COALESCE(MAX(sort_order), 0) FROM ProductImages WHERE product_id=?',
-                    (product_id,),
-                )
-                max_sort_row = cur.fetchone()
-                max_sort = int(max_sort_row[0]) if max_sort_row and max_sort_row[0] is not None else 0
-                for url in extra_images:
-                    max_sort += 1
-                    cur.execute(
-                        'INSERT INTO ProductImages (product_id, image_url, sort_order) VALUES (?, ?, ?)',
-                        (product_id, url, max_sort),
-                    )
                 cur.execute('DELETE FROM ProductSizes WHERE product_id=?', (product_id,))
                 for size_label in size_values:
                     cur.execute(
@@ -1593,7 +1939,15 @@ def api_calculate():
 
 @app.context_processor
 def inject_globals():
-    return {'current_year': datetime.now().year, 'current_lang': get_lang(), 'tc': tc}
+    wids = get_wishlist_ids()
+    return {
+        'current_year': datetime.now().year,
+        'current_lang': get_lang(),
+        'tc': tc,
+        'wishlist_ids': frozenset(wids),
+        'wishlist_count': len(wids),
+        'current_user': get_current_user(),
+    }
 
 
 if __name__ == '__main__':

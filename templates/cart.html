@@ -34,7 +34,7 @@
             <a href="{{ url_for('clear_cart') }}" class="cart-clear-link">{{ t('clear_bag') }}</a>
         </div>
     {% else %}
-        <div class="empty-state">{{ t('bag_empty') }}<br><br><a href="{{ url_for('collection') }}" class="btn-outline">{{ t('browse') }}</a></div>
+        <div class="empty-state">{{ t('bag_empty') }}<br><br><a href="{{ url_for('home') }}" class="btn-outline">{{ t('browse') }}</a></div>
     {% endif %}
 </div>
 {% endblock %}

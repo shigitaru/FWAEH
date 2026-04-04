@@ -1,8 +1,28 @@
 import os
+import sys
 import pyodbc
+
+_APP_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+if _APP_ROOT not in sys.path:
+    sys.path.insert(0, _APP_ROOT)
+
+from seed_defaults import (  # noqa: E402
+    DEFAULT_CAMPAIGN_SETTINGS,
+    DEMO_PRODUCTS,
+    campaign_stories_for_seed,
+    resolve_demo_item_images,
+    sync_balenciaga_graffiti_jeans_product_images,
+    sync_bc_couture_bag_product_images,
+    sync_kiss_heels_product_images,
+    sync_raf_bomber_product_images,
+    sync_yzy_grillz_product_images,
+)
 
 DB_NAME = os.getenv("DB_NAME", "ProtocolArchive")
 SERVER = os.getenv("DB_SERVER", r"SHIGITARU\SQLEXPRESS")
+
+# Сбросить витрину и кампанию к содержимому seed_defaults.py (удалит текущие товары/истории).
+SEED_RESET_DEMO = os.getenv("SEED_RESET_DEMO", "").strip().lower() in ("1", "true", "yes")
 
 MASTER_CONN_STR = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
@@ -23,6 +43,195 @@ APP_CONN_STR = (
     "TrustServerCertificate=yes;"
     "MARS_Connection=no;"
 )
+
+
+def _ensure_brand_id(cur, brand_name):
+    cur.execute("SELECT id FROM Brands WHERE name = ?", (brand_name,))
+    row = cur.fetchone()
+    if row:
+        return int(row[0])
+    cur.execute(
+        """
+        INSERT INTO Brands (name, slug, css_class)
+        OUTPUT INSERTED.id
+        VALUES (?, ?, ?)
+        """,
+        (brand_name, brand_name, ""),
+    )
+    out = cur.fetchone()
+    return int(out[0]) if out and out[0] is not None else None
+
+
+def _clear_product_rows(cur):
+    cur.execute("DELETE FROM ProductImages")
+    cur.execute("DELETE FROM ProductSizes")
+    cur.execute("DELETE FROM Products")
+
+
+def _clear_campaign_rows(cur):
+    cur.execute("DELETE FROM CampaignStoryImages")
+    cur.execute("DELETE FROM CampaignStories")
+    cur.execute("DELETE FROM CampaignLooks")
+
+
+def _insert_demo_products(cur, items=None):
+    catalog = items if items is not None else DEMO_PRODUCTS
+    for item in catalog:
+        brand_id = _ensure_brand_id(cur, item["brand"])
+        if not brand_id:
+            continue
+        main_image, gallery = resolve_demo_item_images(item)
+        cur.execute(
+            """
+            INSERT INTO Products (
+                brand_id, category, serial, name, price, max_days, condition_score,
+                material, origin, [condition], main_image
+            )
+            OUTPUT INSERTED.id
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                brand_id,
+                item["category"],
+                item["serial"],
+                item["name"],
+                item["price"],
+                item["max_days"],
+                item["condition_score"],
+                item.get("material"),
+                item.get("origin"),
+                item.get("condition"),
+                main_image,
+            ),
+        )
+        prod_row = cur.fetchone()
+        product_id = int(prod_row[0]) if prod_row and prod_row[0] is not None else None
+        if not product_id:
+            continue
+        for sort_order, url in enumerate(gallery):
+            cur.execute(
+                """
+                INSERT INTO ProductImages (product_id, image_url, sort_order)
+                VALUES (?, ?, ?)
+                """,
+                (product_id, url, sort_order),
+            )
+        for size_label in item.get("sizes") or []:
+            cur.execute(
+                "INSERT INTO ProductSizes (product_id, size_label) VALUES (?, ?)",
+                (product_id, size_label),
+            )
+
+
+def _ensure_campaign_settings(cur, force_reset):
+    d = DEFAULT_CAMPAIGN_SETTINGS
+    cur.execute("SELECT COUNT(*) FROM CampaignSettings WHERE id = 1")
+    if cur.fetchone()[0] == 0:
+        cur.execute(
+            """
+            INSERT INTO CampaignSettings (id, intro_en, intro_ru, tagline_en, tagline_ru)
+            VALUES (1, ?, ?, ?, ?)
+            """,
+            (d["intro_en"], d["intro_ru"], d["tagline_en"], d["tagline_ru"]),
+        )
+    elif force_reset:
+        cur.execute(
+            """
+            UPDATE CampaignSettings
+            SET intro_en = ?, intro_ru = ?, tagline_en = ?, tagline_ru = ?
+            WHERE id = 1
+            """,
+            (d["intro_en"], d["intro_ru"], d["tagline_en"], d["tagline_ru"]),
+        )
+
+
+def _insert_campaign_from_defaults(cur):
+    stories = sorted(campaign_stories_for_seed(), key=lambda x: x["sort_order"])
+    for st in stories:
+        cur.execute(
+            """
+            INSERT INTO CampaignStories (
+                sort_order, headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru
+            )
+            OUTPUT INSERTED.id
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                st["sort_order"],
+                st["headline_en"],
+                st["headline_ru"],
+                st["body_en"],
+                st["body_ru"],
+                st["credits_en"],
+                st["credits_ru"],
+            ),
+        )
+        sid = int(cur.fetchone()[0])
+        cover = st["images"][0]
+        cur.execute(
+            """
+            INSERT INTO CampaignLooks (sort_order, image_url, ref_text, location_text)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                st["sort_order"],
+                cover,
+                st["headline_en"][:120],
+                (st["credits_en"] or "")[:120],
+            ),
+        )
+        for idx, url in enumerate(st["images"]):
+            cur.execute(
+                """
+                INSERT INTO CampaignStoryImages (story_id, sort_order, image_url)
+                VALUES (?, ?, ?)
+                """,
+                (sid, idx, url),
+            )
+
+
+def _seed_demo_products(cur, force_reset, items=None):
+    cur.execute("SELECT COUNT(*) AS c FROM Products")
+    has_products = cur.fetchone()[0] > 0
+    if has_products and not force_reset:
+        return
+    if force_reset:
+        _clear_product_rows(cur)
+        if has_products:
+            print("Demo catalog reset from seed_defaults.py.")
+    _insert_demo_products(cur, items)
+    n = len(items) if items is not None else len(DEMO_PRODUCTS)
+    print(f"Demo products seeded ({n} items).")
+
+
+def _seed_campaign(cur, force_reset):
+    cur.execute("SELECT COUNT(*) AS c FROM CampaignStories")
+    story_count = cur.fetchone()[0]
+    if force_reset:
+        _clear_campaign_rows(cur)
+        story_count = 0
+    _ensure_campaign_settings(cur, force_reset)
+    if story_count > 0:
+        return
+    _insert_campaign_from_defaults(cur)
+    print("Campaign stories and images seeded.")
+
+
+def apply_demo_seed(cur, *, reset=None, products=None):
+    """
+    Вставить демо-витрину и кампанию из seed_defaults.py.
+    reset=None: брать флаг из переменной окружения SEED_RESET_DEMO.
+    reset=True: очистить товары и кампанию и залить заново (как после потери БД).
+    products: если задан — вставить только этот список (иначе полный DEMO_PRODUCTS).
+    """
+    force = SEED_RESET_DEMO if reset is None else bool(reset)
+    _seed_demo_products(cur, force, items=products)
+    sync_kiss_heels_product_images(cur)
+    sync_raf_bomber_product_images(cur)
+    sync_yzy_grillz_product_images(cur)
+    sync_balenciaga_graffiti_jeans_product_images(cur)
+    sync_bc_couture_bag_product_images(cur)
+    _seed_campaign(cur, force)
 
 
 def create_database():
@@ -146,113 +355,42 @@ def create_tables():
             );
             """
         )
+        cur.execute(
+            """
+            IF OBJECT_ID('AppUsers', 'U') IS NULL
+            CREATE TABLE AppUsers (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                email NVARCHAR(255) NOT NULL UNIQUE,
+                password_hash NVARCHAR(500) NOT NULL,
+                display_name NVARCHAR(120) NOT NULL,
+                created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+            );
+            """
+        )
 
-        # Seed brand suggestions so admin has autocomplete immediately.
         default_brands = [
-            'Rick Owens',
-            'YZY',
-            'Maison Margiela',
-            'Balenciaga',
-            'Vetements',
-            'Gucci',
-            'Raf Simons',
+            "Rick Owens",
+            "YZY",
+            "Maison Margiela",
+            "Balenciaga",
+            "Balenciaga Coture",
+            "Vetements",
+            "Gucci",
+            "Raf Simons",
+            "Yohji Yamamoto",
+            "Comme des Garçons",
+            "Schiaparelli",
         ]
         for brand_name in default_brands:
-            slug = brand_name
             cur.execute(
                 """
                 IF NOT EXISTS (SELECT 1 FROM Brands WHERE name = ?)
-                    INSERT INTO Brands (name, slug, css_class) VALUES (?, ?, '')
+                    INSERT INTO Brands (name, slug, css_class) VALUES (?, ?, N'')
                 """,
-                (brand_name, brand_name, slug),
+                (brand_name, brand_name, brand_name),
             )
 
-        cur.execute("SELECT COUNT(*) AS c FROM CampaignSettings WHERE id = 1")
-        if cur.fetchone()[0] == 0:
-            cur.execute(
-                """
-                INSERT INTO CampaignSettings (id, intro_en, intro_ru, tagline_en, tagline_ru)
-                VALUES (1, ?, ?, ?, ?)
-                """,
-                (
-                    "Silhouette, material, and light — a visual sequence shot for Protocol Archive.",
-                    "Силуэт, материал и свет — визуальный ряд для Protocol Archive.",
-                    "Editorial series",
-                    "Редакционная серия",
-                ),
-            )
-        cur.execute("SELECT COUNT(*) AS c FROM CampaignStories")
-        if cur.fetchone()[0] == 0:
-            cur.execute("SELECT COUNT(*) AS c FROM CampaignLooks")
-            if cur.fetchone()[0] > 0:
-                cur.execute(
-                    "SELECT sort_order, image_url, ref_text, location_text FROM CampaignLooks ORDER BY sort_order, id"
-                )
-                for row in cur.fetchall():
-                    so, url, ref_t, loc_t = row[0], row[1], row[2], row[3]
-                    cur.execute(
-                        """
-                        INSERT INTO CampaignStories (sort_order, headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru)
-                        OUTPUT INSERTED.id
-                        VALUES (?, ?, ?, N'', N'', ?, ?)
-                        """,
-                        (so, ref_t, ref_t, loc_t or "", loc_t or ""),
-                    )
-                    sid = cur.fetchone()[0]
-                    cur.execute(
-                        """
-                        INSERT INTO CampaignStoryImages (story_id, sort_order, image_url)
-                        VALUES (?, 0, ?)
-                        """,
-                        (sid, url),
-                    )
-            else:
-                default_stories = [
-                    (
-                        0,
-                        "Look 01",
-                        "Look 01",
-                        "Editorial session in Paris — silhouette, fabric, and light.",
-                        "Редакционная съёмка в Париже — силуэт, ткань и свет.",
-                        "Paris",
-                        "Paris",
-                        "https://images.unsplash.com/photo-1612336307429-8a898d10e223?q=80&w=2070&auto=format&fit=crop",
-                    ),
-                    (
-                        1,
-                        "Look 02",
-                        "Look 02",
-                        "Studio study — controlled lighting and form.",
-                        "Студийный этюд — контроль света и формы.",
-                        "Studio",
-                        "Студия",
-                        "https://images.unsplash.com/photo-1550614000-4b95d4ed79cf?q=80&w=2000&auto=format&fit=crop",
-                    ),
-                    (
-                        2,
-                        "Look 03",
-                        "Look 03",
-                        "Archive references — materials from the house collection.",
-                        "Отсылки к архиву — материалы из домашней коллекции.",
-                        "Archive",
-                        "Архив",
-                        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop",
-                    ),
-                ]
-                for so, h_en, h_ru, b_en, b_ru, c_en, c_ru, url in default_stories:
-                    cur.execute(
-                        """
-                        INSERT INTO CampaignStories (sort_order, headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru)
-                        OUTPUT INSERTED.id
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (so, h_en, h_ru, b_en, b_ru, c_en, c_ru),
-                    )
-                    sid = cur.fetchone()[0]
-                    cur.execute(
-                        "INSERT INTO CampaignStoryImages (story_id, sort_order, image_url) VALUES (?, 0, ?)",
-                        (sid, url),
-                    )
+        apply_demo_seed(cur)
 
         print("Tables are ready.")
 

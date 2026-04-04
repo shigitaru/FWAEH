@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ current_lang }}">
+<html lang="{{ current_lang }}"{% block html_attrs %}{% endblock %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17,20 +17,42 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}<div class="flash-notification">{{ messages[0] }}</div>{% endif %}
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for category, message in msgs %}
+    {% if category == 'cart_added' %}
+    <div class="cart-added-toast" role="status" aria-live="polite" data-cart-toast>
+        <div class="cart-added-toast-inner">
+            <span class="cart-added-toast-icon" aria-hidden="true">✓</span>
+            <div class="cart-added-toast-text">
+                <span class="cart-added-toast-title">{{ t('added_to_bag_title') }}</span>
+                <span class="cart-added-toast-name">{{ message }}</span>
+            </div>
+            <a href="{{ url_for('cart') }}" class="cart-added-toast-link">{{ t('view_bag') }}</a>
+            <button type="button" class="cart-added-toast-close" aria-label="{{ t('close') }}">×</button>
+        </div>
+    </div>
+    {% elif category in ['error', 'success'] %}
+    <div class="flash-notification flash-notification--{{ category }}">{{ message }}</div>
+    {% else %}
+    <div class="flash-notification">{{ message }}</div>
+    {% endif %}
+    {% endfor %}
     {% endwith %}
 
     <header class="site-header">
         <div class="header-inner">
-            <nav class="header-nav" aria-label="Main">
-                <a href="{{ url_for('collection') }}" class="{% if active_page == 'collection' %}active{% endif %}">{{ t('collection') }}</a>
-                <a href="{{ url_for('couture') }}" class="{% if active_page == 'couture' %}active{% endif %}">{{ t('couture') }}</a>
-                <a href="{{ url_for('campaign') }}" class="{% if active_page == 'campaign' %}active{% endif %}">{{ t('campaign') }}</a>
-                <a href="{{ url_for('about') }}" class="{% if active_page == 'about' %}active{% endif %}">{{ t('about') }}</a>
-            </nav>
+            <div class="header-menu-slot">
+                <button type="button" class="menu-open-btn" id="pa-menu-open" aria-expanded="false" aria-controls="pa-nav-drawer" aria-label="{{ t('menu') }}">
+                    <span class="menu-open-btn-burger" aria-hidden="true"><span></span><span></span><span></span></span>
+                    <span class="menu-open-btn-label">{{ t('menu') }}</span>
+                </button>
+                <a href="{{ url_for('search') }}" class="header-search-link {% if active_page == 'search' %}is-active{% endif %}">
+                    <svg class="header-search-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M15 15l6 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    <span class="header-search-text">{{ t('search') }}</span>
+                </a>
+            </div>
             <div class="header-brand">
-                <a href="{{ url_for('collection') }}" class="logo logo-roll" aria-label="Protocol-Archive">
+                <a href="{{ url_for('home') }}" class="logo logo-roll" aria-label="Protocol-Archive">
                     <span class="logo-roll-viewport">
                         <span class="logo-roll-track">
                             <span class="logo-roll-cell">Protocol-Archive</span>
@@ -44,15 +66,63 @@
             <div class="header-right">
                 <span class="header-clock" id="live-clock">00:00:00.000</span>
                 <div class="header-utils">
-                    <a href="{{ url_for('search') }}">{{ t('search') }}</a>
-                    <a href="{{ url_for('admin_panel') }}">{{ t('admin') }}</a>
-                    <a href="{{ url_for('cart') }}">{{ t('bag') }} ({{ cart_count }})</a>
+                    <a href="{{ url_for('account') }}" class="header-icon-link {% if active_page == 'account' %}active{% endif %}" aria-label="{{ t('aria_account') }}">
+                        <span class="header-icon-wrap">
+                            <svg class="header-icon-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                                <circle cx="12" cy="9" r="3.25" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M6.5 20.25v-.25c0-3.04 2.46-5.5 5.5-5.5s5.5 2.46 5.5 5.5v.25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                    </a>
+                    <a href="{{ url_for('wishlist_page') }}" class="header-icon-link {% if active_page == 'wishlist' %}active{% endif %}" aria-label="{{ t('aria_wishlist_page') }}">
+                        <span class="header-icon-wrap">
+                            <svg class="header-icon-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 21s-7-4.6-9.6-9.2C-.2 8.4 2.6 4 7.5 4c2.4 0 4 1.2 4.5 3C12.5 5.2 14 4 16.5 4 21.4 4 24.2 8.4 21.6 11.8 19 16.4 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                            <span class="header-icon-badge" id="header-wish-count">{{ wishlist_count }}</span>
+                        </span>
+                    </a>
+                    <a href="{{ url_for('cart') }}" class="header-icon-link" id="header-bag-link" aria-label="{{ t('aria_bag') }}">
+                        <span class="header-icon-wrap">
+                            <svg class="header-icon-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                                <path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M6.5 7h14.5l-1.4 13.5H8L6.5 7z"/>
+                                <path fill="none" stroke="currentColor" stroke-width="1.5" d="M9 7V5.5a3 3 0 016 0V7"/>
+                            </svg>
+                            <span class="header-icon-badge" id="header-cart-count">{{ cart_count }}</span>
+                        </span>
+                    </a>
                     <a href="{{ url_for('set_lang', lang='ru' if current_lang == 'en' else 'en') }}" class="lang-toggle">{{ 'RU' if current_lang == 'en' else 'EN' }}</a>
                     <button type="button" class="theme-toggle" id="theme-toggle">☀</button>
                 </div>
             </div>
         </div>
     </header>
+
+    <div class="pa-drawer-root" id="pa-drawer-root" aria-hidden="true">
+        <div class="pa-drawer-backdrop" id="pa-drawer-backdrop" tabindex="-1"></div>
+        <aside class="pa-drawer-panel" id="pa-nav-drawer" role="dialog" aria-modal="true" aria-label="{{ t('menu') }}">
+            <div class="pa-drawer-scroll">
+                <button type="button" class="pa-drawer-close" id="pa-menu-close">
+                    <span class="pa-drawer-close-x" aria-hidden="true"></span>
+                    <span>{{ t('menu_close') }}</span>
+                </button>
+                <nav class="pa-drawer-nav" aria-label="Main">
+                    <a href="{{ url_for('home') }}" class="{% if active_page == 'collection' %}is-active{% endif %}">{{ t('collection') }}</a>
+                    <a href="{{ url_for('couture') }}" class="{% if active_page == 'couture' %}is-active{% endif %}">{{ t('couture') }}</a>
+                    <a href="{{ url_for('campaign') }}" class="{% if active_page == 'campaign' %}is-active{% endif %}">{{ t('campaign') }}</a>
+                    <a href="{{ url_for('about') }}" class="{% if active_page == 'about' %}is-active{% endif %}">{{ t('about') }}</a>
+                    {% if current_user %}
+                    <a href="{{ url_for('members') }}" class="{% if active_page == 'members' %}is-active{% endif %}">{{ t('members_open') }}</a>
+                    {% endif %}
+                    <a href="{{ url_for('admin_panel') }}" class="pa-drawer-nav-secondary">{{ t('admin') }}</a>
+                </nav>
+                <div class="pa-drawer-divider" role="presentation"></div>
+                <div class="pa-drawer-footer">
+                    <p class="pa-drawer-help">{{ t('menu_help') }}</p>
+                    <a href="{{ url_for('about') }}#contact" class="pa-drawer-contact">{{ t('contact') }}</a>
+                    <p class="pa-drawer-email">hello@protocolarchive.com</p>
+                </div>
+            </div>
+        </aside>
+    </div>
 
     <main class="site-main">
         {% block content %}{% endblock %}
@@ -63,6 +133,8 @@
         <span>{{ t('authenticated') }}</span>
     </footer>
 
+    <script type="application/json" id="pa-cart-toast-i18n">{{ {'title': t('added_to_bag_title'), 'viewBag': t('view_bag'), 'close': t('close'), 'cartHref': url_for('cart')} | tojson }}</script>
+    <script type="application/json" id="pa-wishlist-i18n">{{ {'add': t('aria_add_wishlist'), 'remove': t('aria_remove_wishlist'), 'toggleUrl': url_for('wishlist_toggle')} | tojson }}</script>
     <script>
         function formatClock(n, mode){
             var hh = String(n.getHours()).padStart(2,'0');
@@ -149,11 +221,13 @@
                 setTimeout(syncPaLayout, ms);
             });
         })();
-        /* Скролл: полное название → буква A (как у Maison Margiela) */
+        /* Скролл: полное название → буква A; на главной с hero — шапка «как LV»: после прокрутки непрозрачная */
         (function () {
             var root = document.documentElement;
             var TH_ON = 56;
             var TH_OFF = 28;
+            var HERO_BAR_ON = 72;
+            var HERO_BAR_OFF = 36;
             var raf = 0;
             function y() {
                 return window.scrollY || root.scrollTop || 0;
@@ -167,6 +241,17 @@
                 } else {
                     if (scrollY >= TH_ON) root.classList.add('pa-brand-scroll');
                 }
+                var hero = root.classList.contains('pa-hero-home');
+                var barSolid = root.classList.contains('pa-header-solid');
+                if (hero) {
+                    if (barSolid) {
+                        if (scrollY <= HERO_BAR_OFF) root.classList.remove('pa-header-solid');
+                    } else {
+                        if (scrollY >= HERO_BAR_ON) root.classList.add('pa-header-solid');
+                    }
+                } else if (barSolid) {
+                    root.classList.remove('pa-header-solid');
+                }
             }
             function onScroll() {
                 if (!raf) raf = requestAnimationFrame(tick);
@@ -175,6 +260,158 @@
             tick();
             window.addEventListener('pageshow', function () {
                 tick();
+            });
+        })();
+        (function () {
+            var i18nEl = document.getElementById('pa-cart-toast-i18n');
+            try {
+                if (i18nEl) window.paCartToastI18n = JSON.parse(i18nEl.textContent);
+            } catch (e) {}
+            function paBindCartToastDismissal(el) {
+                if (!el) return;
+                var hideTimer;
+                function close() {
+                    if (hideTimer) clearTimeout(hideTimer);
+                    el.classList.add('cart-added-toast--hide');
+                    setTimeout(function () {
+                        if (el.parentNode) el.parentNode.removeChild(el);
+                    }, 320);
+                }
+                var btn = el.querySelector('.cart-added-toast-close');
+                if (btn) btn.addEventListener('click', close);
+                hideTimer = setTimeout(close, 5200);
+            }
+            document.querySelectorAll('[data-cart-toast]').forEach(function (el) {
+                paBindCartToastDismissal(el);
+            });
+            window.paSetCartCount = function (n) {
+                var c = document.getElementById('header-cart-count');
+                if (c) c.textContent = String(n);
+            };
+            window.paSetWishlistCount = function (n) {
+                var w = document.getElementById('header-wish-count');
+                if (w) w.textContent = String(n);
+            };
+            window.paShowCartToast = function (productName) {
+                var i18n = window.paCartToastI18n;
+                if (!i18n) return;
+                document.querySelectorAll('[data-cart-toast]').forEach(function (n) {
+                    n.remove();
+                });
+                var wrap = document.createElement('div');
+                wrap.className = 'cart-added-toast';
+                wrap.setAttribute('role', 'status');
+                wrap.setAttribute('aria-live', 'polite');
+                wrap.setAttribute('data-cart-toast', '');
+                var inner = document.createElement('div');
+                inner.className = 'cart-added-toast-inner';
+                var icon = document.createElement('span');
+                icon.className = 'cart-added-toast-icon';
+                icon.setAttribute('aria-hidden', 'true');
+                icon.textContent = '\u2713';
+                var text = document.createElement('div');
+                text.className = 'cart-added-toast-text';
+                var title = document.createElement('span');
+                title.className = 'cart-added-toast-title';
+                title.textContent = i18n.title;
+                var nameEl = document.createElement('span');
+                nameEl.className = 'cart-added-toast-name';
+                nameEl.textContent = productName || '';
+                text.appendChild(title);
+                text.appendChild(nameEl);
+                var link = document.createElement('a');
+                link.href = i18n.cartHref;
+                link.className = 'cart-added-toast-link';
+                link.textContent = i18n.viewBag;
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'cart-added-toast-close';
+                btn.setAttribute('aria-label', i18n.close);
+                btn.textContent = '\u00d7';
+                inner.appendChild(icon);
+                inner.appendChild(text);
+                inner.appendChild(link);
+                inner.appendChild(btn);
+                wrap.appendChild(inner);
+                document.body.appendChild(wrap);
+                paBindCartToastDismissal(wrap);
+            };
+        })();
+        (function () {
+            var cfgEl = document.getElementById('pa-wishlist-i18n');
+            var cfg = null;
+            try {
+                if (cfgEl) cfg = JSON.parse(cfgEl.textContent);
+            } catch (e) {}
+            if (!cfg || !cfg.toggleUrl || !window.fetch) return;
+            function setWishAria(btn, active) {
+                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+                btn.setAttribute('aria-label', active ? cfg.remove : cfg.add);
+            }
+            document.addEventListener('click', function (e) {
+                var btn = e.target.closest('.wishlist-toggle');
+                if (!btn) return;
+                e.preventDefault();
+                e.stopPropagation();
+                var id = parseInt(btn.getAttribute('data-product-id'), 10);
+                if (isNaN(id)) return;
+                fetch(cfg.toggleUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ product_id: id })
+                })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error('bad');
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        if (!data || !data.ok) return;
+                        btn.classList.toggle('is-active', data.in_wishlist);
+                        setWishAria(btn, data.in_wishlist);
+                        if (window.paSetWishlistCount) window.paSetWishlistCount(data.count);
+                    })
+                    .catch(function () {});
+            });
+        })();
+        (function () {
+            var root = document.getElementById('pa-drawer-root');
+            var openBtn = document.getElementById('pa-menu-open');
+            var closeBtn = document.getElementById('pa-menu-close');
+            var backdrop = document.getElementById('pa-drawer-backdrop');
+            if (!root || !openBtn) return;
+            var nav = root.querySelector('.pa-drawer-nav');
+            function setOpen(on) {
+                root.classList.toggle('is-open', on);
+                root.setAttribute('aria-hidden', on ? 'false' : 'true');
+                openBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+                document.documentElement.classList.toggle('pa-drawer-open', on);
+                document.body.style.overflow = on ? 'hidden' : '';
+                if (on) {
+                    try {
+                        closeBtn && closeBtn.focus();
+                    } catch (e) {}
+                } else {
+                    try {
+                        openBtn.focus();
+                    } catch (e) {}
+                }
+            }
+            openBtn.addEventListener('click', function () {
+                setOpen(true);
+            });
+            if (closeBtn) closeBtn.addEventListener('click', function () { setOpen(false); });
+            if (backdrop) backdrop.addEventListener('click', function () { setOpen(false); });
+            if (nav) {
+                nav.addEventListener('click', function (e) {
+                    var a = e.target.closest('a');
+                    if (a) setOpen(false);
+                });
+            }
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && root.classList.contains('is-open')) {
+                    setOpen(false);
+                }
             });
         })();
     </script>

@@ -1,24 +1,23 @@
 {% extends "base.html" %}
 {% import 'macros/store_product.html' as store with context %}
-{% block title %}{{ t('couture') }}{% endblock %}
+{% block title %}{{ t('wishlist') }}{% endblock %}
 {% block content %}
 <div class="listing-page-lead">
     <div class="page-header">
-        <div class="section-title">{{ t('couture_title') }}</div>
+        <div class="section-title">{{ t('wishlist') }}</div>
         <div class="page-meta">
             <span>{{ products|length }} {{ tc('result', products|length) }}</span>
         </div>
-        <p class="page-lead-note">{{ t('couture_subtitle') }}</p>
         <div class="page-hairline"></div>
     </div>
 </div>
 {% if products %}
-<div class="product-grid">
+<div class="product-grid" id="collection-grid">
     {% for p in products %}
     {{ store.store_product_card(p) }}
     {% endfor %}
 </div>
 {% else %}
-<div class="empty-state">{{ t('no_items') }}</div>
+<div class="empty-state">{{ t('wishlist_empty') }}<br><br><a href="{{ url_for('home') }}" class="btn-outline">{{ t('browse') }}</a></div>
 {% endif %}
 {% endblock %}

@@ -2,6 +2,8 @@
 {% block title %}{{ product.name }}{% endblock %}
 {% block content %}
 <div class="product-detail">
+    <a href="{% if product.category == 'couture' %}{{ url_for('couture') }}{% else %}{{ url_for('collection') }}#collection-grid{% endif %}" class="product-back-link">{{ t('back_to_couture') if product.category == 'couture' else t('back_to_items') }}</a>
+    <div class="product-detail-body">
     <div class="product-detail-image">
         {% set gallery = product.images if product.images else [product.image] %}
         <div class="product-gallery {% if gallery|length > 1 %}has-thumbs{% endif %}">
@@ -16,33 +18,47 @@
                 </div>
             </div>
             {% endif %}
-            {% if gallery|length > 1 %}
-            <button type="button" class="gallery-arrow gallery-arrow-left" id="gallery-prev" aria-label="Previous image">&#8249;</button>
-            {% endif %}
-            <img id="main-product-image" class="main-product-image" src="{{ gallery[0] }}" alt="{{ product.name }}">
-            {% if gallery|length > 1 %}
-            <button type="button" class="gallery-arrow gallery-arrow-right" id="gallery-next" aria-label="Next image">&#8250;</button>
-            {% endif %}
+            <div class="product-gallery-main">
+                {% if gallery|length > 1 %}
+                <button type="button" class="gallery-arrow gallery-arrow-left" id="gallery-prev" aria-label="Previous image">&#8249;</button>
+                {% endif %}
+                <div class="product-gallery-frame">
+                    <img id="main-product-image" class="main-product-image" src="{{ gallery[0] }}" alt="{{ product.name }}">
+                </div>
+                {% if gallery|length > 1 %}
+                <button type="button" class="gallery-arrow gallery-arrow-right" id="gallery-next" aria-label="Next image">&#8250;</button>
+                {% endif %}
+            </div>
         </div>
     </div>
     <div class="product-detail-info">
         <div class="detail-serial">{{ product.serial }}</div>
         <div class="product-card-brand" style="margin-bottom: 6px;">{{ product.brand }}</div>
-        <h1 class="detail-name">{{ product.name }}</h1>
+        <div class="detail-name-row">
+            <h1 class="detail-name">{{ product.name }}</h1>
+            <button type="button" class="wishlist-toggle wishlist-toggle--detail{% if product.id in wishlist_ids %} is-active{% endif %}"
+                data-product-id="{{ product.id }}"
+                aria-pressed="{{ 'true' if product.id in wishlist_ids else 'false' }}"
+                aria-label="{% if product.id in wishlist_ids %}{{ t('aria_remove_wishlist') }}{% else %}{{ t('aria_add_wishlist') }}{% endif %}">
+                <svg class="wishlist-heart-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 21s-7-4.6-9.6-9.2C-.2 8.4 2.6 4 7.5 4c2.4 0 4 1.2 4.5 3C12.5 5.2 14 4 16.5 4 21.4 4 24.2 8.4 21.6 11.8 19 16.4 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
         <div class="detail-price">${{ product.price }} {{ t('per_day') }}</div>
         <div class="spec-table">
             <div class="spec-row"><span class="label">{{ t('material') }}</span><span class="value">{{ tv(product.material) }}</span></div>
             <div class="spec-row"><span class="label">{{ t('made_in') }}</span><span class="value">{{ tv(product.origin) }}</span></div>
             <div class="spec-row"><span class="label">{{ t('condition') }}</span><span class="value">{{ tv(product.condition) }} ({{ product.condition_score }}/10)</span></div>
         </div>
-        <form action="{{ url_for('add_to_cart') }}" method="POST">
+        <form id="add-to-bag-form" action="{{ url_for('add_to_cart') }}" method="POST">
             <input type="hidden" name="product_id" value="{{ product.id }}">
+            {% if product.sizes %}
             <div class="form-label">{{ t('size') }}</div>
             <div class="size-options">
                 {% for size in product.sizes %}
                 <label><input type="radio" name="size" value="{{ size }}" {% if loop.first %}checked{% endif %}><span>{{ size }}</span></label>
                 {% endfor %}
             </div>
+            {% endif %}
             <div class="form-label">{{ t('rental_period') }}</div>
             <div class="days-input-wrap">
                 <div class="days-stepper">
@@ -55,6 +71,7 @@
             <div class="total-display"><span>{{ t('total') }}</span><span>$<span id="total-display">{{ total_price }}</span></span></div>
             <button type="submit" class="btn-primary">{{ t('add_to_bag') }}</button>
         </form>
+    </div>
     </div>
 </div>
 {% endblock %}
@@ -71,15 +88,42 @@ nextBtn=document.getElementById('gallery-next'),
 images=thumbs.length ? thumbs.map(function(t){ return t.dataset.src; }) : [mainImg.src],
 currentIndex=0;
 
-function setDays(v){
-    var d=parseInt(v,10)||1;
-    if(d<1)d=1;
+function clampDays(raw){
+    var d=parseInt(String(raw).trim(),10);
+    if(isNaN(d)||d<1)d=1;
     if(d>mx)d=mx;
-    inp.value=d;
+    return d;
+}
+function setTotalForDays(d){
     total.innerText=p*d;
 }
+/* Кнопки ±: сразу нормализуем число */
+function setDays(v){
+    var d=clampDays(v);
+    inp.value=d;
+    setTotalForDays(d);
+}
+/* Ввод с клавиатуры: не перезаписываем поле на каждой клавише (иначе ломается набор и пустое значение) */
+function onDaysInput(){
+    var raw=inp.value;
+    if(raw===''||raw==='-'){
+        return;
+    }
+    var d=parseInt(raw,10);
+    if(isNaN(d)){
+        return;
+    }
+    var c=Math.min(Math.max(d,1),mx);
+    setTotalForDays(c);
+}
+function normalizeDaysField(){
+    var d=clampDays(inp.value);
+    inp.value=d;
+    setTotalForDays(d);
+}
 
-inp.addEventListener('input',function(){ setDays(this.value); });
+inp.addEventListener('input',onDaysInput);
+inp.addEventListener('blur',normalizeDaysField);
 btns.forEach(function(btn){
     btn.addEventListener('click',function(){
         setDays((parseInt(inp.value,10)||1)+parseInt(this.dataset.step,10));
@@ -122,6 +166,45 @@ if(prevBtn){ prevBtn.addEventListener('click',function(){ setImage(currentIndex-
 if(nextBtn){ nextBtn.addEventListener('click',function(){ setImage(currentIndex+1); }); }
 setDays(inp.value);
 setImage(0);
+})();
+
+(function () {
+    var form = document.getElementById('add-to-bag-form');
+    if (!form || !window.fetch) return;
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var daysInp = document.getElementById('days-input');
+        if (daysInp) {
+            var maxD = parseInt(daysInp.getAttribute('max'), 10) || 9999;
+            var d = parseInt(daysInp.value, 10);
+            if (isNaN(d) || d < 1) d = 1;
+            if (d > maxD) d = maxD;
+            daysInp.value = d;
+            var td = document.getElementById('total-display');
+            var price = {{ product.price }};
+            if (td) td.textContent = String(price * d);
+        }
+        var fd = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            body: fd,
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        })
+            .then(function (r) {
+                if (!r.ok) throw new Error('bad');
+                return r.json();
+            })
+            .then(function (data) {
+                if (data && data.ok) {
+                    if (window.paSetCartCount) window.paSetCartCount(data.cart_count);
+                    if (window.paShowCartToast) window.paShowCartToast(data.product_name);
+                }
+            })
+            .catch(function () {
+                form.submit();
+            });
+    });
 })();
 </script>
 {% endblock %}

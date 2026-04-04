@@ -14,10 +14,12 @@ pip install -r requirements.txt
 $env:DB_NAME = "ProtocolArchive"
 $env:DB_SERVER = "localhost\SQLEXPRESS"
 python scripts/init_db.py
+# опционально: только вшитые 5 товаров + кампания из seed_defaults.py и папок static/*
+# python scripts/seed_demo_content.py
 python app.py
 ```
 
-Подставьте свой экземпляр SQL Server вместо `localhost\SQLEXPRESS`. Сайт: http://127.0.0.1:5000
+Подставьте свой экземпляр SQL Server вместо `localhost\SQLEXPRESS`. Сайт: http://127.0.0.1:5000. Перед первым запуском положите фото в `static/products/` и `static/campaign/` (см. раздел 5), если нужны локальные кадры.
 
 ---
 
@@ -90,16 +92,14 @@ $env:DB_CONNECTION_STRING = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=local
 
 ## 5. Создать базу и таблицы
 
-Скрипт создаёт базу (если её ещё нет), таблицы и начальный набор брендов для админки:
+Скрипт создаёт базу (если её ещё нет), таблицы, начальный набор брендов и **демо-данные из `seed_defaults.py`**:
 
 - `Brands`
-- `Products`
-- `ProductImages`
-- `ProductSizes`
+- `Products`, `ProductImages`, `ProductSizes`
 - `CampaignSettings` — тексты страницы «Кампания» (EN/RU)
 - `CampaignStories` — истории кампании (заголовок, описание, коллаборация EN/RU)
 - `CampaignStoryImages` — фото внутри каждой истории
-- `CampaignLooks` — устаревшая таблица; при первом запуске `init_db` данные переносятся в истории, если историй ещё нет
+- `CampaignLooks` — кадры для обложек; при сиде заполняется вместе с историями
 
 Из папки **`rental_app`**:
 
@@ -109,7 +109,40 @@ python scripts/init_db.py
 
 В консоли появятся сообщения вроде `Created database` / `Database already exists` и `Tables are ready.`
 
-**Важно:** скрипт **не** копирует товары и фото с другого компьютера. После инициализации каталог заполняется через **админку** в приложении либо через восстановление бэкапа SQL (`.bak`), если вы так делаете.
+При первом создании таблиц вызывается **`apply_demo_seed`**: в каталог попадает **полный** список `DEMO_PRODUCTS` из `seed_defaults.py`, затем синхронизируются галереи товаров с локальными файлами в `static/products/` (см. ниже), кампания — из `static/campaign/` или запасной набор URL.
+
+Переменная окружения **`SEED_RESET_DEMO=1`** (перед `init_db`) заставит при создании таблиц **сначала очистить** товары и кампанию и залить их заново из `seed_defaults.py` (редко нужно при первом запуске).
+
+### Демо-каталог и кампания без полного `init_db`
+
+Чтобы **сбросить** текущие товары и истории кампании и залить **только вшитые** позиции (дипломный набор) + кампанию по правилам из `seed_defaults.py`:
+
+```bash
+python scripts/seed_demo_content.py
+```
+
+- **Товары:** пять артикулов — `RO-0001` (Kiss Heels), `RS-0001` (Raf bomber), `YZY-9999` (grillz), `BAL-0001` (джинсы), `BC-0001` (сумка Getaria, кутюр). Список задаётся в `seed_defaults.py` (`DEMO_WIRED_PRODUCT_SERIALS`, функция `wired_demo_products()`).
+- **Кампания:** если в папке `static/campaign/` есть файлы `campaign-1.jpg`, `campaign-02.png` и т.п. (сортировка по номеру), создаётся **одна** история со **всеми** этими кадрами в галерее; иначе подставляется запасной набор внешних URL из того же файла.
+
+Пользователей (`AppUsers`) скрипт не трогает.
+
+### Локальные фото товаров (`static/products/`)
+
+Имена файлов (расширения: `png`, `jpg`, `jpeg`, `webp`):
+
+| Артикул / товар | Шаблон имён |
+|-----------------|-------------|
+| `RO-0001` | `kiss-heels-1`, `kiss-heels-2`, … |
+| `RS-0001` | `raf-bomber-1`, … |
+| `YZY-9999` | `yzy-1`, … |
+| `BAL-0001` | `balenciaga-1`, … |
+| `BC-0001` | `couturebag.jpg` или `couturebag-1.png`, … |
+
+Если локальных файлов нет, для части позиций используются URL из `seed_defaults.py` (fallback).
+
+### Локальные фото кампании (`static/campaign/`)
+
+Шаблон: **`campaign-<номер>.<расширение>`** (например `campaign-01.jpg`). Все найденные кадры объединяются в **одну** историю на странице кампании.
 
 ## 6. Запуск приложения
 
@@ -145,16 +178,22 @@ flask run --port 5000
 2. `python -m venv .venv` и активировать окружение.
 3. `pip install -r requirements.txt`
 4. Задать `DB_SERVER` / `DB_NAME` (или `DB_CONNECTION_STRING`) под свой SQL Server.
-5. `python scripts/init_db.py`
-6. `python app.py` → http://127.0.0.1:5000
+5. Положить свои фото в `static/products/` и `static/campaign/` (по шаблонам выше), если нужны локальные кадры.
+6. `python scripts/init_db.py`
+7. (Опционально) для витрины «только вшитые 5 товаров»: `python scripts/seed_demo_content.py`
+8. `python app.py` → http://127.0.0.1:5000
 
 ## Структура проекта (кратко)
 
 - `app.py` — приложение Flask, маршруты
-- `scripts/init_db.py` — создание БД и таблиц
+- `seed_defaults.py` — единый источник демо-товаров, текстов кампании, правил локальных галерей и fallback-URL
+- `scripts/init_db.py` — создание БД, таблиц, первичный сид через `apply_demo_seed`
+- `scripts/seed_demo_content.py` — сброс товаров и кампании + заливка вшитого набора товаров и кампании
 - `templates/` — HTML-шаблоны
-- `static/` — `style.css`, сплэш `splash.jpg`, знак в шапке `header-logo-mark.png`, шрифт бренда `fonts/SignThat-Regular.ttf`; загрузки товаров — `static/products/uploads/`; кампания — `static/campaign/uploads/`
+- `static/` — `style.css`, сплэш `splash.jpg`, знак в шапке `header-logo-mark.png`, шрифт бренда `fonts/SignThat-Regular.ttf`
+- `static/products/` — демо-фото товаров по шаблонам имён; загрузки из админки — `static/products/uploads/`
+- `static/campaign/` — кадры кампании (`campaign-N.*`); загрузки из админки — `static/campaign/uploads/`
 
 ---
 
-**Напоминание:** товары и изображения на новый ПК не подтягиваются автоматически — только структура БД и список брендов из скрипта. Полный каталог — через админку или восстановление бэкапа SQL.
+**Напоминание:** бинарные файлы (jpg/png) в репозиторий часто не коммитят — их нужно скопировать на свой ПК в `static/products/` и `static/campaign/`, затем при необходимости выполнить `seed_demo_content.py` или править каталог в админке. Полный снимок данных можно восстановить из бэкапа SQL (`.bak`).

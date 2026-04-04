@@ -18,10 +18,13 @@
         <div class="admin-current-images">
             <span class="upload-title" style="display:block; margin-bottom:6px;">{{ t('admin_current_images') }}</span>
             <p class="admin-remove-images-hint">{{ t('admin_remove_images_hint') }}</p>
-            <div class="admin-current-images-row admin-current-images-select">
+            <p class="admin-drag-photos-hint">{{ t('admin_drag_photos_hint') }}</p>
+            <div class="admin-current-images-row admin-current-images-select admin-image-sort-list" id="admin-image-sort-list">
                 {% for img in product_images %}
-                <div class="admin-image-tile">
-                    <div class="admin-current-images-item"><img src="{{ img.url }}" alt=""></div>
+                <div class="admin-image-tile" data-sort-tile>
+                    <input type="hidden" name="image_order_id" value="{{ img.id }}">
+                    <span class="admin-image-drag-handle" draggable="true" title="{{ t('admin_drag_photos_hint') }}" aria-label="{{ t('admin_drag_photos_hint') }}"></span>
+                    <div class="admin-current-images-item"><img src="{{ img.url }}" alt="" draggable="false"></div>
                     <label class="admin-image-remove-label">
                         <input type="checkbox" name="remove_image_id" value="{{ img.id }}">
                         <span>{{ t('admin_remove_photo') }}</span>
@@ -333,8 +336,47 @@
         });
     });
 
+    function initAdminImageSort(){
+        var list = document.getElementById('admin-image-sort-list');
+        if (!list) return;
+        var dragEl = null;
+        function clearDrag(){
+            if (dragEl) dragEl.classList.remove('is-dragging');
+            dragEl = null;
+        }
+        list.querySelectorAll('.admin-image-drag-handle').forEach(function(handle){
+            handle.addEventListener('dragstart', function(e){
+                dragEl = handle.closest('[data-sort-tile]');
+                if (dragEl) dragEl.classList.add('is-dragging');
+                if (e.dataTransfer) {
+                    e.dataTransfer.effectAllowed = 'move';
+                    try { e.dataTransfer.setData('text/plain', 'sort'); } catch (err) {}
+                }
+            });
+            handle.addEventListener('dragend', clearDrag);
+        });
+        list.querySelectorAll('[data-sort-tile]').forEach(function(tile){
+            tile.addEventListener('dragover', function(e){
+                e.preventDefault();
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+            });
+            tile.addEventListener('drop', function(e){
+                e.preventDefault();
+                if (!dragEl || dragEl === tile) return;
+                var rect = tile.getBoundingClientRect();
+                var before = e.clientX < rect.left + rect.width / 2;
+                if (before) {
+                    list.insertBefore(dragEl, tile);
+                } else {
+                    list.insertBefore(dragEl, tile.nextSibling);
+                }
+            });
+        });
+    }
+
     initBrandAutocomplete();
     initCategoryPicker();
+    initAdminImageSort();
 })();
 </script>
 {% endblock %}

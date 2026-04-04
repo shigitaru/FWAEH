@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ t('members_title') }}{% endblock %}
+{% block content %}
+<div class="members-page">
+    <div class="members-page-inner">
+        <header class="members-header">
+            <p class="members-kicker">{{ t('members_open') }}</p>
+            <h1 class="members-title">{{ t('members_title') }}</h1>
+            <p class="members-intro">{{ t('members_intro') }}</p>
+        </header>
+
+        <ul class="members-tiles" role="list">
+            <li>
+                <a href="{{ url_for('collection') }}#collection-grid" class="members-tile">
+                    <span class="members-tile-title">{{ t('members_tile_items') }}</span>
+                    <span class="members-tile-desc">{{ t('members_tile_items_desc') }}</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('couture') }}" class="members-tile members-tile--highlight">
+                    <span class="members-tile-title">{{ t('members_tile_couture') }}</span>
+                    <span class="members-tile-desc">{{ t('members_tile_couture_desc') }}</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('wishlist_page') }}" class="members-tile">
+                    <span class="members-tile-title">{{ t('members_tile_wishlist') }}</span>
+                    <span class="members-tile-desc">{{ t('members_tile_wishlist_desc') }}</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('cart') }}" class="members-tile">
+                    <span class="members-tile-title">{{ t('members_tile_cart') }}</span>
+                    <span class="members-tile-desc">{{ t('members_tile_cart_desc') }}</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('campaign') }}" class="members-tile">
+                    <span class="members-tile-title">{{ t('members_tile_campaign') }}</span>
+                    <span class="members-tile-desc">{{ t('members_tile_campaign_desc') }}</span>
+                </a>
+            </li>
+        </ul>
+
+        <section class="members-perks" aria-labelledby="members-perks-h">
+            <h2 id="members-perks-h" class="members-perks-title">{{ t('members_perks_title') }}</h2>
+            <ul class="members-perks-list">
+                <li>{{ t('members_perk_1') }}</li>
+                <li>{{ t('members_perk_2') }}</li>
+                <li>{{ t('members_perk_3') }}</li>
+            </ul>
+        </section>
+
+        <p class="members-foot">
+            <a href="{{ url_for('account') }}" class="members-foot-link">{{ t('account_title') }}</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
