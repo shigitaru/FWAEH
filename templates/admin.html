@@ -25,6 +25,13 @@
                 <button type="button" class="category-pill is-active" data-value="rtw">{{ t('category_rtw') }}</button>
                 <button type="button" class="category-pill" data-value="couture">{{ t('category_couture') }}</button>
             </div>
+            <label class="admin-select-label" for="admin-new-item-category">{{ t('admin_item_category') }}</label>
+            <select id="admin-new-item-category" class="search-input" name="item_category" aria-label="{{ t('admin_item_category') }}">
+                <option value="">{{ t('admin_item_category_none') }}</option>
+                {% for ic in item_categories %}
+                <option value="{{ ic.slug }}">{{ ic[current_lang] }}</option>
+                {% endfor %}
+            </select>
             <input class="search-input" type="number" name="price" placeholder="{{ t('price_per_day_placeholder') }}" required min="1">
             <input class="search-input" type="number" name="max_days" placeholder="{{ t('max_days_placeholder') }}" required min="1">
             <input class="search-input" type="number" name="condition_score" placeholder="{{ t('condition_score_placeholder') }}" required min="1" max="10">

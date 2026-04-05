@@ -46,6 +46,13 @@
                 <button type="button" class="category-pill {% if product.category == 'rtw' %}is-active{% endif %}" data-value="rtw">{{ t('category_rtw') }}</button>
                 <button type="button" class="category-pill {% if product.category == 'couture' %}is-active{% endif %}" data-value="couture">{{ t('category_couture') }}</button>
             </div>
+            <label class="admin-select-label" for="admin-edit-item-category">{{ t('admin_item_category') }}</label>
+            <select id="admin-edit-item-category" class="search-input" name="item_category" aria-label="{{ t('admin_item_category') }}">
+                <option value="">{{ t('admin_item_category_none') }}</option>
+                {% for ic in item_categories %}
+                <option value="{{ ic.slug }}" {% if product.item_category == ic.slug %}selected{% endif %}>{{ ic[current_lang] }}</option>
+                {% endfor %}
+            </select>
             <input class="search-input" type="number" name="price" placeholder="{{ t('price_per_day_placeholder') }}" required min="1" value="{{ product.price }}">
             <input class="search-input" type="number" name="max_days" placeholder="{{ t('max_days_placeholder') }}" required min="1" value="{{ product.max_days }}">
             <input class="search-input" type="number" name="condition_score" placeholder="{{ t('condition_score_placeholder') }}" required min="1" max="10" value="{{ product.condition_score }}">

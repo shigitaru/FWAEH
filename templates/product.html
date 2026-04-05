@@ -45,6 +45,7 @@
         </div>
         <div class="detail-price">${{ product.price }} {{ t('per_day') }}</div>
         <div class="spec-table">
+            <div class="spec-row"><span class="label">{{ t('item_category') }}</span><span class="value">{% if product.item_category %}{{ item_category_label(product.item_category) }}{% else %}—{% endif %}</span></div>
             <div class="spec-row"><span class="label">{{ t('material') }}</span><span class="value">{{ tv(product.material) }}</span></div>
             <div class="spec-row"><span class="label">{{ t('made_in') }}</span><span class="value">{{ tv(product.origin) }}</span></div>
             <div class="spec-row"><span class="label">{{ t('condition') }}</span><span class="value">{{ tv(product.condition) }} ({{ product.condition_score }}/10)</span></div>

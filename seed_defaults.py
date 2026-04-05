@@ -282,6 +282,7 @@ def resolve_demo_item_images(item: dict) -> tuple[str, list[str]]:
 DEMO_PRODUCTS: list[dict] = [
     {
         "category": "rtw",
+        "item_category": "coats_jackets",
         "serial": "PA-0510",
         "brand": "Maison Margiela",
         "name": "Oversized wool coat",
@@ -296,6 +297,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "rtw",
+        "item_category": "coats_jackets",
         "serial": "PA-0511",
         "brand": "Balenciaga",
         "name": "Deconstructed blazer",
@@ -310,6 +312,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "rtw",
+        "item_category": "heels",
         "serial": "RO-0001",
         "brand": "Rick Owens",
         "name": "Kiss Heels",
@@ -325,6 +328,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "rtw",
+        "item_category": "coats_jackets",
         "serial": "RS-0001",
         "brand": "Raf Simons",
         "name": "AW01 Raf Simons Riot Riot Camouflage Patched Bomber Jacket",
@@ -340,6 +344,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "rtw",
+        "item_category": "jewelry",
         "serial": "YZY-9999",
         "brand": "YZY",
         "name": "Yeezy Grillz",
@@ -355,6 +360,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "rtw",
+        "item_category": "pants_denim",
         "serial": "BAL-0001",
         "brand": "Balenciaga",
         "name": "SS23 Graffiti Jeans Baggy",
@@ -370,6 +376,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "couture",
+        "item_category": "bags",
         "serial": "BC-0001",
         "brand": "Balenciaga Coture",
         "name": "Getaria One Handle Bag",
@@ -385,6 +392,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "rtw",
+        "item_category": "dresses",
         "serial": "PA-0512",
         "brand": "Yohji Yamamoto",
         "name": "Silk shirt dress",
@@ -399,6 +407,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "rtw",
+        "item_category": "coats_jackets",
         "serial": "PA-0513",
         "brand": "Vetements",
         "name": "Oversized bomber",
@@ -413,6 +422,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "rtw",
+        "item_category": "coats_jackets",
         "serial": "PA-0556",
         "brand": "Comme des Garçons",
         "name": "Layered jacket",
@@ -427,6 +437,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "couture",
+        "item_category": "dresses",
         "serial": "PA-C001",
         "brand": "Maison Margiela",
         "name": "Artisanal recicla gown",
@@ -441,6 +452,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
     {
         "category": "couture",
+        "item_category": "dresses",
         "serial": "PA-C002",
         "brand": "Schiaparelli",
         "name": "Golden vein gown",
@@ -571,6 +583,7 @@ def fallback_products_list() -> list[dict]:
             {
                 "id": i,
                 "category": item["category"],
+                "item_category": item.get("item_category"),
                 "serial": item["serial"],
                 "brand": item["brand"],
                 "name": item["name"],

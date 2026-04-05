@@ -88,15 +88,16 @@ def _insert_demo_products(cur, items=None):
         cur.execute(
             """
             INSERT INTO Products (
-                brand_id, category, serial, name, price, max_days, condition_score,
+                brand_id, category, item_category, serial, name, price, max_days, condition_score,
                 material, origin, [condition], main_image
             )
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 brand_id,
                 item["category"],
+                item.get("item_category"),
                 item["serial"],
                 item["name"],
                 item["price"],
@@ -271,6 +272,7 @@ def create_tables():
                 id INT IDENTITY(1,1) PRIMARY KEY,
                 brand_id INT NOT NULL,
                 category NVARCHAR(40) NOT NULL,
+                item_category NVARCHAR(80) NULL,
                 serial NVARCHAR(50) NOT NULL UNIQUE,
                 name NVARCHAR(180) NOT NULL,
                 price INT NOT NULL,
@@ -283,6 +285,12 @@ def create_tables():
                 created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
                 CONSTRAINT FK_Products_Brands FOREIGN KEY (brand_id) REFERENCES Brands(id)
             );
+            """
+        )
+        cur.execute(
+            """
+            IF COL_LENGTH('dbo.Products', 'item_category') IS NULL
+                ALTER TABLE dbo.Products ADD item_category NVARCHAR(80) NULL;
             """
         )
         cur.execute(

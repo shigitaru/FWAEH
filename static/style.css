@@ -2255,47 +2255,6 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     max-width: 640px;
     margin: 0;
 }
-.search-filters {
-    margin-top: 18px;
-}
-.condition-filter {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-.condition-filter label {
-    display: inline-flex;
-    align-items: center;
-    font-size: 11px;
-    color: var(--text);
-    cursor: pointer;
-}
-.condition-filter input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
-.condition-filter label span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 34px;
-    padding: 0 14px;
-    border: 1px solid var(--border-strong);
-    border-radius: 999px;
-    color: var(--text-secondary);
-    font-size: 12px;
-    transition: all 0.2s ease;
-}
-.condition-filter label:hover span {
-    border-color: var(--text-secondary);
-    color: var(--text);
-}
-.condition-filter input[type="radio"]:checked + span {
-    background: var(--text);
-    color: var(--bg);
-    border-color: var(--text);
-}
 .search-results {
     margin-top: 26px;
 }
@@ -2547,6 +2506,19 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+}
+.admin-select-label {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.admin-grid select.search-input {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 .brand-autocomplete {
     position: relative;
@@ -3683,9 +3655,11 @@ html.refine-open .refine-fab {
     max-width: 100%;
     z-index: 2530;
     background: var(--bg);
-    box-shadow: 12px 0 48px rgba(0, 0, 0, 0.15);
+    /* Smaller blur than before — large shadows repaint a wide area each frame with the drawer transform */
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.14);
     transform: translate3d(-105%, 0, 0);
-    transition: transform 0.42s cubic-bezier(0.33, 1, 0.68, 1);
+    transition: transform 0.32s cubic-bezier(0.33, 1, 0.55, 1);
+    backface-visibility: hidden;
     display: flex;
     flex-direction: column;
     padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
@@ -3695,7 +3669,7 @@ html.refine-open .refine-fab {
     transform: translate3d(0, 0, 0);
 }
 [data-theme="dark"] .refine-panel {
-    box-shadow: 12px 0 56px rgba(0, 0, 0, 0.5);
+    box-shadow: 8px 0 40px rgba(0, 0, 0, 0.45);
 }
 .refine-panel-inner {
     display: flex;
@@ -3793,13 +3767,15 @@ html.refine-open .refine-fab {
     flex-direction: column;
     gap: 10px;
     padding-bottom: 8px;
+    /* Меньше сдвигов вёрстки, когда появляется/пропадает вертикальный скролл */
+    scrollbar-gutter: stable;
+    transform: translateZ(0);
 }
 
 /* Аккордеон */
 .refine-acc {
     border: 1px solid var(--border-strong);
     background: var(--bg);
-    transition: background 0.2s ease;
 }
 .refine-acc.is-open {
     background: var(--bg-alt);
@@ -3816,7 +3792,6 @@ html.refine-open .refine-fab {
     font-family: inherit;
     text-align: left;
     color: var(--text);
-    transition: background 0.2s ease;
 }
 .refine-acc-btn:hover {
     background: rgba(128, 128, 128, 0.06);
@@ -3849,7 +3824,6 @@ html.refine-open .refine-fab {
     border-radius: 50%;
     position: relative;
     flex-shrink: 0;
-    transition: border-color 0.2s ease;
 }
 .refine-acc-icon::before,
 .refine-acc-icon::after {
@@ -3861,7 +3835,6 @@ html.refine-open .refine-fab {
     height: 1px;
     background: var(--text);
     transform: translate(-50%, -50%);
-    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 .refine-acc-icon::after {
     transform: translate(-50%, -50%) rotate(90deg);
@@ -3911,7 +3884,6 @@ html.refine-open .refine-fab {
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--text-secondary);
-    transition: background 0.22s ease, color 0.22s ease;
 }
 .refine-choice:hover span {
     background: var(--bg-alt);
@@ -4028,6 +4000,12 @@ html.refine-open .refine-fab {
     .refine-panel,
     .refine-overlay {
         transition-duration: 0.01ms !important;
+    }
+    .refine-acc-icon::after {
+        transition: none;
+    }
+    .refine-choice span {
+        transition: none;
     }
     .refine-btn--primary:hover,
     .refine-btn--primary:active {

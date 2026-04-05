@@ -81,12 +81,22 @@
             <div class="refine-acc">
                 <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
                     <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
-                    <span class="refine-acc-label">{{ t('refine_acc_search') }}</span>
+                    <span class="refine-acc-label">{{ t('refine_acc_item_category') }}</span>
                     <span class="refine-acc-icon" aria-hidden="true"></span>
                 </button>
-                <div class="refine-acc-panel" hidden>
-                    <input type="search" name="q" value="{{ search_query }}" class="refine-input"
-                        placeholder="{{ t('search_placeholder') }}" autocomplete="off" id="refine-q">
+                <div class="refine-acc-panel refine-acc-panel--scroll" hidden>
+                    <div class="refine-choice-list" role="radiogroup" aria-label="{{ t('refine_acc_item_category') }}">
+                        <label class="refine-choice">
+                            <input type="radio" name="item_category" value="" {% if not active_item_category %}checked{% endif %}>
+                            <span>{{ t('filters_item_category_all') }}</span>
+                        </label>
+                        {% for ic in item_categories %}
+                        <label class="refine-choice">
+                            <input type="radio" name="item_category" value="{{ ic.slug }}" {% if active_item_category == ic.slug %}checked{% endif %}>
+                            <span>{{ ic[current_lang] }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
 
@@ -254,7 +264,7 @@
         window.addEventListener('hashchange', scheduleSync);
     }
 
-    /* Аккордеон: один открытый блок, в духе MM */
+    /* Аккордеон: один открытый блок — закрываем только текущую открытую (без цикла по всем секциям) */
     document.querySelectorAll('[data-refine-acc]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var acc = btn.closest('.refine-acc');
@@ -262,17 +272,17 @@
             var form = acc.closest('.refine-form');
             var open = !acc.classList.contains('is-open');
             if (form && open) {
-                form.querySelectorAll('.refine-acc').forEach(function (sib) {
-                    if (sib === acc) return;
-                    sib.classList.remove('is-open');
-                    var ob = sib.querySelector('[data-refine-acc]');
-                    var op = sib.querySelector('.refine-acc-panel');
-                    if (ob) {
-                        ob.classList.remove('is-open');
-                        ob.setAttribute('aria-expanded', 'false');
+                var prev = form.querySelector('.refine-acc.is-open');
+                if (prev && prev !== acc) {
+                    prev.classList.remove('is-open');
+                    var pob = prev.querySelector('[data-refine-acc]');
+                    var pop = prev.querySelector('.refine-acc-panel');
+                    if (pob) {
+                        pob.classList.remove('is-open');
+                        pob.setAttribute('aria-expanded', 'false');
                     }
-                    if (op) op.hidden = true;
-                });
+                    if (pop) pop.hidden = true;
+                }
             }
             acc.classList.toggle('is-open', open);
             btn.classList.toggle('is-open', open);

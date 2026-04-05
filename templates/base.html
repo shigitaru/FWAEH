@@ -145,8 +145,18 @@
             if (mode === 'medium') return hh + ':' + mm + ':' + ss;
             return hh + ':' + mm + ':' + ss + '.' + ms;
         }
+        var paClockLastSlow = 0;
         function updateClock(){
-            var n=new Date();
+            if (document.hidden) return;
+            var n = new Date();
+            var now = n.getTime();
+            /* Плавные мс в шапке: 37 мс. Пока открыт Refine — не чаще 500 мс, чтобы не спорить с UI за main thread. */
+            if (document.documentElement.classList.contains('refine-open')) {
+                if (now - paClockLastSlow < 500) return;
+                paClockLastSlow = now;
+            } else {
+                paClockLastSlow = 0;
+            }
             var header = document.getElementById('live-clock');
             if (header) header.textContent = formatClock(n, 'full');
             document.querySelectorAll('[data-live-clock]').forEach(function(el){
@@ -154,7 +164,8 @@
                 el.textContent = formatClock(n, mode);
             });
         }
-        setInterval(updateClock,37);updateClock();
+        setInterval(updateClock, 37);
+        updateClock();
         (function(){
             var t=document.getElementById('theme-toggle'), root=document.documentElement, s=null;
             try { s=localStorage.getItem('theme'); } catch (e) {}
@@ -189,10 +200,18 @@
                 else if (w <= 1100) root.style.setProperty('--site-header-offset', '132px');
                 else root.style.removeProperty('--site-header-offset');
             }
+            var paLayoutRoRaf = 0;
+            function syncPaLayoutFromRo() {
+                if (paLayoutRoRaf) return;
+                paLayoutRoRaf = requestAnimationFrame(function () {
+                    paLayoutRoRaf = 0;
+                    syncPaLayout();
+                });
+            }
             function armResizeObserver() {
                 if (!window.ResizeObserver || !document.body) return;
                 try {
-                    var ro = new ResizeObserver(syncPaLayout);
+                    var ro = new ResizeObserver(syncPaLayoutFromRo);
                     ro.observe(document.body);
                 } catch (e) {}
             }

@@ -114,6 +114,8 @@ TRANSLATIONS = {
         'refine_acc_brand': 'Brand',
         'refine_acc_search': 'Search',
         'refine_acc_condition': 'Condition',
+        'refine_acc_item_category': 'Category',
+        'filters_item_category_all': 'All categories',
         'refine_acc_price': 'Max price / day',
         'refine_show_results': 'Show results',
         'refine_clear_all': 'Clear all',
@@ -146,6 +148,7 @@ TRANSLATIONS = {
         'material': 'Material',
         'made_in': 'Made in',
         'condition': 'Condition',
+        'item_category': 'Category',
         'added': 'Added',
         'added_to_bag_title': 'Added to your bag',
         'view_bag': 'View bag',
@@ -181,6 +184,8 @@ TRANSLATIONS = {
         'name_placeholder': 'Name',
         'serial_placeholder': 'Serial (PA-XXXX)',
         'category_placeholder': 'Category: rtw/couture',
+        'admin_item_category': 'Garment category',
+        'admin_item_category_none': 'Not set',
         'price_per_day_placeholder': 'Price per day',
         'max_days_placeholder': 'Max rental days',
         'condition_score_placeholder': 'Condition score 1-10',
@@ -342,6 +347,8 @@ TRANSLATIONS = {
         'refine_acc_brand': 'Бренд',
         'refine_acc_search': 'Поиск',
         'refine_acc_condition': 'Состояние',
+        'refine_acc_item_category': 'Категория',
+        'filters_item_category_all': 'Все категории',
         'refine_acc_price': 'Макс. цена / день',
         'refine_show_results': 'Показать',
         'refine_clear_all': 'Сбросить всё',
@@ -374,6 +381,7 @@ TRANSLATIONS = {
         'material': 'Материал',
         'made_in': 'Производство',
         'condition': 'Состояние',
+        'item_category': 'Категория',
         'added': 'Добавлено',
         'added_to_bag_title': 'Добавлено в корзину',
         'view_bag': 'Открыть корзину',
@@ -410,6 +418,8 @@ TRANSLATIONS = {
         'name_placeholder': 'Название',
         'serial_placeholder': 'Артикул (PA-XXXX)',
         'category_placeholder': 'Категория: rtw/couture',
+        'admin_item_category': 'Категория вещи',
+        'admin_item_category_none': 'Не задана',
         'price_per_day_placeholder': 'Цена за день',
         'max_days_placeholder': 'Максимум дней аренды',
         'condition_score_placeholder': 'Оценка состояния 1-10',
@@ -570,6 +580,31 @@ BRAND_CSS_BY_NAME.update({
     'yzy': 'brand-yzy',
     'raf simons': 'brand-raf-simons',
 })
+
+# Тип вещи для витрины (не путать с category rtw/couture в БД)
+ITEM_CATEGORIES = [
+    {'slug': 'bags', 'en': 'Bags', 'ru': 'Сумки'},
+    {'slug': 'boots', 'en': 'Boots', 'ru': 'Ботинки'},
+    {'slug': 'coats_jackets', 'en': 'Coats & jackets', 'ru': 'Пальто и куртки'},
+    {'slug': 'dresses', 'en': 'Dresses', 'ru': 'Платья'},
+    {'slug': 'flats', 'en': 'Flats', 'ru': 'Балетки'},
+    {'slug': 'footwear', 'en': 'Footwear', 'ru': 'Обувь'},
+    {'slug': 'heels', 'en': 'Heels', 'ru': 'Каблуки'},
+    {'slug': 'jewelry', 'en': 'Jewelry', 'ru': 'Украшения'},
+    {'slug': 'knitwear', 'en': 'Knitwear', 'ru': 'Трикотаж'},
+    {'slug': 'pants_denim', 'en': 'Pants and denim', 'ru': 'Брюки и деним'},
+    {'slug': 'pumps', 'en': 'Pumps', 'ru': 'Туфли'},
+]
+ITEM_CATEGORY_SLUGS = frozenset(c['slug'] for c in ITEM_CATEGORIES)
+
+
+def normalize_item_category_slug(raw):
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    return s if s in ITEM_CATEGORY_SLUGS else None
 
 
 def _resolve_brand_css(name, db_css=None):
@@ -830,8 +865,10 @@ def _user_insert(email_norm, password_plain, display_name):
 
 
 def _collection_listing_data(for_home=False):
-    q = request.args.get('q', '').strip()
+    # Текстовый поиск только на /search; в «Подборе» каталога поля q нет
     brand = request.args.get('brand', '').strip()
+    item_cat_arg = (request.args.get('item_category') or '').strip()
+    active_item_category = item_cat_arg if item_cat_arg in ITEM_CATEGORY_SLUGS else ''
     min_cond = int(request.args.get('min_condition', 0))
     sort = (request.args.get('sort') or 'id').strip().lower()
     if sort not in ('id', 'price_asc', 'price_desc'):
@@ -844,19 +881,22 @@ def _collection_listing_data(for_home=False):
             max_price = v
     products = filter_products(
         category='rtw',
-        query=q or None,
+        query=None,
         brand=brand or None,
+        item_category=active_item_category or None,
         min_condition=min_cond,
         max_price=max_price,
         sort=sort,
     )
     clear_listing_url = url_for('home' if for_home else 'collection')
-    has_filters = bool(q or brand or min_cond > 0 or max_price is not None or sort != 'id')
+    has_filters = bool(
+        brand or active_item_category or min_cond > 0 or max_price is not None or sort != 'id'
+    )
     filter_count = sum(
         1
         for cond in (
-            bool(q),
             bool(brand),
+            bool(active_item_category),
             min_cond > 0,
             max_price is not None,
             sort != 'id',
@@ -867,7 +907,7 @@ def _collection_listing_data(for_home=False):
         'products': products,
         'brands': get_brands(),
         'active_brand': brand,
-        'search_query': q,
+        'active_item_category': active_item_category,
         'min_condition': min_cond,
         'active_sort': sort,
         'max_price_value': max_price_raw if max_price_raw.isdigit() else '',
@@ -1191,7 +1231,7 @@ def find_product(product_id):
             cur = conn.cursor()
             cur.execute(
                 '''
-                SELECT p.id, p.category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
+                SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
                        p.condition_score, p.material, p.origin, p.[condition], p.main_image
                 FROM Products p
                 JOIN Brands b ON b.id = p.brand_id
@@ -1205,6 +1245,7 @@ def find_product(product_id):
         product = {
             'id': row.id,
             'category': row.category,
+            'item_category': getattr(row, 'item_category', None),
             'serial': row.serial,
             'brand': row.brand,
             'name': row.name,
@@ -1221,13 +1262,21 @@ def find_product(product_id):
     except Exception:
         return next((p for p in PRODUCTS if p['id'] == product_id), None)
 
-def filter_products(category=None, query=None, brand=None, min_condition=0, max_price=None, sort='id'):
+def filter_products(
+    category=None,
+    query=None,
+    brand=None,
+    item_category=None,
+    min_condition=0,
+    max_price=None,
+    sort='id',
+):
     sort = (sort or 'id').lower()
     if sort not in ('id', 'price_asc', 'price_desc'):
         sort = 'id'
     try:
         sql = '''
-            SELECT p.id, p.category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
+            SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
                    p.condition_score, p.material, p.origin, p.[condition], p.main_image
             FROM Products p
             JOIN Brands b ON b.id = p.brand_id
@@ -1237,6 +1286,9 @@ def filter_products(category=None, query=None, brand=None, min_condition=0, max_
         if category:
             sql += ' AND p.category = ?'
             params.append(category)
+        if item_category:
+            sql += ' AND p.item_category = ?'
+            params.append(item_category)
         if brand:
             sql += ' AND (LOWER(LTRIM(RTRIM(b.slug))) = LOWER(?) OR b.name LIKE ?)'
             btrim = brand.strip()
@@ -1265,6 +1317,7 @@ def filter_products(category=None, query=None, brand=None, min_condition=0, max_
         results = [{
             'id': row.id,
             'category': row.category,
+            'item_category': getattr(row, 'item_category', None),
             'serial': row.serial,
             'brand': row.brand,
             'name': row.name,
@@ -1282,6 +1335,8 @@ def filter_products(category=None, query=None, brand=None, min_condition=0, max_
         results = PRODUCTS.copy()
         if category:
             results = [p for p in results if p['category'] == category]
+        if item_category:
+            results = [p for p in results if (p.get('item_category') or '') == item_category]
         if brand:
             bl = brand.strip().lower()
             results = [
@@ -1558,15 +1613,15 @@ def members():
 @app.route('/search')
 def search():
     q = request.args.get('q', '').strip()
-    min_cond = int(request.args.get('min_condition', 0))
     if not q:
         results = []
     else:
+        # Состояние вещи настраивается в фильтрах каталога, не на странице поиска
         results = filter_products(
             category=None,
             query=q,
             brand=None,
-            min_condition=min_cond,
+            min_condition=0,
             max_price=None,
             sort='id',
         )
@@ -1579,8 +1634,6 @@ def search():
         cart_count=get_cart_count(),
         t=t,
         tv=tv,
-        min_condition=min_cond,
-        condition_labels=CONDITION_LABELS,
     )
 
 @app.route('/admin', methods=['GET', 'POST'])
@@ -1588,6 +1641,7 @@ def admin_panel():
     if request.method == 'POST':
         try:
             category = request.form.get('category', '').strip() or 'rtw'
+            item_category = normalize_item_category_slug(request.form.get('item_category'))
             serial = request.form.get('serial', '').strip()
             brand_name = request.form.get('brand', '').strip()
             name = request.form.get('name', '').strip()
@@ -1641,11 +1695,24 @@ def admin_panel():
                     raise ValueError(t('admin_brand_resolve_error'))
                 cur.execute(
                     '''
-                    INSERT INTO Products (brand_id, category, serial, name, price, max_days, condition_score, material, origin, [condition], main_image)
+                    INSERT INTO Products (brand_id, category, item_category, serial, name, price, max_days, condition_score, material, origin, [condition], main_image)
                     OUTPUT INSERTED.id
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''',
-                    (brand_id, category, serial, name, price, max_days, condition_score, material, origin, condition, main_image)
+                    (
+                        brand_id,
+                        category,
+                        item_category,
+                        serial,
+                        name,
+                        price,
+                        max_days,
+                        condition_score,
+                        material,
+                        origin,
+                        condition,
+                        main_image,
+                    ),
                 )
                 prod_row = cur.fetchone()
                 product_id = int(prod_row[0]) if prod_row and prod_row[0] is not None else None
@@ -1708,6 +1775,7 @@ def admin_edit_product(product_id):
     if request.method == 'POST':
         try:
             category = request.form.get('category', '').strip() or 'rtw'
+            item_category = normalize_item_category_slug(request.form.get('item_category'))
             serial = request.form.get('serial', '').strip()
             brand_name = request.form.get('brand', '').strip()
             name = request.form.get('name', '').strip()
@@ -1776,13 +1844,24 @@ def admin_edit_product(product_id):
                     raise ValueError(t('admin_brand_resolve_error'))
                 cur.execute(
                     '''
-                    UPDATE Products SET brand_id=?, category=?, serial=?, name=?, price=?, max_days=?,
+                    UPDATE Products SET brand_id=?, category=?, item_category=?, serial=?, name=?, price=?, max_days=?,
                     condition_score=?, material=?, origin=?, [condition]=?, main_image=?
                     WHERE id=?
                     ''',
                     (
-                        brand_id, category, serial, name, price, max_days, condition_score,
-                        material, origin, condition, main_image, product_id,
+                        brand_id,
+                        category,
+                        item_category,
+                        serial,
+                        name,
+                        price,
+                        max_days,
+                        condition_score,
+                        material,
+                        origin,
+                        condition,
+                        main_image,
+                        product_id,
                     ),
                 )
                 cur.execute('DELETE FROM ProductSizes WHERE product_id=?', (product_id,))
@@ -2068,13 +2147,25 @@ def api_calculate():
 @app.context_processor
 def inject_globals():
     wids = get_wishlist_ids()
+    lang = get_lang()
+
+    def item_category_label(slug):
+        if not slug:
+            return ''
+        for c in ITEM_CATEGORIES:
+            if c['slug'] == slug:
+                return c.get(lang) or c['en']
+        return str(slug)
+
     return {
         'current_year': datetime.now().year,
-        'current_lang': get_lang(),
+        'current_lang': lang,
         'tc': tc,
         'wishlist_ids': frozenset(wids),
         'wishlist_count': len(wids),
         'current_user': get_current_user(),
+        'item_categories': ITEM_CATEGORIES,
+        'item_category_label': item_category_label,
     }
 
 

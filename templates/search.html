@@ -3,23 +3,9 @@
 {% block title %}{{ t('search') }}{% endblock %}
 {% block content %}
 <div class="search-page">
-    <form action="{{ url_for('search') }}" method="GET" id="search-form">
+    <form action="{{ url_for('search') }}" method="GET">
         <input type="text" name="q" value="{{ query }}" class="search-input" autofocus
             placeholder="{{ t('search_placeholder') }}">
-
-        <div class="search-filters">
-            <div class="form-label">{{ t('min_condition') }}</div>
-            <div class="condition-filter">
-                {% for cl in condition_labels %}
-                <label>
-                    <input type="radio" name="min_condition" value="{{ cl.score }}"
-                        {% if min_condition == cl.score %}checked{% endif %}
-                        onchange="document.getElementById('search-form').submit();">
-                    <span>{{ cl[current_lang] }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
     </form>
 
     {% if results %}
