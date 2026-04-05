@@ -16,6 +16,7 @@ from seed_defaults import (  # noqa: E402
     sync_kiss_heels_product_images,
     sync_raf_bomber_product_images,
     sync_yzy_grillz_product_images,
+    wired_demo_products,
 )
 
 DB_NAME = os.getenv("DB_NAME", "ProtocolArchive")
@@ -23,6 +24,9 @@ SERVER = os.getenv("DB_SERVER", r"SHIGITARU\SQLEXPRESS")
 
 # Сбросить витрину и кампанию к содержимому seed_defaults.py (удалит текущие товары/истории).
 SEED_RESET_DEMO = os.getenv("SEED_RESET_DEMO", "").strip().lower() in ("1", "true", "yes")
+# Первичный сид при create_tables: по умолчанию только 5 «вшитых» артикулов (см. DEMO_WIRED_PRODUCT_SERIALS).
+# Полный список DEMO_PRODUCTS — перед init_db: SEED_FULL_DEMO=1
+SEED_FULL_DEMO = os.getenv("SEED_FULL_DEMO", "").strip().lower() in ("1", "true", "yes")
 
 MASTER_CONN_STR = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
@@ -390,7 +394,8 @@ def create_tables():
                 (brand_name, brand_name, brand_name),
             )
 
-        apply_demo_seed(cur)
+        seed_catalog = None if SEED_FULL_DEMO else wired_demo_products()
+        apply_demo_seed(cur, products=seed_catalog)
 
         print("Tables are ready.")
 

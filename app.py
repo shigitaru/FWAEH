@@ -94,6 +94,29 @@ TRANSLATIONS = {
         'members_open': 'Member area',
         'bag': 'Bag',
         'search_placeholder': 'Search by name, brand or code...',
+        'filters_title': 'Refine',
+        'filters_search': 'Search',
+        'filters_brand': 'Brand',
+        'filters_brand_all': 'All brands',
+        'filters_condition': 'Min. condition',
+        'filters_sort': 'Sort',
+        'sort_catalog': 'Catalog order',
+        'sort_price_low': 'Price · low to high',
+        'sort_price_high': 'Price · high to low',
+        'filters_max_price': 'Max price / day',
+        'filters_apply': 'Apply',
+        'filters_reset': 'Reset',
+        'refine_label': 'Refine',
+        'refine_fab_aria': 'Open filters',
+        'refine_drawer_close_aria': 'Close filters',
+        'refine_drawer_title': 'Refine',
+        'refine_acc_sort': 'Sort by',
+        'refine_acc_brand': 'Brand',
+        'refine_acc_search': 'Search',
+        'refine_acc_condition': 'Condition',
+        'refine_acc_price': 'Max price / day',
+        'refine_show_results': 'Show results',
+        'refine_clear_all': 'Clear all',
         'shop_by_brand': 'Shop by brand',
         'all_brands': 'All brands',
         'no_results': 'No results for',
@@ -299,6 +322,29 @@ TRANSLATIONS = {
         'members_open': 'Зона участника',
         'bag': 'Корзина',
         'search_placeholder': 'Название, бренд или артикул...',
+        'filters_title': 'Фильтры',
+        'filters_search': 'Поиск',
+        'filters_brand': 'Бренд',
+        'filters_brand_all': 'Все бренды',
+        'filters_condition': 'Мин. состояние',
+        'filters_sort': 'Сортировка',
+        'sort_catalog': 'Как в каталоге',
+        'sort_price_low': 'Цена · по возрастанию',
+        'sort_price_high': 'Цена · по убыванию',
+        'filters_max_price': 'Макс. цена / день',
+        'filters_apply': 'Применить',
+        'filters_reset': 'Сбросить',
+        'refine_label': 'Подбор',
+        'refine_fab_aria': 'Открыть фильтры',
+        'refine_drawer_close_aria': 'Закрыть фильтры',
+        'refine_drawer_title': 'Подбор',
+        'refine_acc_sort': 'Сортировка',
+        'refine_acc_brand': 'Бренд',
+        'refine_acc_search': 'Поиск',
+        'refine_acc_condition': 'Состояние',
+        'refine_acc_price': 'Макс. цена / день',
+        'refine_show_results': 'Показать',
+        'refine_clear_all': 'Сбросить всё',
         'shop_by_brand': 'Бренды',
         'all_brands': 'Все бренды',
         'no_results': 'Нет результатов для',
@@ -784,16 +830,49 @@ def _user_insert(email_norm, password_plain, display_name):
 
 
 def _collection_listing_data(for_home=False):
-    q = request.args.get('q', '')
-    brand = request.args.get('brand', '')
+    q = request.args.get('q', '').strip()
+    brand = request.args.get('brand', '').strip()
     min_cond = int(request.args.get('min_condition', 0))
-    products = filter_products(category='rtw', query=q, brand=brand, min_condition=min_cond)
+    sort = (request.args.get('sort') or 'id').strip().lower()
+    if sort not in ('id', 'price_asc', 'price_desc'):
+        sort = 'id'
+    max_price_raw = request.args.get('max_price', '').strip()
+    max_price = None
+    if max_price_raw.isdigit():
+        v = int(max_price_raw)
+        if v > 0:
+            max_price = v
+    products = filter_products(
+        category='rtw',
+        query=q or None,
+        brand=brand or None,
+        min_condition=min_cond,
+        max_price=max_price,
+        sort=sort,
+    )
     clear_listing_url = url_for('home' if for_home else 'collection')
+    has_filters = bool(q or brand or min_cond > 0 or max_price is not None or sort != 'id')
+    filter_count = sum(
+        1
+        for cond in (
+            bool(q),
+            bool(brand),
+            min_cond > 0,
+            max_price is not None,
+            sort != 'id',
+        )
+        if cond
+    )
     return {
         'products': products,
+        'brands': get_brands(),
         'active_brand': brand,
         'search_query': q,
         'min_condition': min_cond,
+        'active_sort': sort,
+        'max_price_value': max_price_raw if max_price_raw.isdigit() else '',
+        'has_active_filters': has_filters,
+        'active_filter_count': filter_count,
         'condition_labels': CONDITION_LABELS,
         'clear_listing_url': clear_listing_url,
     }
@@ -1142,7 +1221,10 @@ def find_product(product_id):
     except Exception:
         return next((p for p in PRODUCTS if p['id'] == product_id), None)
 
-def filter_products(category=None, query=None, brand=None, min_condition=0):
+def filter_products(category=None, query=None, brand=None, min_condition=0, max_price=None, sort='id'):
+    sort = (sort or 'id').lower()
+    if sort not in ('id', 'price_asc', 'price_desc'):
+        sort = 'id'
     try:
         sql = '''
             SELECT p.id, p.category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
@@ -1156,16 +1238,26 @@ def filter_products(category=None, query=None, brand=None, min_condition=0):
             sql += ' AND p.category = ?'
             params.append(category)
         if brand:
-            sql += ' AND b.name LIKE ?'
-            params.append(f'%{brand}%')
+            sql += ' AND (LOWER(LTRIM(RTRIM(b.slug))) = LOWER(?) OR b.name LIKE ?)'
+            btrim = brand.strip()
+            params.append(btrim)
+            params.append(f'%{btrim}%')
         if query:
-            sql += ' AND (p.name LIKE ? OR p.serial LIKE ? OR b.name LIKE ?)'
+            sql += ' AND (p.name LIKE ? OR p.serial LIKE ? OR b.name LIKE ? OR p.material LIKE ?)'
             q = f'%{query}%'
-            params.extend([q, q, q])
+            params.extend([q, q, q, q])
         if min_condition > 0:
             sql += ' AND p.condition_score >= ?'
             params.append(min_condition)
-        sql += ' ORDER BY p.id'
+        if max_price is not None and max_price > 0:
+            sql += ' AND p.price <= ?'
+            params.append(max_price)
+        if sort == 'price_asc':
+            sql += ' ORDER BY p.price ASC, p.id'
+        elif sort == 'price_desc':
+            sql += ' ORDER BY p.price DESC, p.id'
+        else:
+            sql += ' ORDER BY p.id'
         with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute(sql, params)
@@ -1191,12 +1283,27 @@ def filter_products(category=None, query=None, brand=None, min_condition=0):
         if category:
             results = [p for p in results if p['category'] == category]
         if brand:
-            results = [p for p in results if brand.lower() in p['brand'].lower()]
+            bl = brand.strip().lower()
+            results = [
+                p for p in results
+                if bl == p['brand'].lower() or bl in p['brand'].lower()
+            ]
         if query:
             q = query.lower()
-            results = [p for p in results if q in p['name'].lower() or q in p['serial'].lower() or q in p['brand'].lower()]
+            mat = (lambda p: (p.get('material') or '').lower())
+            results = [
+                p for p in results
+                if q in p['name'].lower() or q in p['serial'].lower()
+                or q in p['brand'].lower() or q in mat(p)
+            ]
         if min_condition > 0:
             results = [p for p in results if p['condition_score'] >= min_condition]
+        if max_price is not None and max_price > 0:
+            results = [p for p in results if p['price'] <= max_price]
+        if sort == 'price_asc':
+            results.sort(key=lambda p: (p['price'], p['id']))
+        elif sort == 'price_desc':
+            results.sort(key=lambda p: (p['price'], p['id']), reverse=True)
         return results
 
 
@@ -1450,10 +1557,31 @@ def members():
 
 @app.route('/search')
 def search():
-    q = request.args.get('q', '')
+    q = request.args.get('q', '').strip()
     min_cond = int(request.args.get('min_condition', 0))
-    results = filter_products(query=q, min_condition=min_cond) if q else []
-    return render_template('search.html', brands=get_brands(), results=results, query=q, active_page='search', cart_count=get_cart_count(), t=t, tv=tv, min_condition=min_cond, condition_labels=CONDITION_LABELS)
+    if not q:
+        results = []
+    else:
+        results = filter_products(
+            category=None,
+            query=q,
+            brand=None,
+            min_condition=min_cond,
+            max_price=None,
+            sort='id',
+        )
+    return render_template(
+        'search.html',
+        brands=get_brands(),
+        results=results,
+        query=q,
+        active_page='search',
+        cart_count=get_cart_count(),
+        t=t,
+        tv=tv,
+        min_condition=min_cond,
+        condition_labels=CONDITION_LABELS,
+    )
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_panel():

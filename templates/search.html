@@ -4,7 +4,8 @@
 {% block content %}
 <div class="search-page">
     <form action="{{ url_for('search') }}" method="GET" id="search-form">
-        <input type="text" name="q" value="{{ query }}" placeholder="{{ t('search_placeholder') }}" class="search-input" autofocus>
+        <input type="text" name="q" value="{{ query }}" class="search-input" autofocus
+            placeholder="{{ t('search_placeholder') }}">
 
         <div class="search-filters">
             <div class="form-label">{{ t('min_condition') }}</div>

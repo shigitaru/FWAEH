@@ -8,29 +8,148 @@
     <img class="collection-hero-bg" src="{{ hero_image }}" alt="" decoding="async">
     <div class="collection-hero-inner">
         <h1 class="collection-hero-title">{{ t('hero_title') }}</h1>
-        <a href="#collection-grid" class="collection-hero-cta">{{ t('hero_cta') }}</a>
+        <a href="#collection-catalog" class="collection-hero-cta">{{ t('hero_cta') }}</a>
         <p class="collection-hero-service">{{ t('hero_service_line') }}</p>
         <p class="collection-hero-slogan">{{ t('hero_slogan') }}</p>
     </div>
 </section>
 {% endif %}
+
+<div class="refine-overlay" id="refine-overlay" hidden aria-hidden="true"></div>
+<aside class="refine-panel" id="refine-panel" aria-hidden="true" aria-labelledby="refine-drawer-title">
+    <div class="refine-panel-inner">
+        <header class="refine-panel-header">
+            <h2 class="refine-panel-title" id="refine-drawer-title">
+                {{ t('refine_drawer_title') }}
+                {% if active_filter_count > 0 %}
+                <span class="refine-panel-badge" aria-label="{{ active_filter_count }}">{{ active_filter_count }}</span>
+                {% endif %}
+            </h2>
+            <button type="button" class="refine-panel-close" id="refine-close" aria-label="{{ t('refine_drawer_close_aria') }}">
+                <span class="refine-panel-close-x" aria-hidden="true"></span>
+            </button>
+        </header>
+        <p class="refine-panel-results">{{ products|length }} {{ tc('result', products|length) }}</p>
+
+        <form class="refine-form" method="get" action="{{ request.path }}#collection-catalog" id="refine-form">
+            <div class="refine-acc is-open">
+                <button type="button" class="refine-acc-btn is-open" aria-expanded="true" data-refine-acc>
+                    <span class="refine-acc-dot" aria-hidden="true"></span>
+                    <span class="refine-acc-label">{{ t('refine_acc_sort') }}</span>
+                    <span class="refine-acc-icon" aria-hidden="true"></span>
+                </button>
+                <div class="refine-acc-panel">
+                    <div class="refine-choice-list" role="radiogroup" aria-label="{{ t('refine_acc_sort') }}">
+                        <label class="refine-choice">
+                            <input type="radio" name="sort" value="id" {% if active_sort == 'id' %}checked{% endif %}>
+                            <span>{{ t('sort_catalog') }}</span>
+                        </label>
+                        <label class="refine-choice">
+                            <input type="radio" name="sort" value="price_asc" {% if active_sort == 'price_asc' %}checked{% endif %}>
+                            <span>{{ t('sort_price_low') }}</span>
+                        </label>
+                        <label class="refine-choice">
+                            <input type="radio" name="sort" value="price_desc" {% if active_sort == 'price_desc' %}checked{% endif %}>
+                            <span>{{ t('sort_price_high') }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="refine-acc">
+                <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
+                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
+                    <span class="refine-acc-label">{{ t('refine_acc_brand') }}</span>
+                    <span class="refine-acc-icon" aria-hidden="true"></span>
+                </button>
+                <div class="refine-acc-panel refine-acc-panel--scroll" hidden>
+                    <div class="refine-choice-list" role="radiogroup" aria-label="{{ t('refine_acc_brand') }}">
+                        <label class="refine-choice">
+                            <input type="radio" name="brand" value="" {% if not active_brand %}checked{% endif %}>
+                            <span>{{ t('filters_brand_all') }}</span>
+                        </label>
+                        {% for b in brands %}
+                        <label class="refine-choice">
+                            <input type="radio" name="brand" value="{{ b.slug }}" {% if active_brand == b.slug %}checked{% endif %}>
+                            <span>{{ b.name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="refine-acc">
+                <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
+                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
+                    <span class="refine-acc-label">{{ t('refine_acc_search') }}</span>
+                    <span class="refine-acc-icon" aria-hidden="true"></span>
+                </button>
+                <div class="refine-acc-panel" hidden>
+                    <input type="search" name="q" value="{{ search_query }}" class="refine-input"
+                        placeholder="{{ t('search_placeholder') }}" autocomplete="off" id="refine-q">
+                </div>
+            </div>
+
+            <div class="refine-acc">
+                <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
+                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
+                    <span class="refine-acc-label">{{ t('refine_acc_condition') }}</span>
+                    <span class="refine-acc-icon" aria-hidden="true"></span>
+                </button>
+                <div class="refine-acc-panel" hidden>
+                    <div class="refine-choice-list" role="radiogroup" aria-label="{{ t('refine_acc_condition') }}">
+                        {% for cl in condition_labels %}
+                        <label class="refine-choice">
+                            <input type="radio" name="min_condition" value="{{ cl.score }}"
+                                {% if min_condition == cl.score %}checked{% endif %}>
+                            <span>{{ cl[current_lang] }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="refine-acc">
+                <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
+                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
+                    <span class="refine-acc-label">{{ t('refine_acc_price') }}</span>
+                    <span class="refine-acc-icon" aria-hidden="true"></span>
+                </button>
+                <div class="refine-acc-panel" hidden>
+                    <input type="number" name="max_price" class="refine-input" min="1" step="1"
+                        placeholder="—" value="{{ max_price_value }}" id="refine-max-price">
+                </div>
+            </div>
+
+            <div class="refine-footer">
+                <button type="submit" class="refine-btn refine-btn--primary">{{ t('refine_show_results') }}</button>
+                <a class="refine-btn refine-btn--ghost" href="{{ clear_listing_url }}#collection-catalog">{{ t('refine_clear_all') }}</a>
+            </div>
+        </form>
+    </div>
+</aside>
+
+<button type="button" class="refine-fab" id="refine-fab" aria-expanded="false" aria-controls="refine-panel"
+    aria-label="{{ t('refine_fab_aria') }}">
+    <span class="refine-fab-text">{{ t('refine_label') }}</span>
+    {% if active_filter_count > 0 %}
+    <span class="refine-fab-badge">{{ active_filter_count }}</span>
+    {% endif %}
+</button>
+
+<div id="collection-catalog" class="collection-main">
 <div class="listing-page-lead">
     <div class="page-header">
         <div class="section-title">{{ t('collection') }}</div>
         <div class="page-meta">
             <span>{{ products|length }} {{ tc('result', products|length) }}</span>
-            {% if active_brand %}
+            {% if has_active_filters %}
             <span class="page-meta-dot"></span>
-            <span>{{ t('filtered_by') }} <strong style="color: var(--text); font-weight: 500;">{{ active_brand }}</strong></span>
+            <span class="page-meta-filter-note">{{ t('filtered_by') }} {{ t('filters_title') }}</span>
             {% endif %}
         </div>
         <div class="page-hairline"></div>
     </div>
-    {% if active_brand %}
-    <div style="margin: 10px 0 12px; color: var(--text-secondary); font-size: 12px;">
-        <a href="{{ clear_listing_url }}" style="text-decoration: underline;">{{ t('clear') }}</a>
-    </div>
-    {% endif %}
 </div>
 {% if products %}
 <div class="product-grid" id="collection-grid">
@@ -41,4 +160,127 @@
 {% else %}
 <div class="empty-state" id="collection-grid">{{ t('no_items') }}</div>
 {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var fab = document.getElementById('refine-fab');
+    var panel = document.getElementById('refine-panel');
+    var overlay = document.getElementById('refine-overlay');
+    var closeBtn = document.getElementById('refine-close');
+    if (!fab || !panel || !overlay) return;
+
+    var reduceMotion = false;
+    try {
+        reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) {}
+
+    function setOpen(on) {
+        panel.classList.toggle('is-open', on);
+        overlay.classList.toggle('is-open', on);
+        overlay.hidden = !on;
+        panel.setAttribute('aria-hidden', on ? 'false' : 'true');
+        fab.setAttribute('aria-expanded', on ? 'true' : 'false');
+        document.documentElement.classList.toggle('refine-open', on);
+        document.body.style.overflow = on ? 'hidden' : '';
+        if (on) {
+            try { closeBtn.focus(); } catch (e) {}
+        } else {
+            try { fab.focus(); } catch (e) {}
+        }
+    }
+
+    fab.addEventListener('click', function () { setOpen(true); });
+    closeBtn.addEventListener('click', function () { setOpen(false); });
+    overlay.addEventListener('click', function () { setOpen(false); });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && panel.classList.contains('is-open')) {
+            e.stopPropagation();
+            setOpen(false);
+        }
+    }, true);
+
+    /*
+     * FAB после выхода из hero: низ hero выше края экрана.
+     * Плюс: якорь #collection-catalog / #collection-grid не всегда даёт событие scroll —
+     * дублируем проверкой hash, load, таймерами и IntersectionObserver.
+     */
+    var hero = document.querySelector('.collection-hero');
+    function syncRefineFab() {
+        if (!hero) {
+            fab.classList.add('refine-fab--visible');
+            return;
+        }
+        var hb = hero.getBoundingClientRect().bottom;
+        var pastHero = hb < 96;
+        var sy = window.scrollY || window.pageYOffset || 0;
+        var hash = (location.hash || '').toLowerCase();
+        var jumpedToCatalog = hash === '#collection-catalog' || hash === '#collection-grid';
+        var catalog = document.getElementById('collection-catalog');
+        var catVisible = false;
+        var catInUpperView = false;
+        if (catalog) {
+            var r = catalog.getBoundingClientRect();
+            var vh = window.innerHeight || 0;
+            if (jumpedToCatalog) {
+                catVisible = r.top < vh * 0.98 && r.bottom > 0;
+            }
+            /* Скролл колесом без смены hash: «вещи» уже у верхней части экрана */
+            if (sy > 64) {
+                catInUpperView = r.top < vh * 0.38;
+            }
+        }
+        fab.classList.toggle('refine-fab--visible', pastHero || catVisible || catInUpperView);
+    }
+    function scheduleSync() {
+        syncRefineFab();
+        setTimeout(syncRefineFab, 0);
+        setTimeout(syncRefineFab, 80);
+        setTimeout(syncRefineFab, 320);
+    }
+    if (!hero) {
+        if (!reduceMotion) {
+            requestAnimationFrame(function () { setTimeout(function () { fab.classList.add('refine-fab--visible'); }, 280); });
+        } else {
+            fab.classList.add('refine-fab--visible');
+        }
+    } else {
+        scheduleSync();
+        window.addEventListener('scroll', syncRefineFab, { passive: true });
+        window.addEventListener('resize', syncRefineFab);
+        window.addEventListener('load', scheduleSync);
+        window.addEventListener('hashchange', scheduleSync);
+    }
+
+    /* Аккордеон: один открытый блок, в духе MM */
+    document.querySelectorAll('[data-refine-acc]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var acc = btn.closest('.refine-acc');
+            if (!acc) return;
+            var form = acc.closest('.refine-form');
+            var open = !acc.classList.contains('is-open');
+            if (form && open) {
+                form.querySelectorAll('.refine-acc').forEach(function (sib) {
+                    if (sib === acc) return;
+                    sib.classList.remove('is-open');
+                    var ob = sib.querySelector('[data-refine-acc]');
+                    var op = sib.querySelector('.refine-acc-panel');
+                    if (ob) {
+                        ob.classList.remove('is-open');
+                        ob.setAttribute('aria-expanded', 'false');
+                    }
+                    if (op) op.hidden = true;
+                });
+            }
+            acc.classList.toggle('is-open', open);
+            btn.classList.toggle('is-open', open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            var p = acc.querySelector('.refine-acc-panel');
+            if (p) p.hidden = !open;
+        });
+    });
+})();
+</script>
 {% endblock %}
