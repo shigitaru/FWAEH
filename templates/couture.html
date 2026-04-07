@@ -2,14 +2,23 @@
 {% import 'macros/store_product.html' as store with context %}
 {% block title %}{{ t('couture') }}{% endblock %}
 {% block content %}
-<div class="listing-page-lead">
-    <div class="page-header">
-        <div class="section-title">{{ t('couture_title') }}</div>
-        <div class="page-meta">
-            <span>{{ products|length }} {{ tc('result', products|length) }}</span>
+<section class="collection-hero couture-hero" aria-label="{{ t('couture') }}">
+    <img class="collection-hero-bg" src="{{ url_for('static', filename='couture-hero.jpg') }}" alt="" decoding="async">
+    <div class="couture-hero-signature">
+        <p class="couture-hero-brand">Protocol Archive</p>
+        <p class="couture-hero-line">Couture</p>
+    </div>
+</section>
+<div id="collection-catalog" class="collection-main">
+    <div class="listing-page-lead">
+        <div class="page-header">
+            <div class="section-title">{{ t('couture_title') }}</div>
+            <div class="page-meta">
+                <span>{{ products|length }} {{ tc('result', products|length) }}</span>
+            </div>
+            <p class="page-lead-note">{{ t('couture_subtitle') }}</p>
+            <div class="page-hairline"></div>
         </div>
-        <p class="page-lead-note">{{ t('couture_subtitle') }}</p>
-        <div class="page-hairline"></div>
     </div>
 </div>
 {% if products %}
@@ -21,4 +30,5 @@
 {% else %}
 <div class="empty-state">{{ t('no_items') }}</div>
 {% endif %}
+</div>
 {% endblock %}

@@ -56,6 +56,27 @@
         </div>
         <button type="submit" class="btn-primary" style="margin-top:12px; max-width:220px;">{{ t('create_product') }}</button>
     </form>
+    <section class="admin-brands-block" aria-labelledby="admin-brands-title">
+        <h3 id="admin-brands-title" class="admin-brands-title">{{ t('admin_brands_title') }}</h3>
+        <div class="admin-brands-list">
+            {% for b in brands_admin %}
+            <div class="admin-brand-row">
+                <div class="admin-brand-meta">
+                    <span class="admin-brand-name">{{ b.name }}</span>
+                    <span class="admin-brand-count">{{ b.products_count }} {{ t('admin_brand_products_count') }}</span>
+                </div>
+                <form method="post" action="{{ url_for('admin_delete_brand', brand_id=b.id) }}">
+                    <button
+                        type="submit"
+                        class="admin-brand-delete-btn"
+                        {% if b.products_count > 0 %}disabled{% endif %}
+                        onclick="return confirm({{ t('admin_delete_brand_confirm')|tojson }});"
+                    >{{ t('admin_delete_brand') }}</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
 
     <div class="search-results">
         <div class="section-title">{{ products|length }} {{ t('products') }}</div>

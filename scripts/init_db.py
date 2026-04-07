@@ -379,6 +379,39 @@ def create_tables():
             );
             """
         )
+        cur.execute(
+            """
+            IF OBJECT_ID('RentalOrders', 'U') IS NULL
+            CREATE TABLE RentalOrders (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                user_id INT NOT NULL,
+                status NVARCHAR(30) NOT NULL DEFAULT N'confirmed',
+                total_items INT NOT NULL,
+                total_price INT NOT NULL,
+                created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+                CONSTRAINT FK_RentalOrders_AppUsers FOREIGN KEY (user_id) REFERENCES AppUsers(id) ON DELETE CASCADE
+            );
+            """
+        )
+        cur.execute(
+            """
+            IF OBJECT_ID('RentalOrderItems', 'U') IS NULL
+            CREATE TABLE RentalOrderItems (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                order_id INT NOT NULL,
+                product_id INT NULL,
+                serial NVARCHAR(50) NOT NULL,
+                brand_name NVARCHAR(120) NOT NULL,
+                product_name NVARCHAR(180) NOT NULL,
+                size_label NVARCHAR(40) NULL,
+                rental_days INT NOT NULL,
+                price_per_day INT NOT NULL,
+                line_total INT NOT NULL,
+                image_url NVARCHAR(500) NULL,
+                CONSTRAINT FK_RentalOrderItems_Order FOREIGN KEY (order_id) REFERENCES RentalOrders(id) ON DELETE CASCADE
+            );
+            """
+        )
 
         default_brands = [
             "Rick Owens",

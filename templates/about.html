@@ -3,24 +3,68 @@
 {% block content %}
 <div class="about-page-container">
     <div class="about-content">
-        <div class="page-header" style="margin-bottom: 26px;">
+        <div class="page-header about-page-header">
             <div class="section-title">{{ t('about') }}</div>
             <div class="page-meta">
                 <span class="site-brand-name">Protocol-Archive</span>
             </div>
             <div class="page-hairline"></div>
         </div>
-        <h2>{{ t('rental_service') }}</h2>
-        <p>{{ t('rental_desc') }}</p>
-        
-        <h2>{{ t('duration') }}</h2>
-        <p>{{ t('duration_desc') }}</p>
-        
-        <h2>{{ t('care') }}</h2>
-        <p>{{ t('care_desc') }}</p>
-        
-        <h2 id="contact" style="margin-top: 60px; color: var(--text-muted);">{{ t('contact') }}</h2>
-        <p style="letter-spacing: 0.05em; font-weight: 400;">hello@protocolarchive.com</p>
+        <p class="about-lead">{{ t('about_lead') }}</p>
+
+        <section class="about-info-grid" aria-label="{{ t('about') }}">
+            <article class="about-info-card">
+                <h2>{{ t('rental_service') }}</h2>
+                <p>{{ t('rental_desc') }}</p>
+            </article>
+            <article class="about-info-card">
+                <h2>{{ t('duration') }}</h2>
+                <p>{{ t('duration_desc') }}</p>
+            </article>
+            <article class="about-info-card">
+                <h2>{{ t('care') }}</h2>
+                <p>{{ t('care_desc') }}</p>
+            </article>
+        </section>
+
+        <section class="about-faq" aria-labelledby="about-faq-title">
+            <h2 id="about-faq-title" class="about-faq-title">{{ t('about_faq_title') }}</h2>
+            <details class="about-faq-item">
+                <summary>{{ t('about_faq_q1') }}</summary>
+                <p>{{ t('about_faq_a1') }}</p>
+            </details>
+            <details class="about-faq-item">
+                <summary>{{ t('about_faq_q2') }}</summary>
+                <p>{{ t('about_faq_a2') }}</p>
+            </details>
+            <details class="about-faq-item">
+                <summary>{{ t('about_faq_q3') }}</summary>
+                <p>{{ t('about_faq_a3') }}</p>
+            </details>
+            <details class="about-faq-item">
+                <summary>{{ t('about_faq_q4') }}</summary>
+                <p>{{ t('about_faq_a4') }}</p>
+            </details>
+        </section>
+
+        <h2 id="contact" class="about-contact-title">{{ t('contact') }}</h2>
+        <p class="about-contact-email">hello@protocolarchive.com</p>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    var items = Array.prototype.slice.call(document.querySelectorAll('.about-faq-item'));
+    if (!items.length) return;
+    items.forEach(function (item) {
+        item.addEventListener('toggle', function () {
+            if (!item.open) return;
+            items.forEach(function (other) {
+                if (other !== item) other.open = false;
+            });
+        });
+    });
+})();
+</script>
 {% endblock %}

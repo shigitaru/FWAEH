@@ -4,6 +4,7 @@
 <div class="account-page">
     <div class="account-page-inner">
         {% if current_user %}
+        <div class="account-signed-layout">
         <div class="account-welcome-card">
             <p class="account-kicker">{{ t('account_title') }}</p>
             <h1 class="account-hero-name">{{ current_user.display_name }}</h1>
@@ -13,6 +14,75 @@
             <form action="{{ url_for('account_logout') }}" method="post" class="account-logout-form">
                 <button type="submit" class="account-btn-secondary">{{ t('account_logout') }}</button>
             </form>
+        </div>
+        <div class="account-dashboard-grid">
+            <section class="account-panel" aria-labelledby="account-summary-title">
+                <h2 id="account-summary-title" class="account-panel-title">{{ t('account_summary_title') }}</h2>
+                {% if history_stats %}
+                <div class="account-stats-grid">
+                    <div class="account-stat-card">
+                        <p class="account-stat-label">{{ t('account_summary_orders') }}</p>
+                        <p class="account-stat-value">{{ history_stats.orders_count }}</p>
+                    </div>
+                    <div class="account-stat-card">
+                        <p class="account-stat-label">{{ t('account_summary_items') }}</p>
+                        <p class="account-stat-value">{{ history_stats.items_count }}</p>
+                    </div>
+                    <div class="account-stat-card">
+                        <p class="account-stat-label">{{ t('account_summary_spent') }}</p>
+                        <p class="account-stat-value">${{ history_stats.total_spend }}</p>
+                    </div>
+                    <div class="account-stat-card">
+                        <p class="account-stat-label">{{ t('account_summary_favorite_brand') }}</p>
+                        <p class="account-stat-value account-stat-value--text">{{ history_stats.favorite_brand or t('account_summary_favorite_brand_none') }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="account-quick-actions">
+                    <p class="account-subtitle">{{ t('account_quick_actions') }}</p>
+                    <div class="account-quick-links">
+                        <a href="{{ url_for('cart') }}" class="account-quick-link">{{ t('account_quick_action_bag') }}</a>
+                        <a href="{{ url_for('wishlist_page') }}" class="account-quick-link">{{ t('account_quick_action_wishlist') }}</a>
+                        <a href="{{ url_for('collection') }}" class="account-quick-link">{{ t('account_quick_action_collection') }}</a>
+                    </div>
+                </div>
+            </section>
+            <section class="account-panel" aria-labelledby="account-history-title">
+                <h2 id="account-history-title" class="account-panel-title">{{ t('account_history_title') }}</h2>
+                {% if history_orders %}
+                <div class="account-history-list">
+                    {% for order in history_orders %}
+                    <article class="account-history-card">
+                        <div class="account-history-head">
+                            <div>
+                                <p class="account-history-order">{{ t('account_history_order') }} #{{ order.id }}</p>
+                                <p class="account-history-meta">{{ t('account_history_date') }}: {{ order.created_at.strftime('%d.%m.%Y %H:%M') if order.created_at else '-' }}</p>
+                            </div>
+                            <span class="account-status-badge">{{ t('order_status_' ~ order.status) }}</span>
+                        </div>
+                        <div class="account-history-body">
+                            {% for item in order['items'] %}
+                            <div class="account-history-item">
+                                <div>
+                                    <p class="account-history-item-title">{{ item.product_name }}</p>
+                                    <p class="account-history-item-meta">{{ item.serial }} · {{ item.brand_name }}{% if item.size_label %} · {{ t('size') }} {{ item.size_label }}{% endif %}</p>
+                                </div>
+                                <p class="account-history-item-price">${{ item.line_total }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="account-history-foot">
+                            <p>{{ order.total_items }} {{ t('account_history_items') }}</p>
+                            <p>{{ t('account_history_total') }}: ${{ order.total_price }}</p>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="account-empty">{{ t('account_history_empty') }}</p>
+                {% endif %}
+            </section>
+        </div>
         </div>
         {% else %}
         <div class="account-dual-grid">
@@ -53,6 +123,15 @@
                     </div>
                     <button type="submit" class="account-btn-primary account-btn-primary--outline">{{ t('acc_submit_register') }}</button>
                 </form>
+                <div class="account-register-benefits">
+                    <p class="account-register-benefits-title">{{ t('account_register_benefits_title') }}</p>
+                    <ul class="account-register-benefits-list">
+                        <li>{{ t('account_register_benefit_1') }}</li>
+                        <li>{{ t('account_register_benefit_2') }}</li>
+                        <li>{{ t('account_register_benefit_3') }}</li>
+                        <li>{{ t('account_register_benefit_4') }}</li>
+                    </ul>
+                </div>
             </section>
         </div>
         {% endif %}

@@ -75,6 +75,28 @@ TRANSLATIONS = {
         'acc_login_required': 'Please sign in to use this.',
         'acc_couture_members_only': 'Couture is available to signed-in members only.',
         'acc_couture_cart_login': 'Sign in to add couture pieces to your bag.',
+        'acc_checkout_login_required': 'Sign in to complete rental checkout.',
+        'acc_checkout_empty': 'Your bag is empty.',
+        'acc_checkout_success': 'Rental request submitted. Added to your account history.',
+        'acc_checkout_failed': 'Could not complete checkout right now. Try again later.',
+        'account_history_title': 'Rental history',
+        'account_history_empty': 'No completed rentals yet.',
+        'account_history_order': 'Order',
+        'account_history_date': 'Date',
+        'account_history_status': 'Status',
+        'account_history_items': 'items',
+        'account_history_total': 'Total',
+        'account_summary_title': 'Your rental summary',
+        'account_summary_orders': 'Completed orders',
+        'account_summary_items': 'Rented pieces',
+        'account_summary_spent': 'Total spend',
+        'account_summary_favorite_brand': 'Favorite brand',
+        'account_summary_favorite_brand_none': 'No favorite yet',
+        'account_quick_actions': 'Quick actions',
+        'account_quick_action_bag': 'Open bag',
+        'account_quick_action_wishlist': 'Open wishlist',
+        'account_quick_action_collection': 'Browse collection',
+        'order_status_confirmed': 'Confirmed',
         'members_title': 'Member area',
         'members_intro': 'Tools and access reserved for registered clients.',
         'members_tile_couture': 'Couture archive',
@@ -159,6 +181,16 @@ TRANSLATIONS = {
         'duration_desc': 'Rental period is flexible per item. Late returns are charged at 150% of the daily rate.',
         'care': 'Care',
         'care_desc': 'All garments must be returned in the condition received. Do not wash or dry clean. Professional care is included in the rental price.',
+        'about_lead': 'Authenticated designer archive for short-term rental with concierge-level handling.',
+        'about_faq_title': 'FAQ',
+        'about_faq_q1': 'How do I book a rental?',
+        'about_faq_a1': 'Choose an item, select rental days, add it to bag, and complete checkout from your account.',
+        'about_faq_q2': 'Do you offer size guidance?',
+        'about_faq_a2': 'Yes. Product pages include available sizes, and our team can help with fit recommendations.',
+        'about_faq_q3': 'What happens if I return late?',
+        'about_faq_a3': 'Late returns are charged at 150% of the daily rate for each delayed day.',
+        'about_faq_q4': 'Can I request a specific pickup or delivery window?',
+        'about_faq_a4': 'Yes, you can leave a note in your request and our team confirms the final schedule.',
         'contact': 'Contact',
         'couture_title': 'Couture Archive',
         'couture_subtitle': 'Restricted access — special handling required',
@@ -220,6 +252,18 @@ TRANSLATIONS = {
         'admin_drag_photos_hint': 'Drag photos by the handle to reorder. The first photo is the main image on the product page.',
         'admin_cannot_remove_last_image': 'You must keep at least one image',
         'admin_remove_photo': 'Remove',
+        'admin_brands_title': 'Brands',
+        'admin_brand_products_count': 'products',
+        'admin_delete_brand': 'Delete brand',
+        'admin_delete_brand_confirm': 'Delete this brand? This action cannot be undone.',
+        'admin_brand_deleted': 'Brand deleted',
+        'admin_brand_has_products': 'Cannot delete brand with linked products.',
+        'admin_brand_not_found': 'Brand not found',
+        'account_register_benefits_title': 'Enjoy a unique shopping experience with your personal account',
+        'account_register_benefit_1': 'Check details and track status of your rentals and returns',
+        'account_register_benefit_2': 'Create a wishlist to save your favorite pieces',
+        'account_register_benefit_3': 'Manage private appointments and custom requests',
+        'account_register_benefit_4': 'Receive tailored assistance from client service',
         'category_rtw': 'RTW',
         'category_couture': 'Couture',
         'category_accessories': 'Accessories',
@@ -308,6 +352,28 @@ TRANSLATIONS = {
         'acc_login_required': 'Войдите в аккаунт, чтобы пользоваться этим.',
         'acc_couture_members_only': 'Раздел кутюр доступен только зарегистрированным участникам.',
         'acc_couture_cart_login': 'Войдите, чтобы добавить кутюр в корзину.',
+        'acc_checkout_login_required': 'Войдите, чтобы оформить аренду.',
+        'acc_checkout_empty': 'Корзина пуста.',
+        'acc_checkout_success': 'Заявка на аренду оформлена и добавлена в историю кабинета.',
+        'acc_checkout_failed': 'Не удалось оформить аренду сейчас. Попробуйте позже.',
+        'account_history_title': 'История аренд',
+        'account_history_empty': 'Пока нет оформленных аренд.',
+        'account_history_order': 'Заказ',
+        'account_history_date': 'Дата',
+        'account_history_status': 'Статус',
+        'account_history_items': 'позиций',
+        'account_history_total': 'Итого',
+        'account_summary_title': 'Сводка по арендам',
+        'account_summary_orders': 'Оформленных заказов',
+        'account_summary_items': 'Арендованных вещей',
+        'account_summary_spent': 'Суммарно',
+        'account_summary_favorite_brand': 'Любимый бренд',
+        'account_summary_favorite_brand_none': 'Пока нет',
+        'account_quick_actions': 'Быстрые действия',
+        'account_quick_action_bag': 'Открыть корзину',
+        'account_quick_action_wishlist': 'Открыть избранное',
+        'account_quick_action_collection': 'Смотреть каталог',
+        'order_status_confirmed': 'Подтверждён',
         'members_title': 'Зона участника',
         'members_intro': 'Доступ и функции для зарегистрированных клиентов.',
         'members_tile_couture': 'Архив кутюр',
@@ -392,6 +458,16 @@ TRANSLATIONS = {
         'duration_desc': 'Срок аренды гибкий для каждой вещи. За просрочку взимается 150% от дневной ставки.',
         'care': 'Уход',
         'care_desc': 'Вещи должны быть возвращены в полученном состоянии. Не стирать. Профессиональный уход включён в стоимость.',
+        'about_lead': 'Аутентифицированный дизайнерский архив для краткосрочной аренды с персональным сопровождением.',
+        'about_faq_title': 'FAQ',
+        'about_faq_q1': 'Как оформить аренду?',
+        'about_faq_a1': 'Выберите вещь, укажите срок аренды, добавьте в корзину и оформите заказ через аккаунт.',
+        'about_faq_q2': 'Есть ли помощь с подбором размера?',
+        'about_faq_a2': 'Да. На страницах товаров указаны доступные размеры, а команда поможет с рекомендацией по посадке.',
+        'about_faq_q3': 'Что будет при позднем возврате?',
+        'about_faq_a3': 'За каждый день просрочки начисляется 150% от дневной ставки аренды.',
+        'about_faq_q4': 'Можно выбрать удобное окно доставки или самовывоза?',
+        'about_faq_a4': 'Да, укажите пожелание в заявке, а команда подтвердит финальное время.',
         'contact': 'Контакты',
         'couture_title': 'Архив кутюр',
         'couture_subtitle': 'Ограниченный доступ — требуется особое обращение',
@@ -454,6 +530,18 @@ TRANSLATIONS = {
         'admin_drag_photos_hint': 'Перетаскивайте фото за ручку, чтобы поменять порядок. Первое фото — главное на карточке товара.',
         'admin_cannot_remove_last_image': 'Нужно оставить хотя бы одно фото',
         'admin_remove_photo': 'Удалить',
+        'admin_brands_title': 'Бренды',
+        'admin_brand_products_count': 'товаров',
+        'admin_delete_brand': 'Удалить бренд',
+        'admin_delete_brand_confirm': 'Удалить этот бренд? Действие нельзя отменить.',
+        'admin_brand_deleted': 'Бренд удалён',
+        'admin_brand_has_products': 'Нельзя удалить бренд, пока к нему привязаны товары.',
+        'admin_brand_not_found': 'Бренд не найден',
+        'account_register_benefits_title': 'Личный аккаунт открывает дополнительные возможности',
+        'account_register_benefit_1': 'Проверяйте детали и отслеживайте статус аренд и возвратов',
+        'account_register_benefit_2': 'Сохраняйте понравившиеся вещи в избранное',
+        'account_register_benefit_3': 'Управляйте приватными заявками и особыми запросами',
+        'account_register_benefit_4': 'Получайте персональную поддержку клиентского сервиса',
         'category_rtw': 'RTW',
         'category_couture': 'Кутюр',
         'category_accessories': 'Аксессуары',
@@ -836,6 +924,181 @@ def ensure_app_users_table():
             """
         )
         conn.commit()
+
+
+def ensure_rental_orders_tables():
+    ensure_app_users_table()
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            IF OBJECT_ID('RentalOrders', 'U') IS NULL
+            CREATE TABLE RentalOrders (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                user_id INT NOT NULL,
+                status NVARCHAR(30) NOT NULL DEFAULT N'confirmed',
+                total_items INT NOT NULL,
+                total_price INT NOT NULL,
+                created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+                CONSTRAINT FK_RentalOrders_AppUsers FOREIGN KEY (user_id) REFERENCES AppUsers(id) ON DELETE CASCADE
+            );
+            """
+        )
+        cur.execute(
+            """
+            IF OBJECT_ID('RentalOrderItems', 'U') IS NULL
+            CREATE TABLE RentalOrderItems (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                order_id INT NOT NULL,
+                product_id INT NULL,
+                serial NVARCHAR(50) NOT NULL,
+                brand_name NVARCHAR(120) NOT NULL,
+                product_name NVARCHAR(180) NOT NULL,
+                size_label NVARCHAR(40) NULL,
+                rental_days INT NOT NULL,
+                price_per_day INT NOT NULL,
+                line_total INT NOT NULL,
+                image_url NVARCHAR(500) NULL,
+                CONSTRAINT FK_RentalOrderItems_Order FOREIGN KEY (order_id) REFERENCES RentalOrders(id) ON DELETE CASCADE
+            );
+            """
+        )
+        conn.commit()
+
+
+def _create_rental_order(user_id, cart_items):
+    if not cart_items:
+        return None
+    ensure_rental_orders_tables()
+    total_price = sum(int(i.get('total_price', 0) or 0) for i in cart_items)
+    total_items = len(cart_items)
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO RentalOrders (user_id, status, total_items, total_price)
+            OUTPUT INSERTED.id
+            VALUES (?, N'confirmed', ?, ?)
+            """,
+            (int(user_id), total_items, total_price),
+        )
+        row = cur.fetchone()
+        order_id = int(row[0]) if row and row[0] is not None else None
+        if not order_id:
+            conn.rollback()
+            return None
+        for item in cart_items:
+            cur.execute(
+                """
+                INSERT INTO RentalOrderItems (
+                    order_id, product_id, serial, brand_name, product_name, size_label,
+                    rental_days, price_per_day, line_total, image_url
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    order_id,
+                    int(item.get('product_id')) if item.get('product_id') is not None else None,
+                    str(item.get('serial') or ''),
+                    str(item.get('brand') or ''),
+                    str(item.get('name') or ''),
+                    (item.get('size') or '').strip() or None,
+                    int(item.get('days', 0) or 0),
+                    int(item.get('price_per_day', 0) or 0),
+                    int(item.get('total_price', 0) or 0),
+                    str(item.get('image') or ''),
+                ),
+            )
+        conn.commit()
+        return order_id
+
+
+def _fetch_user_rental_history(user_id, limit=8):
+    ensure_rental_orders_tables()
+    orders = []
+    stats = {
+        'orders_count': 0,
+        'items_count': 0,
+        'total_spend': 0,
+        'favorite_brand': '',
+    }
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT TOP (?) id, status, total_items, total_price, created_at
+            FROM RentalOrders
+            WHERE user_id = ?
+            ORDER BY created_at DESC, id DESC
+            """,
+            (int(limit), int(user_id)),
+        )
+        order_rows = cur.fetchall()
+        if order_rows:
+            order_ids = [int(r[0]) for r in order_rows]
+            placeholders = ','.join('?' for _ in order_ids)
+            cur.execute(
+                f"""
+                SELECT order_id, serial, brand_name, product_name, size_label, rental_days, line_total, image_url
+                FROM RentalOrderItems
+                WHERE order_id IN ({placeholders})
+                ORDER BY order_id DESC, id ASC
+                """,
+                tuple(order_ids),
+            )
+            items_by_order = {}
+            for row in cur.fetchall():
+                oid = int(row[0])
+                items_by_order.setdefault(oid, []).append({
+                    'serial': row[1] or '',
+                    'brand_name': row[2] or '',
+                    'product_name': row[3] or '',
+                    'size_label': row[4] or '',
+                    'rental_days': int(row[5]) if row[5] is not None else 0,
+                    'line_total': int(row[6]) if row[6] is not None else 0,
+                    'image_url': row[7] or '',
+                })
+            for row in order_rows:
+                oid = int(row[0])
+                orders.append({
+                    'id': oid,
+                    'status': row[1] or 'confirmed',
+                    'total_items': int(row[2]) if row[2] is not None else 0,
+                    'total_price': int(row[3]) if row[3] is not None else 0,
+                    'created_at': row[4],
+                    'items': items_by_order.get(oid, []),
+                })
+        cur.execute(
+            """
+            SELECT
+                COUNT(*) AS orders_count,
+                COALESCE(SUM(total_items), 0) AS items_count,
+                COALESCE(SUM(total_price), 0) AS total_spend
+            FROM RentalOrders
+            WHERE user_id = ?
+            """,
+            (int(user_id),),
+        )
+        base_stats = cur.fetchone()
+        if base_stats:
+            stats['orders_count'] = int(base_stats[0] or 0)
+            stats['items_count'] = int(base_stats[1] or 0)
+            stats['total_spend'] = int(base_stats[2] or 0)
+        cur.execute(
+            """
+            SELECT TOP 1 brand_name, COUNT(*) AS c
+            FROM RentalOrderItems i
+            INNER JOIN RentalOrders o ON o.id = i.order_id
+            WHERE o.user_id = ?
+            GROUP BY brand_name
+            ORDER BY c DESC, brand_name ASC
+            """,
+            (int(user_id),),
+        )
+        fav = cur.fetchone()
+        if fav and fav[0]:
+            stats['favorite_brand'] = str(fav[0])
+    return orders, stats
 
 
 def _user_fetch_by_email(email_norm):
@@ -1225,6 +1488,39 @@ def get_brands():
     except Exception:
         return [dict(b, css_class=_resolve_brand_css(b['name'], b.get('css_class'))) for b in BRANDS]
 
+
+def get_admin_brands():
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT b.id, b.name, b.slug, b.css_class, COUNT(p.id) AS products_count
+                FROM Brands b
+                LEFT JOIN Products p ON p.brand_id = b.id
+                GROUP BY b.id, b.name, b.slug, b.css_class
+                ORDER BY b.name
+                """
+            )
+            rows = cur.fetchall()
+        out = []
+        for r in rows:
+            name = r.name
+            raw_slug = getattr(r, 'slug', None)
+            slug = (raw_slug or '').strip() or name
+            db_css = getattr(r, 'css_class', None)
+            out.append({
+                'id': int(r.id),
+                'name': name,
+                'slug': slug,
+                'css_class': _resolve_brand_css(name, db_css),
+                'products_count': int(r.products_count or 0),
+            })
+        return out
+    except Exception:
+        return []
+
+
 def find_product(product_id):
     try:
         with get_db_connection() as conn:
@@ -1516,12 +1812,45 @@ def clear_cart():
     return redirect(url_for('cart'))
 
 
+@app.route('/cart/checkout', methods=['POST'])
+def cart_checkout():
+    user = get_current_user()
+    if not user:
+        flash(t('acc_checkout_login_required'), 'error')
+        return redirect(url_for('account'))
+    cart_items = get_cart()
+    if not cart_items:
+        flash(t('acc_checkout_empty'), 'error')
+        return redirect(url_for('cart'))
+    try:
+        order_id = _create_rental_order(user['id'], cart_items)
+    except Exception:
+        order_id = None
+    if not order_id:
+        flash(t('acc_checkout_failed'), 'error')
+        return redirect(url_for('cart'))
+    session['cart'] = []
+    session.modified = True
+    flash(t('acc_checkout_success'), 'success')
+    return redirect(url_for('account'))
+
+
 @app.route('/account', methods=['GET'])
 def account():
+    history_orders = []
+    history_stats = None
+    user = get_current_user()
+    if user:
+        try:
+            history_orders, history_stats = _fetch_user_rental_history(user['id'])
+        except Exception:
+            history_orders, history_stats = [], None
     return render_template(
         'account.html',
         active_page='account',
         cart_count=get_cart_count(),
+        history_orders=history_orders,
+        history_stats=history_stats,
         t=t,
     )
 
@@ -1740,6 +2069,7 @@ def admin_panel():
         'admin.html',
         products=products,
         brands=get_brands(),
+        brands_admin=get_admin_brands(),
         admin_status=admin_status,
         active_page='admin',
         cart_count=get_cart_count(),
@@ -1760,6 +2090,28 @@ def admin_delete_product(product_id):
             cur.execute('DELETE FROM Products WHERE id = ?', (product_id,))
             conn.commit()
         session['admin_status'] = {'type': 'success', 'message': t('admin_product_deleted')}
+    except Exception as exc:
+        session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+    return redirect(url_for('admin_panel'))
+
+
+@app.route('/admin/brand/<int:brand_id>/delete', methods=['POST'])
+def admin_delete_brand(brand_id):
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id FROM Brands WHERE id = ?', (brand_id,))
+            if not cur.fetchone():
+                session['admin_status'] = {'type': 'error', 'message': t('admin_brand_not_found')}
+                return redirect(url_for('admin_panel'))
+            cur.execute('SELECT COUNT(*) FROM Products WHERE brand_id = ?', (brand_id,))
+            linked_products = int(cur.fetchone()[0] or 0)
+            if linked_products > 0:
+                session['admin_status'] = {'type': 'error', 'message': t('admin_brand_has_products')}
+                return redirect(url_for('admin_panel'))
+            cur.execute('DELETE FROM Brands WHERE id = ?', (brand_id,))
+            conn.commit()
+        session['admin_status'] = {'type': 'success', 'message': t('admin_brand_deleted')}
     except Exception as exc:
         session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
     return redirect(url_for('admin_panel'))

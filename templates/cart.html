@@ -29,7 +29,9 @@
             <span>{{ t('total') }}</span>
             <span>${{ total }}</span>
         </div>
-        <button type="button" class="btn-primary cart-checkout-btn" onclick="alert('Redirecting to secure payment...')">{{ t('checkout') }}</button>
+        <form method="post" action="{{ url_for('cart_checkout') }}">
+            <button type="submit" class="btn-primary cart-checkout-btn">{{ t('checkout') }}</button>
+        </form>
         <div class="cart-clear-wrap">
             <a href="{{ url_for('clear_cart') }}" class="cart-clear-link">{{ t('clear_bag') }}</a>
         </div>
