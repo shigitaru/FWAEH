@@ -209,7 +209,7 @@ def sync_balenciaga_graffiti_jeans_product_images(cur) -> None:
         )
 
 
-# Balenciaga Coture Getaria bag — couturebag.jpg или couturebag-1.png … в static/products
+# Balenciaga Couture Getaria bag — couturebag.jpg или couturebag-1.png … в static/products
 BC_COUTURE_BAG_SERIAL = "BC-0001"
 _COUTUREBAG_NAME = re.compile(r"^couturebag(?:-(\d+))?\.(png|jpg|jpeg|webp)$", re.I)
 BC_COUTURE_BAG_REMOTE = (
@@ -378,7 +378,7 @@ DEMO_PRODUCTS: list[dict] = [
         "category": "couture",
         "item_category": "bags",
         "serial": "BC-0001",
-        "brand": "Balenciaga Coture",
+        "brand": "Balenciaga Couture",
         "name": "Getaria One Handle Bag",
         "price": 140,
         "max_days": 5,

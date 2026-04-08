@@ -21,6 +21,8 @@ from seed_defaults import fallback_products_list
 app = Flask(__name__)
 app.secret_key = 'protocol-archive-2024'
 
+_brand_coture_typo_fixed = False
+
 DB_NAME = os.getenv('DB_NAME', 'ProtocolArchive')
 DB_SERVER = os.getenv('DB_SERVER', r'SHIGITARU\SQLEXPRESS')
 DB_CONNECTION_STRING = os.getenv(
@@ -651,7 +653,7 @@ PRODUCTS = fallback_products_list()
 BRANDS = [
     {'name': 'Maison Margiela', 'slug': 'Maison Margiela', 'css_class': 'brand-margiela'},
     {'name': 'Balenciaga', 'slug': 'Balenciaga', 'css_class': 'brand-balenciaga'},
-    {'name': 'Balenciaga Coture', 'slug': 'Balenciaga Coture', 'css_class': 'brand-balenciaga'},
+    {'name': 'Balenciaga Couture', 'slug': 'Balenciaga Couture', 'css_class': 'brand-balenciaga'},
     {'name': 'Rick Owens', 'slug': 'Rick Owens', 'css_class': 'brand-rickowens'},
     {'name': 'YZY', 'slug': 'YZY', 'css_class': 'brand-yzy'},
     {'name': 'Raf Simons', 'slug': 'Raf Simons', 'css_class': 'brand-raf-simons'},
@@ -964,6 +966,44 @@ def ensure_rental_orders_tables():
             """
         )
         conn.commit()
+
+
+def ensure_legacy_balenciaga_coture_brand_rename():
+    """Переименовать бренд Balenciaga Coture → Balenciaga Couture в уже существующей БД."""
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT OBJECT_ID('dbo.Brands', 'U')")
+            if cur.fetchone()[0] is None:
+                return
+            cur.execute("SELECT 1 FROM Brands WHERE name = ?", ("Balenciaga Coture",))
+            if not cur.fetchone():
+                return
+            cur.execute("SELECT 1 FROM Brands WHERE name = ?", ("Balenciaga Couture",))
+            if cur.fetchone():
+                return
+            cur.execute(
+                "UPDATE Brands SET name = ?, slug = ? WHERE name = ?",
+                ("Balenciaga Couture", "Balenciaga Couture", "Balenciaga Coture"),
+            )
+            cur.execute("SELECT OBJECT_ID('dbo.RentalOrderItems', 'U')")
+            if cur.fetchone()[0] is not None:
+                cur.execute(
+                    "UPDATE RentalOrderItems SET brand_name = ? WHERE brand_name = ?",
+                    ("Balenciaga Couture", "Balenciaga Coture"),
+                )
+            conn.commit()
+    except Exception:
+        pass
+
+
+@app.before_request
+def _run_brand_coture_typo_fix_once():
+    global _brand_coture_typo_fixed
+    if _brand_coture_typo_fixed:
+        return
+    _brand_coture_typo_fixed = True
+    ensure_legacy_balenciaga_coture_brand_rename()
 
 
 def _create_rental_order(user_id, cart_items):

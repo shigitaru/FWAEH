@@ -259,10 +259,11 @@ html.pa-hero-home:not(.pa-header-solid)[data-theme="dark"] .header-logo-mark-img
     align-items: stretch;
     background: #ddd3bf;
 }
+/* Подпись: не привязывать к vh — высота hero задаётся aspect-ratio от ширины; % от высоты блока держит баланс на ноутбуке */
 .couture-hero-signature {
     position: absolute;
     left: 50%;
-    bottom: clamp(72px, 12vh, 132px);
+    bottom: clamp(80px, 15%, 176px);
     transform: translateX(-50%);
     z-index: 3;
     text-align: center;

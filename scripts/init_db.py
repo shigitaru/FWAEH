@@ -222,6 +222,30 @@ def _seed_campaign(cur, force_reset):
     print("Campaign stories and images seeded.")
 
 
+_LEGACY_BRAND_COTURE_TYPO = "Balenciaga Coture"
+_BRAND_BALENCIAGA_COUTURE = "Balenciaga Couture"
+
+
+def _rename_legacy_balenciaga_coture_brand(cur):
+    """Переименовать бренд с опечаткой Coture → Couture в уже существующей БД."""
+    cur.execute("SELECT 1 FROM Brands WHERE name = ?", (_LEGACY_BRAND_COTURE_TYPO,))
+    if not cur.fetchone():
+        return
+    cur.execute("SELECT 1 FROM Brands WHERE name = ?", (_BRAND_BALENCIAGA_COUTURE,))
+    if cur.fetchone():
+        return
+    cur.execute(
+        "UPDATE Brands SET name = ?, slug = ? WHERE name = ?",
+        (_BRAND_BALENCIAGA_COUTURE, _BRAND_BALENCIAGA_COUTURE, _LEGACY_BRAND_COTURE_TYPO),
+    )
+    cur.execute("SELECT OBJECT_ID('dbo.RentalOrderItems', 'U')")
+    if cur.fetchone()[0] is not None:
+        cur.execute(
+            "UPDATE RentalOrderItems SET brand_name = ? WHERE brand_name = ?",
+            (_BRAND_BALENCIAGA_COUTURE, _LEGACY_BRAND_COTURE_TYPO),
+        )
+
+
 def apply_demo_seed(cur, *, reset=None, products=None):
     """
     Вставить демо-витрину и кампанию из seed_defaults.py.
@@ -413,12 +437,14 @@ def create_tables():
             """
         )
 
+        _rename_legacy_balenciaga_coture_brand(cur)
+
         default_brands = [
             "Rick Owens",
             "YZY",
             "Maison Margiela",
             "Balenciaga",
-            "Balenciaga Coture",
+            "Balenciaga Couture",
             "Vetements",
             "Gucci",
             "Raf Simons",
