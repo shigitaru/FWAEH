@@ -1,9 +1,9 @@
 """Rental order schema, checkout, and admin/history queries."""
-from db import get_db_connection
+from .db import get_db_connection
 
 from services.rental_service import RentalAvailabilityError
 
-from rental_wrappers import _cart_item_period, _is_product_available
+from .rental_wrappers import _cart_item_period, _is_product_available
 
 def ensure_app_users_table():
     with get_db_connection() as conn:

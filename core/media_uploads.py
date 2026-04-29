@@ -4,8 +4,8 @@ from uuid import uuid4
 
 from werkzeug.utils import secure_filename
 
-from config import settings
-from db import get_db_connection
+from .config import settings
+from .db import get_db_connection
 
 UPLOAD_DIR = settings.upload_dir
 CAMPAIGN_UPLOAD_DIR = settings.campaign_upload_dir

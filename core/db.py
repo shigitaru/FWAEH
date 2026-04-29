@@ -1,6 +1,6 @@
 import pyodbc
 
-from config import settings
+from .config import settings
 
 
 def get_db_connection():

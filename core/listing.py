@@ -1,8 +1,8 @@
 """Collection listing request context (filters, brands, clear URL)."""
 from flask import request, url_for
 
-from catalog import filter_products, get_brands
-from constants import CONDITION_LABELS, ITEM_CATEGORY_SLUGS
+from .catalog import filter_products, get_brands
+from .constants import CONDITION_LABELS, ITEM_CATEGORY_SLUGS
 
 
 def _collection_listing_data(for_home=False):

@@ -1,6 +1,6 @@
 """Thin wrappers around rental_service for DB availability checks."""
-from db import get_db_connection
-from constants import ACTIVE_RENTAL_STATUSES
+from .db import get_db_connection
+from .constants import ACTIVE_RENTAL_STATUSES
 from services.rental_service import (
     parse_iso_date as rental_parse_iso_date,
     cart_item_period as rental_cart_item_period,

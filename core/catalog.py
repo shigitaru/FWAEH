@@ -1,7 +1,7 @@
 """Product catalog: DB queries with in-memory fallback."""
-from db import get_db_connection
+from .db import get_db_connection
 
-from constants import BRANDS, PRODUCTS, _resolve_brand_css
+from .constants import BRANDS, PRODUCTS, _resolve_brand_css
 
 def _attach_related_data(products):
     if not products:

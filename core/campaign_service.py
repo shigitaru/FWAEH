@@ -1,10 +1,10 @@
 """Campaign page public data and admin/campaign DB helpers."""
 from flask import request
 
-from db import get_db_connection
-from i18n import TRANSLATIONS, _campaign_bilingual_display, get_lang, t
+from .db import get_db_connection
+from .i18n import TRANSLATIONS, _campaign_bilingual_display, get_lang, t
 
-from media_uploads import _save_campaign_upload
+from .media_uploads import _save_campaign_upload
 
 def get_campaign_index_data():
     """Главная страница кампании: интро + список историй с обложкой."""

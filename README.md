@@ -189,18 +189,19 @@ flask run --port 5000
 ## Структура проекта (кратко)
 
 - `app.py` — точка входа Flask: создание `app`, `before_request`, регистрация роутов и `context_processor`
-- `i18n.py` — словари переводов и функции `t` / `tc` / `tv`
-- `constants.py` — статусы заказов, fallback-каталог, бренды, категории вещей, `normalize_item_category_slug`
-- `session_cart.py` — корзина, wishlist, текущий пользователь из сессии
-- `rental_wrappers.py` — обёртки над `rental_service` для проверки доступности
-- `rental_orders.py` — схема заказов, чекаут, история и админ-список заказов
-- `account_service.py` — вставка/поиск пользователя для auth
-- `catalog.py` — выборка товаров из БД с fallback на `PRODUCTS`
-- `listing.py` — контекст листинга коллекции (фильтры, `url_for`)
-- `media_uploads.py` — загрузка изображений товаров и кампании, правки галереи в админке
-- `campaign_service.py` — публичные данные кампании и админские запросы к stories/settings
-- `config.py` — конфигурация (DB, пути загрузок, разрешённые расширения)
-- `db.py` — подключение к SQL Server (`get_db_connection`)
+- `core/` — общие модули приложения (импорт: `from core.<модуль> import ...`):
+  - `core/i18n.py` — словари переводов и функции `t` / `tc` / `tv`
+  - `core/constants.py` — статусы заказов, fallback-каталог, бренды, категории вещей, `normalize_item_category_slug`
+  - `core/session_cart.py` — корзина, wishlist, текущий пользователь из сессии
+  - `core/rental_wrappers.py` — обёртки над `rental_service` для проверки доступности
+  - `core/rental_orders.py` — схема заказов, чекаут, история и админ-список заказов
+  - `core/account_service.py` — вставка/поиск пользователя для auth
+  - `core/catalog.py` — выборка товаров из БД с fallback на `PRODUCTS`
+  - `core/listing.py` — контекст листинга коллекции (фильтры, `url_for`)
+  - `core/media_uploads.py` — загрузка изображений товаров и кампании, правки галереи в админке
+  - `core/campaign_service.py` — публичные данные кампании и админские запросы к stories/settings
+  - `core/config.py` — конфигурация (DB, пути загрузок, разрешённые расширения)
+  - `core/db.py` — подключение к SQL Server (`get_db_connection`)
 - `routes/` — маршруты приложения:
   - `routes/public.py` — публичные страницы, корзина, wishlist, checkout, campaign/about
   - `routes/api.py` — API-эндпоинты (`/api/*`)

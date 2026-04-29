@@ -2,8 +2,8 @@ from datetime import datetime
 
 from flask import Flask, request
 
-from account_service import _user_fetch_by_email, _user_insert
-from campaign_service import (
+from core.account_service import _user_fetch_by_email, _user_insert
+from core.campaign_service import (
     _collect_story_image_urls_from_form,
     _fetch_campaign_settings_admin,
     _fetch_campaign_story_admin,
@@ -12,24 +12,24 @@ from campaign_service import (
     get_campaign_index_data,
     get_campaign_story_detail,
 )
-from catalog import filter_products, find_product, get_admin_brands, get_brands
-from constants import (
+from core.catalog import filter_products, find_product, get_admin_brands, get_brands
+from core.constants import (
     ITEM_CATEGORIES,
     ORDER_STATUS_FLOW,
     SPLASH_IMAGE,
     normalize_item_category_slug,
 )
-from db import get_db_connection
-from i18n import TRANSLATIONS, get_lang, t, tc, tv
-from listing import _collection_listing_data
-from media_uploads import (
+from core.db import get_db_connection
+from core.i18n import TRANSLATIONS, get_lang, t, tc, tv
+from core.listing import _collection_listing_data
+from core.media_uploads import (
     _apply_admin_product_image_changes,
     _fetch_product_image_rows,
     _nullable_str,
     _save_campaign_upload,
     _save_uploaded_image,
 )
-from rental_orders import (
+from core.rental_orders import (
     _create_rental_order,
     _fetch_recent_orders_admin,
     _fetch_user_rental_history,
@@ -42,7 +42,7 @@ from routes.api import register_api_routes
 from routes.auth import register_auth_routes
 from routes.public import register_public_routes
 from services.rental_service import RentalAvailabilityError
-from session_cart import (
+from core.session_cart import (
     ACC_EMAIL_RE,
     _clear_user_session,
     get_cart,
@@ -51,7 +51,7 @@ from session_cart import (
     get_current_user,
     get_wishlist_ids,
 )
-from rental_wrappers import _is_product_available, _parse_iso_date
+from core.rental_wrappers import _is_product_available, _parse_iso_date
 
 app = Flask(__name__)
 app.secret_key = 'protocol-archive-2024'
