@@ -16,7 +16,9 @@
                     {% if item.size %}
                     {{ t('size') }}: {{ item.size }}<br>
                     {% endif %}
-                    {{ t('period') }}: {{ item.days }} {{ t('days_label') }}
+                    {{ t('period') }}: {{ item.days }} {{ t('days_label') }}<br>
+                    {{ t('rental_start_date') }}: {{ item.start_date }}<br>
+                    {{ t('rental_end_date') }}: {{ item.end_date }}
                 </div>
             </div>
             <div class="cart-item-right">

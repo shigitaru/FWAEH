@@ -188,7 +188,28 @@ flask run --port 5000
 
 ## Структура проекта (кратко)
 
-- `app.py` — приложение Flask, маршруты, фильтры каталога и поиск
+- `app.py` — точка входа Flask: создание `app`, `before_request`, регистрация роутов и `context_processor`
+- `i18n.py` — словари переводов и функции `t` / `tc` / `tv`
+- `constants.py` — статусы заказов, fallback-каталог, бренды, категории вещей, `normalize_item_category_slug`
+- `session_cart.py` — корзина, wishlist, текущий пользователь из сессии
+- `rental_wrappers.py` — обёртки над `rental_service` для проверки доступности
+- `rental_orders.py` — схема заказов, чекаут, история и админ-список заказов
+- `account_service.py` — вставка/поиск пользователя для auth
+- `catalog.py` — выборка товаров из БД с fallback на `PRODUCTS`
+- `listing.py` — контекст листинга коллекции (фильтры, `url_for`)
+- `media_uploads.py` — загрузка изображений товаров и кампании, правки галереи в админке
+- `campaign_service.py` — публичные данные кампании и админские запросы к stories/settings
+- `config.py` — конфигурация (DB, пути загрузок, разрешённые расширения)
+- `db.py` — подключение к SQL Server (`get_db_connection`)
+- `routes/` — маршруты приложения:
+  - `routes/public.py` — публичные страницы, корзина, wishlist, checkout, campaign/about
+  - `routes/api.py` — API-эндпоинты (`/api/*`)
+  - `routes/auth.py` — аккаунт, login/register/logout, members
+  - `routes/admin.py` — операции админки (товары, бренды, заказы, campaign stories)
+- `services/` — бизнес-логика:
+  - `services/rental_service.py` — период аренды, парсинг дат, проверка доступности
+- `repositories/` — слой доступа к данным:
+  - `repositories/user_repository.py` — операции с пользователями
 - `seed_defaults.py` — единый источник демо-товаров, текстов кампании, правил локальных галерей и fallback-URL
 - `scripts/init_db.py` — создание БД, таблиц, первичный сид через `apply_demo_seed`
 - `scripts/seed_demo_content.py` — сброс товаров и кампании + заливка вшитого набора товаров и кампании

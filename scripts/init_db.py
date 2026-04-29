@@ -409,9 +409,11 @@ def create_tables():
             CREATE TABLE RentalOrders (
                 id INT IDENTITY(1,1) PRIMARY KEY,
                 user_id INT NOT NULL,
-                status NVARCHAR(30) NOT NULL DEFAULT N'confirmed',
+                status NVARCHAR(30) NOT NULL DEFAULT N'created',
                 total_items INT NOT NULL,
                 total_price INT NOT NULL,
+                rental_start_date DATE NULL,
+                rental_end_date DATE NULL,
                 created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
                 CONSTRAINT FK_RentalOrders_AppUsers FOREIGN KEY (user_id) REFERENCES AppUsers(id) ON DELETE CASCADE
             );
@@ -432,8 +434,34 @@ def create_tables():
                 price_per_day INT NOT NULL,
                 line_total INT NOT NULL,
                 image_url NVARCHAR(500) NULL,
+                rental_start_date DATE NULL,
+                rental_end_date DATE NULL,
                 CONSTRAINT FK_RentalOrderItems_Order FOREIGN KEY (order_id) REFERENCES RentalOrders(id) ON DELETE CASCADE
             );
+            """
+        )
+        cur.execute(
+            """
+            IF COL_LENGTH('dbo.RentalOrders', 'rental_start_date') IS NULL
+                ALTER TABLE dbo.RentalOrders ADD rental_start_date DATE NULL;
+            """
+        )
+        cur.execute(
+            """
+            IF COL_LENGTH('dbo.RentalOrders', 'rental_end_date') IS NULL
+                ALTER TABLE dbo.RentalOrders ADD rental_end_date DATE NULL;
+            """
+        )
+        cur.execute(
+            """
+            IF COL_LENGTH('dbo.RentalOrderItems', 'rental_start_date') IS NULL
+                ALTER TABLE dbo.RentalOrderItems ADD rental_start_date DATE NULL;
+            """
+        )
+        cur.execute(
+            """
+            IF COL_LENGTH('dbo.RentalOrderItems', 'rental_end_date') IS NULL
+                ALTER TABLE dbo.RentalOrderItems ADD rental_end_date DATE NULL;
             """
         )
 

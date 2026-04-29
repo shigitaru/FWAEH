@@ -69,6 +69,9 @@
             </div>
             {% endif %}
             <div class="form-label">{{ t('rental_period') }}</div>
+            <div class="rental-date-wrap">
+                <input type="date" name="start_date" id="start-date-input" class="rental-date-input" value="{{ selected_start_date }}" min="{{ selected_start_date }}">
+            </div>
             <div class="days-input-wrap">
                 <div class="days-stepper">
                     <button type="button" class="step-btn" data-step="-1" aria-label="Decrease days">-</button>
@@ -78,6 +81,9 @@
                 <span class="days-max">{{ t('max') }}: {{ product.max_days }} {{ t('days_label') }}</span>
             </div>
             <div class="total-display"><span>{{ t('total') }}</span><span>$<span id="total-display">{{ total_price }}</span></span></div>
+            <div class="availability-status {% if selected_available %}is-available{% else %}is-unavailable{% endif %}" id="availability-text">
+                {% if selected_available %}{{ t('product_available_for_dates') }}{% else %}{{ t('product_unavailable_for_dates') }}{% endif %} ({{ selected_start_date }} - {{ selected_end_date }})
+            </div>
             <button type="submit" class="btn-primary">{{ t('add_to_bag') }}</button>
         </form>
     </div>
@@ -89,6 +95,8 @@
 (function(){
 var p={{ product.price }},mx={{ product.max_days }},inp=document.getElementById('days-input'),
 total=document.getElementById('total-display'),btns=document.querySelectorAll('.step-btn'),
+startDateInp=document.getElementById('start-date-input'),
+availabilityText=document.getElementById('availability-text'),
 mainImg=document.getElementById('main-product-image'),
 thumbs=Array.prototype.slice.call(document.querySelectorAll('.product-thumb')),
 thumbsRail=document.getElementById('product-thumbs-rail'),
@@ -106,11 +114,33 @@ function clampDays(raw){
 function setTotalForDays(d){
     total.innerText=p*d;
 }
+function setAvailabilityState(available, startDate, endDate){
+    var label=available ? {{ t('product_available_for_dates')|tojson }} : {{ t('product_unavailable_for_dates')|tojson }};
+    availabilityText.textContent=label+' ('+startDate+' - '+endDate+')';
+    availabilityText.classList.toggle('is-available', !!available);
+    availabilityText.classList.toggle('is-unavailable', !available);
+}
+function refreshAvailability(){
+    if(!startDateInp || !availabilityText || !window.fetch) return;
+    var payload={start_date:startDateInp.value,days:clampDays(inp.value)};
+    fetch('/api/product/{{ product.id }}/availability',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        credentials:'same-origin',
+        body:JSON.stringify(payload)
+    }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(data){
+        if(!data || !data.ok) return;
+        setAvailabilityState(data.available, data.start_date, data.end_date);
+      })
+      .catch(function(){});
+}
 /* Кнопки ±: сразу нормализуем число */
 function setDays(v){
     var d=clampDays(v);
     inp.value=d;
     setTotalForDays(d);
+    refreshAvailability();
 }
 /* Ввод с клавиатуры: не перезаписываем поле на каждой клавише (иначе ломается набор и пустое значение) */
 function onDaysInput(){
@@ -133,6 +163,14 @@ function normalizeDaysField(){
 
 inp.addEventListener('input',onDaysInput);
 inp.addEventListener('blur',normalizeDaysField);
+if(startDateInp){
+    startDateInp.addEventListener('change',function(){
+        if(!startDateInp.value){
+            startDateInp.value={{ selected_start_date|tojson }};
+        }
+        refreshAvailability();
+    });
+}
 btns.forEach(function(btn){
     btn.addEventListener('click',function(){
         setDays((parseInt(inp.value,10)||1)+parseInt(this.dataset.step,10));
@@ -175,6 +213,7 @@ if(prevBtn){ prevBtn.addEventListener('click',function(){ setImage(currentIndex-
 if(nextBtn){ nextBtn.addEventListener('click',function(){ setImage(currentIndex+1); }); }
 setDays(inp.value);
 setImage(0);
+refreshAvailability();
 })();
 
 (function () {

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% import 'macros/store_product.html' as store with context %}
-{% block html_attrs %}{% if lux_theme %} class="pa-lux-site{% if show_hero %} pa-hero-home{% endif %}"{% endif %}{% endblock %}
+{% block html_attrs %}{% if lux_theme or (admin_site|default(false)) %} class="{% if lux_theme %}pa-lux-site{% if show_hero %} pa-hero-home{% endif %}{% endif %}{% if lux_theme and (admin_site|default(false)) %} {% endif %}{% if admin_site|default(false) %}admin-site{% endif %}"{% endif %}{% endblock %}
 {% block title %}{{ t('collection') }}{% endblock %}
 {% block content %}
 {% if show_hero %}

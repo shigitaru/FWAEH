@@ -1,0 +1,212 @@
+"""Campaign page public data and admin/campaign DB helpers."""
+from flask import request
+
+from db import get_db_connection
+from i18n import TRANSLATIONS, _campaign_bilingual_display, get_lang, t
+
+from media_uploads import _save_campaign_upload
+
+def get_campaign_index_data():
+    """Главная страница кампании: интро + список историй с обложкой."""
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT intro_en, intro_ru, tagline_en, tagline_ru FROM CampaignSettings WHERE id=1')
+            srow = cur.fetchone()
+            cur.execute(
+                """
+                SELECT s.id, s.sort_order, s.headline_en, s.headline_ru, s.credits_en, s.credits_ru,
+                    (SELECT TOP 1 image_url FROM CampaignStoryImages i WHERE i.story_id = s.id ORDER BY i.sort_order, i.id) AS cover_url,
+                    (SELECT COUNT(*) FROM CampaignStoryImages i2 WHERE i2.story_id = s.id) AS img_count
+                FROM CampaignStories s
+                ORDER BY s.sort_order, s.id
+                """
+            )
+            story_rows = cur.fetchall()
+        lang = get_lang()
+        if srow:
+            intro = _campaign_bilingual_display(srow[0], srow[1], lang)
+            tagline = _campaign_bilingual_display(srow[2], srow[3], lang)
+        else:
+            intro, tagline = '', ''
+        if not intro.strip():
+            intro = t('campaign_intro')
+        if not tagline.strip():
+            tagline = t('campaign_tagline')
+        stories = []
+        for r in story_rows:
+            # Индексы: надёжнее чем r.id у pyodbc/драйвера ODBC
+            sid = int(r[0])
+            h_en, h_ru = r[2], r[3]
+            c_en, c_ru = r[4], r[5]
+            cover = r[6] or ''
+            img_count = int(r[7] or 0)
+            stories.append(
+                {
+                    'id': sid,
+                    'headline': _campaign_bilingual_display(h_en, h_ru, lang),
+                    'credits': _campaign_bilingual_display(c_en, c_ru, lang),
+                    'cover_url': cover,
+                    'img_count': img_count,
+                }
+            )
+        return {'campaign_intro': intro, 'campaign_tagline': tagline, 'stories': stories}
+    except Exception:
+        return {'campaign_intro': t('campaign_intro'), 'campaign_tagline': t('campaign_tagline'), 'stories': []}
+
+
+def get_campaign_story_detail(story_id):
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru
+                FROM CampaignStories WHERE id=?
+                """,
+                (story_id,),
+            )
+            srow = cur.fetchone()
+            if not srow:
+                return None
+            cur.execute(
+                'SELECT image_url FROM CampaignStoryImages WHERE story_id=? ORDER BY sort_order, id',
+                (story_id,),
+            )
+            img_rows = cur.fetchall()
+        lang = get_lang()
+        h_en, h_ru = (srow[0] or ''), (srow[1] or '')
+        b_en, b_ru = (srow[2] or ''), (srow[3] or '')
+        c_en, c_ru = (srow[4] or ''), (srow[5] or '')
+        return {
+            'id': story_id,
+            'headline': _campaign_bilingual_display(h_en, h_ru, lang),
+            'body': _campaign_bilingual_display(b_en, b_ru, lang),
+            'credits': _campaign_bilingual_display(c_en, c_ru, lang),
+            'images': [{'src': r[0]} for r in img_rows],
+        }
+    except Exception:
+        return None
+
+
+def _fetch_campaign_settings_admin():
+    d_en = TRANSLATIONS['en']
+    d_ru = TRANSLATIONS['ru']
+    defaults = {
+        'intro_en': d_en.get('campaign_intro', ''),
+        'intro_ru': d_ru.get('campaign_intro', ''),
+        'tagline_en': d_en.get('campaign_tagline', ''),
+        'tagline_ru': d_ru.get('campaign_tagline', ''),
+    }
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT intro_en, intro_ru, tagline_en, tagline_ru FROM CampaignSettings WHERE id=1')
+            srow = cur.fetchone()
+        if srow:
+            return {
+                'intro_en': (srow[0] or ''),
+                'intro_ru': (srow[1] or ''),
+                'tagline_en': (srow[2] or ''),
+                'tagline_ru': (srow[3] or ''),
+            }
+        return defaults.copy()
+    except Exception:
+        return defaults.copy()
+
+
+def _list_campaign_stories_admin():
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                'SELECT id, sort_order, headline_en, headline_ru FROM CampaignStories ORDER BY sort_order, id',
+            )
+            return [
+                {
+                    'id': int(r[0]),
+                    'sort_order': int(r[1]),
+                    'headline_en': r[2] or '',
+                    'headline_ru': r[3] or '',
+                }
+                for r in cur.fetchall()
+            ]
+    except Exception:
+        return []
+
+
+def _fetch_campaign_story_admin(story_id):
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, sort_order, headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru
+                FROM CampaignStories WHERE id=?
+                """,
+                (story_id,),
+            )
+            srow = cur.fetchone()
+            if not srow:
+                return None, []
+            cur.execute(
+                'SELECT image_url FROM CampaignStoryImages WHERE story_id=? ORDER BY sort_order, id',
+                (story_id,),
+            )
+            imgs = [{'url': r[0]} for r in cur.fetchall()]
+        return (
+            {
+                'id': int(srow[0]),
+                'sort_order': int(srow[1]),
+                'headline_en': srow[2] or '',
+                'headline_ru': srow[3] or '',
+                'body_en': srow[4] or '',
+                'body_ru': srow[5] or '',
+                'credits_en': srow[6] or '',
+                'credits_ru': srow[7] or '',
+            },
+            imgs,
+        )
+    except Exception:
+        return None, []
+
+def _insert_campaign_story_return_id(cur, params):
+    """
+    Вставка CampaignStories и получение id. SCOPE_IDENTITY() должен быть в том же T-SQL batch,
+    что и INSERT: отдельный execute() в pyodbc — это новый batch, и SCOPE_IDENTITY() даёт NULL.
+    """
+    cur.execute(
+        """
+        INSERT INTO CampaignStories (sort_order, headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
+        SELECT CAST(SCOPE_IDENTITY() AS INT);
+        """,
+        params,
+    )
+    sid = None
+    while True:
+        if cur.description:
+            row = cur.fetchone()
+            if row is not None and row[0] is not None:
+                sid = int(row[0])
+                break
+        if not cur.nextset():
+            break
+    if sid is None:
+        raise RuntimeError('CampaignStories insert: could not read new id')
+    return sid
+
+
+def _collect_story_image_urls_from_form():
+    existings = request.form.getlist('img_existing')
+    files = request.files.getlist('img_file')
+    n = max(len(existings), len(files), 1)
+    urls = []
+    for i in range(n):
+        old = (existings[i].strip() if i < len(existings) else '') or ''
+        fs = files[i] if i < len(files) else None
+        new_u = _save_campaign_upload(fs)
+        url = new_u or old
+        if url:
+            urls.append(url)
+    return urls

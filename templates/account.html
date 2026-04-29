@@ -57,6 +57,7 @@
                             <div>
                                 <p class="account-history-order">{{ t('account_history_order') }} #{{ order.id }}</p>
                                 <p class="account-history-meta">{{ t('account_history_date') }}: {{ order.created_at.strftime('%d.%m.%Y %H:%M') if order.created_at else '-' }}</p>
+                                <p class="account-history-meta">{{ t('account_history_period') }}: {{ order.rental_start_date or '-' }} - {{ order.rental_end_date or '-' }}</p>
                             </div>
                             <span class="account-status-badge">{{ t('order_status_' ~ order.status) }}</span>
                         </div>
