@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{ current_lang }}"{% block html_attrs %}{% endblock %}>
+<html lang="{{ current_lang }}"{% block html_attrs %}{% if lux_theme %} class="pa-lux-site"{% endif %}{% endblock %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Protocol-Archive{% endblock %}</title>
     <link rel="preload" href="{{ url_for('static', filename='fonts/SignThat-Regular.ttf') }}" as="font" type="font/ttf" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&amp;family=Archivo+Black&amp;family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700&amp;family=Cinzel:wght@400;600&amp;family=Cormorant+Garamond:wght@500;600&amp;family=Great+Vibes&amp;family=Space+Grotesk:wght@500;700&amp;display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Barlow:wght@300;400;500;600&amp;family=Inter:wght@300;400;500;700&amp;family=Archivo+Black&amp;family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700&amp;family=Cinzel:wght@400;600&amp;family=Cormorant+Garamond:wght@500;600&amp;family=Great+Vibes&amp;family=Space+Grotesk:wght@500;700&amp;display=swap">
     <script>
     (function () {
         try {
@@ -261,8 +261,9 @@
                     if (scrollY >= TH_ON) root.classList.add('pa-brand-scroll');
                 }
                 var hero = root.classList.contains('pa-hero-home');
+                var lux = root.classList.contains('pa-lux-site');
                 var barSolid = root.classList.contains('pa-header-solid');
-                if (hero) {
+                if (hero || lux) {
                     if (barSolid) {
                         if (scrollY <= HERO_BAR_OFF) root.classList.remove('pa-header-solid');
                     } else {

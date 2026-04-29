@@ -1,18 +1,160 @@
 {% extends "base.html" %}
 {% import 'macros/store_product.html' as store with context %}
-{% block html_attrs %}{% if show_hero %} class="pa-hero-home"{% endif %}{% endblock %}
+{% block html_attrs %}{% if lux_theme %} class="pa-lux-site{% if show_hero %} pa-hero-home{% endif %}"{% endif %}{% endblock %}
 {% block title %}{{ t('collection') }}{% endblock %}
 {% block content %}
 {% if show_hero %}
-<section class="collection-hero" aria-label="{{ t('hero_title') }}">
-    <img class="collection-hero-bg" src="{{ hero_image }}" alt="" decoding="async">
-    <div class="collection-hero-inner">
-        <h1 class="collection-hero-title">{{ t('hero_title') }}</h1>
-        <a href="#collection-catalog" class="collection-hero-cta">{{ t('hero_cta') }}</a>
-        <p class="collection-hero-service">{{ t('hero_service_line') }}</p>
-        <p class="collection-hero-slogan">{{ t('hero_slogan') }}</p>
-    </div>
-</section>
+{% set max_rent = (products | map(attribute='max_days') | max) if products else 7 %}
+<div class="pa-landing">
+    <section class="collection-hero pa-lux-hero" aria-label="{{ t('hero_title') }}">
+        <video class="pa-lux-hero-video" autoplay loop muted playsinline webkit-playsinline preload="auto" poster="{{ hero_image }}">
+            <source src="{{ url_for('static', filename='lux_start_local.mp4') }}" type="video/mp4">
+        </video>
+        <img class="collection-hero-bg pa-lux-hero-fallback" src="{{ hero_image }}" alt="" decoding="async">
+        <div class="pa-video-shade" aria-hidden="true"></div>
+        <div class="pa-bottom-fade pa-bottom-fade--hero" aria-hidden="true"></div>
+        <div class="collection-hero-inner pa-lux-hero-inner">
+            <div class="pa-eyebrow-pill liquid-glass">
+                <span class="pa-eyebrow-new">{{ t('lux_badge_new') }}</span>
+                <span>{{ t('lux_hero_eyebrow') }}</span>
+            </div>
+            <h1 class="collection-hero-title pa-lux-title" data-blur-text>{{ t('lux_hero_headline') }}</h1>
+            <p class="collection-hero-service pa-lux-lead">{{ t('lux_hero_lead') }}</p>
+            <div class="pa-hero-actions">
+                <a href="#collection-catalog" class="pa-glass-btn liquid-glass-strong">{{ t('hero_cta') }} <span aria-hidden="true">↗</span></a>
+                <a href="{{ url_for('search') }}" class="pa-text-btn"><span aria-hidden="true">▶</span> {{ t('search') }}</a>
+            </div>
+            <div class="pa-partners" aria-label="{{ t('shop_by_brand') }}">
+                <span class="pa-partners-label liquid-glass">{{ t('shop_by_brand') }}</span>
+                <div class="pa-partner-row">
+                    {% for brand in brands[:3] %}
+                    <a href="{{ url_for('collection', brand=brand.slug) }}#collection-catalog">{{ brand.name }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pa-video-section pa-start-section" aria-labelledby="pa-start-title">
+        <div class="pa-video-poster" style="background-image: url('{{ hero_image }}');" aria-hidden="true"></div>
+        <video class="pa-hls-video" poster="{{ hero_image }}" data-hls-src="{{ url_for('static', filename='lux_how_local_hls/local.m3u8') }}" autoplay loop muted playsinline webkit-playsinline preload="metadata"></video>
+        <div class="pa-top-fade" aria-hidden="true"></div>
+        <div class="pa-bottom-fade" aria-hidden="true"></div>
+        <div class="pa-section-center">
+            <span class="pa-section-badge liquid-glass">{{ t('lux_start_badge') }}</span>
+            <h2 id="pa-start-title" class="pa-section-heading">{{ t('lux_start_title') }}</h2>
+            <p class="pa-section-copy">{{ t('lux_start_copy') }}</p>
+            <a href="#collection-catalog" class="pa-glass-btn liquid-glass-strong">{{ t('hero_cta') }} <span aria-hidden="true">↗</span></a>
+        </div>
+    </section>
+
+    <section class="pa-landing-section pa-chess" aria-labelledby="pa-capabilities-title">
+        <div class="pa-section-header">
+            <span class="pa-section-badge liquid-glass">{{ t('lux_cap_badge') }}</span>
+            <h2 id="pa-capabilities-title" class="pa-section-heading">{{ t('lux_cap_title') }}</h2>
+        </div>
+        <div class="pa-chess-row">
+            <div class="pa-chess-copy">
+                <h3>{{ t('lux_chess1_title') }}</h3>
+                <p>{{ t('lux_chess1_body') }}</p>
+                <a href="#collection-catalog" class="pa-glass-btn liquid-glass-strong">{{ t('lux_chess1_cta') }} <span aria-hidden="true">↗</span></a>
+            </div>
+            <div class="pa-chess-media liquid-glass">
+                <img src="{{ url_for('static', filename='1.png') }}" alt="{{ 'Editorial showcase' if current_lang == 'en' else 'Эстетичный превью-блок' }}" loading="lazy">
+            </div>
+        </div>
+        <div class="pa-chess-row pa-chess-row--reverse">
+            <div class="pa-chess-copy">
+                <h3>{{ t('lux_chess2_title') }}</h3>
+                <p>{{ t('lux_chess2_body') }}</p>
+                <a href="{{ url_for('wishlist_page') }}" class="pa-glass-btn liquid-glass-strong">{{ t('lux_chess2_cta') }} <span aria-hidden="true">↗</span></a>
+            </div>
+            <div class="pa-chess-media liquid-glass">
+                <img src="{{ url_for('static', filename='2.png') }}" alt="{{ 'Editorial showcase' if current_lang == 'en' else 'Эстетичный превью-блок' }}" loading="lazy">
+            </div>
+        </div>
+    </section>
+
+    <section class="pa-landing-section pa-features" aria-labelledby="pa-why-title">
+        <div class="pa-section-header">
+            <span class="pa-section-badge liquid-glass">{{ t('lux_why_badge') }}</span>
+            <h2 id="pa-why-title" class="pa-section-heading">{{ t('lux_why_title') }}</h2>
+        </div>
+        <div class="pa-feature-grid">
+            <article class="pa-feature-card liquid-glass">
+                <span class="pa-feature-icon liquid-glass-strong">ϟ</span>
+                <h3>{{ t('lux_feat1_title') }}</h3>
+                <p>{{ t('lux_feat1_body') }}</p>
+            </article>
+            <article class="pa-feature-card liquid-glass">
+                <span class="pa-feature-icon liquid-glass-strong">✦</span>
+                <h3>{{ t('lux_feat2_title') }}</h3>
+                <p>{{ t('lux_feat2_body') }}</p>
+            </article>
+            <article class="pa-feature-card liquid-glass">
+                <span class="pa-feature-icon liquid-glass-strong">⌁</span>
+                <h3>{{ t('lux_feat3_title') }}</h3>
+                <p>{{ t('lux_feat3_body') }}</p>
+            </article>
+            <article class="pa-feature-card liquid-glass">
+                <span class="pa-feature-icon liquid-glass-strong">◌</span>
+                <h3>{{ t('lux_feat4_title') }}</h3>
+                <p>{{ t('lux_feat4_body') }}</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="pa-video-section pa-stats-section" aria-labelledby="pa-stats-title">
+        <div class="pa-video-poster" style="background-image: url('{{ hero_image }}');" aria-hidden="true"></div>
+        <video class="pa-hls-video pa-hls-video--mono" poster="{{ hero_image }}" data-hls-src="https://stream.mux.com/NcU3HlHeF7CUL86azTTzpy3Tlb00d6iF3BmCdFslMJYM.m3u8" autoplay loop muted playsinline webkit-playsinline preload="metadata"></video>
+        <div class="pa-top-fade" aria-hidden="true"></div>
+        <div class="pa-bottom-fade" aria-hidden="true"></div>
+        <div class="pa-stats-card liquid-glass">
+            <h2 id="pa-stats-title" class="pa-sr-only">{{ t('lux_stats_sr') }}</h2>
+            <div class="pa-stat"><strong>{{ products|length }}+</strong><span>{{ t('lux_stat_pieces') }}</span></div>
+            <div class="pa-stat"><strong>{{ brands|length }}+</strong><span>{{ t('lux_stat_brands') }}</span></div>
+            <div class="pa-stat"><strong>10/10</strong><span>{{ t('lux_stat_condition') }}</span></div>
+            <div class="pa-stat"><strong>1–{{ max_rent }}</strong><span>{{ t('lux_stat_days') }}</span></div>
+        </div>
+    </section>
+
+    <section class="pa-landing-section pa-testimonials" aria-labelledby="pa-testimonials-title">
+        <div class="pa-section-header">
+            <span class="pa-section-badge liquid-glass">{{ t('lux_test_badge') }}</span>
+            <h2 id="pa-testimonials-title" class="pa-section-heading">{{ t('lux_test_title') }}</h2>
+        </div>
+        <div class="pa-testimonial-grid">
+            <article class="pa-testimonial-card liquid-glass">
+                <p>{{ t('lux_test1') }}</p>
+                <strong>Sarah Chen</strong>
+                <span>{{ t('lux_test1_role') }}</span>
+            </article>
+            <article class="pa-testimonial-card liquid-glass">
+                <p>{{ t('lux_test2') }}</p>
+                <strong>Marcus Webb</strong>
+                <span>{{ t('lux_test2_role') }}</span>
+            </article>
+            <article class="pa-testimonial-card liquid-glass">
+                <p>{{ t('lux_test3') }}</p>
+                <strong>Elena Voss</strong>
+                <span>{{ t('lux_test3_role') }}</span>
+            </article>
+        </div>
+    </section>
+
+    <section class="pa-video-section pa-cta-section" aria-labelledby="pa-cta-title">
+        <div class="pa-top-fade" aria-hidden="true"></div>
+        <div class="pa-bottom-fade" aria-hidden="true"></div>
+        <div class="pa-section-center">
+            <h2 id="pa-cta-title" class="pa-section-heading pa-cta-heading">{{ t('lux_cta_title') }}</h2>
+            <p class="pa-section-copy">{{ t('lux_cta_copy') }}</p>
+            <div class="pa-hero-actions">
+                <a href="#collection-catalog" class="pa-glass-btn liquid-glass-strong">{{ t('hero_cta') }} <span aria-hidden="true">↗</span></a>
+                <a href="{{ url_for('about') }}#contact" class="pa-solid-btn">{{ t('contact') }}</a>
+            </div>
+        </div>
+    </section>
+</div>
 {% endif %}
 
 <div class="refine-overlay" id="refine-overlay" hidden aria-hidden="true"></div>
@@ -217,7 +359,7 @@
      * Плюс: якорь #collection-catalog / #collection-grid не всегда даёт событие scroll —
      * дублируем проверкой hash, load, таймерами и IntersectionObserver.
      */
-    var hero = document.querySelector('.collection-hero');
+    var hero = document.querySelector('.pa-landing') || document.querySelector('.collection-hero');
     function syncRefineFab() {
         if (!hero) {
             fab.classList.add('refine-fab--visible');
@@ -291,6 +433,141 @@
             if (p) p.hidden = !open;
         });
     });
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.15/dist/hls.min.js" crossorigin="anonymous"></script>
+<script>
+(function () {
+    function tryPlayVideo(video) {
+        if (!video) return;
+        video.muted = true;
+        video.defaultMuted = true;
+        try {
+            var p = video.play();
+            if (p && typeof p.then === 'function') p.catch(function () {});
+        } catch (e) {}
+    }
+    function markVideoFallback(video) {
+        var section = video.closest('.pa-video-section');
+        if (section) section.classList.add('pa-video-section--fallback');
+    }
+    function initHlsVideo(video) {
+        var src = video.getAttribute('data-hls-src');
+        if (!src) return;
+        var forceHighQuality = !!(video.closest('.pa-start-section'));
+        initHlsFallback(video, src, forceHighQuality);
+    }
+
+    function initHlsFallback(video, src, forceHighQuality) {
+        var onNativeErr = function () {
+            markVideoFallback(video);
+        };
+        video.addEventListener('error', onNativeErr);
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = src;
+            video.addEventListener('loadeddata', function () {
+                tryPlayVideo(video);
+            }, { once: true });
+            return;
+        }
+        if (window.Hls && window.Hls.isSupported()) {
+            var hls = new window.Hls({
+                enableWorker: true,
+                capLevelToPlayerSize: !forceHighQuality,
+                maxBufferLength: 60,
+                lowLatencyMode: false,
+                startLevel: -1,
+            });
+            var lockedLevel = -1;
+            hls.on(window.Hls.Events.ERROR, function (_, data) {
+                if (data && data.fatal) markVideoFallback(video);
+            });
+            hls.loadSource(src);
+            hls.attachMedia(video);
+            hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+                if (forceHighQuality && hls.levels && hls.levels.length) {
+                    // Pick the best rendition by bitrate (safer than relying on level order).
+                    var best = 0;
+                    for (var i = 1; i < hls.levels.length; i++) {
+                        var currBitrate = (hls.levels[i] && hls.levels[i].bitrate) || 0;
+                        var bestBitrate = (hls.levels[best] && hls.levels[best].bitrate) || 0;
+                        if (currBitrate > bestBitrate) best = i;
+                    }
+                    lockedLevel = best;
+                    // Manual mode: disable ABR oscillation for this section.
+                    hls.autoLevelCapping = -1;
+                    hls.nextLevel = best;
+                    hls.loadLevel = best;
+                    hls.currentLevel = best;
+                }
+                tryPlayVideo(video);
+            });
+            if (forceHighQuality) {
+                hls.on(window.Hls.Events.LEVEL_SWITCHED, function (_, data) {
+                    if (lockedLevel >= 0 && data && data.level !== lockedLevel) {
+                        // Lock the start section to one quality level so ABR doesn't pump quality up/down.
+                        hls.nextLevel = lockedLevel;
+                    }
+                });
+            }
+            return;
+        }
+        markVideoFallback(video);
+    }
+    document.querySelectorAll('.pa-hls-video').forEach(initHlsVideo);
+
+    document.querySelectorAll('.pa-lux-hero-video').forEach(function (v) {
+        v.addEventListener('error', function () {
+            v.classList.add('pa-hero-video--hidden');
+            var fb = v.parentElement && v.parentElement.querySelector('.pa-lux-hero-fallback');
+            if (fb) fb.classList.add('pa-hero-fallback--visible');
+        });
+        tryPlayVideo(v);
+    });
+    document.querySelectorAll('.pa-cta-video').forEach(function (v) {
+        v.addEventListener('error', function () {
+            var section = v.closest('.pa-video-section');
+            if (section) section.classList.add('pa-video-section--fallback');
+        });
+        tryPlayVideo(v);
+    });
+
+    var reduceMotion = false;
+    try {
+        reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) {}
+    if (reduceMotion) return;
+
+    document.querySelectorAll('[data-blur-text]').forEach(function (el) {
+        var words = el.textContent.trim().split(/\s+/);
+        el.textContent = '';
+        words.forEach(function (word, index) {
+            var span = document.createElement('span');
+            span.className = 'pa-blur-word';
+            span.style.transitionDelay = String(index * 100) + 'ms';
+            span.textContent = word;
+            if (index !== words.length - 1) span.style.marginRight = '0.22em';
+            el.appendChild(span);
+        });
+    });
+
+    var targets = document.querySelectorAll('.pa-landing [data-blur-text], .pa-section-header, .pa-chess-row, .pa-feature-card, .pa-stats-card, .pa-testimonial-card, .pa-section-center');
+    if (!('IntersectionObserver' in window)) {
+        targets.forEach(function (el) { el.classList.add('is-visible'); });
+        document.querySelectorAll('.pa-blur-word').forEach(function (el) { el.classList.add('is-visible'); });
+        return;
+    }
+    var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('is-visible');
+            entry.target.querySelectorAll('.pa-blur-word').forEach(function (word) {
+                word.classList.add('is-visible');
+            });
+            observer.unobserve(entry.target);
+        });
+    }, { threshold: 0.18 });
+    targets.forEach(function (el) { observer.observe(el); });
 })();
 </script>
 {% endblock %}

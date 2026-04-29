@@ -20,13 +20,21 @@
             {% endif %}
             <div class="product-gallery-main">
                 {% if gallery|length > 1 %}
-                <button type="button" class="gallery-arrow gallery-arrow-left" id="gallery-prev" aria-label="Previous image">&#8249;</button>
+                <button type="button" class="gallery-arrow gallery-arrow-left" id="gallery-prev" aria-label="Previous image">
+                    <svg class="gallery-arrow-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M14.5 6L8.5 12L14.5 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                </button>
                 {% endif %}
                 <div class="product-gallery-frame">
                     <img id="main-product-image" class="main-product-image" src="{{ gallery[0] }}" alt="{{ product.name }}">
                 </div>
                 {% if gallery|length > 1 %}
-                <button type="button" class="gallery-arrow gallery-arrow-right" id="gallery-next" aria-label="Next image">&#8250;</button>
+                <button type="button" class="gallery-arrow gallery-arrow-right" id="gallery-next" aria-label="Next image">
+                    <svg class="gallery-arrow-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M9.5 6L15.5 12L9.5 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                </button>
                 {% endif %}
             </div>
         </div>
