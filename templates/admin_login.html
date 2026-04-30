@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Admin Login{% endblock %}
+{% block content %}
+<div class="account-page">
+    <div class="account-page-inner">
+        <section class="account-card" aria-labelledby="admin-login-heading">
+            <h2 id="admin-login-heading" class="account-card-title">Вход в админку</h2>
+            <p class="account-card-lead">Доступ только для аккаунтов с правами администратора.</p>
+            <form method="post" action="{{ url_for('admin_login') }}" class="account-form" autocomplete="on">
+                <div class="account-field">
+                    <label class="account-label" for="admin-login-email">Email</label>
+                    <input id="admin-login-email" type="email" name="email" required class="account-input" autocomplete="email">
+                </div>
+                <div class="account-field">
+                    <label class="account-label" for="admin-login-password">Пароль</label>
+                    <input id="admin-login-password" type="password" name="password" required class="account-input" autocomplete="current-password">
+                </div>
+                <button type="submit" class="account-btn-primary">Войти</button>
+            </form>
+        </section>
+    </div>
+</div>
+{% endblock %}

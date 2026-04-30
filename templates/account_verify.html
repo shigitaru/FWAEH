@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Подтверждение email{% endblock %}
+{% block content %}
+<div class="account-page">
+    <div class="account-page-inner">
+        <section class="account-card" aria-labelledby="acc-verify-heading" style="max-width:560px; margin:0 auto;">
+            <h2 id="acc-verify-heading" class="account-card-title">Подтверждение email</h2>
+            <p class="account-card-lead">Мы отправили код на {{ pending_email }}.</p>
+            <form method="post" action="{{ url_for('account_verify_email') }}" class="account-form" autocomplete="one-time-code">
+                <div class="account-field">
+                    <label class="account-label" for="acc-verify-code">Код подтверждения</label>
+                    <input id="acc-verify-code" type="text" name="code" required minlength="6" maxlength="6" class="account-input" placeholder="000000">
+                </div>
+                <button type="submit" class="account-btn-primary">Подтвердить</button>
+            </form>
+            <form method="post" action="{{ url_for('account_resend_verification') }}" class="account-form" style="margin-top:8px;">
+                <button type="submit" class="account-btn-secondary">Отправить код ещё раз</button>
+            </form>
+            <p style="margin-top:10px;">
+                <a href="{{ url_for('account') }}" class="members-foot-link">Назад в аккаунт</a>
+            </p>
+        </section>
+    </div>
+</div>
+{% endblock %}

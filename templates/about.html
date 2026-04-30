@@ -27,6 +27,18 @@
             </article>
         </section>
 
+        <section class="about-faq" aria-labelledby="about-how-title">
+            <h2 id="about-how-title" class="about-faq-title">{{ t('about_how_title') }}</h2>
+            <ol class="about-how-list">
+                <li>{{ t('about_how_step_1') }}</li>
+                <li>{{ t('about_how_step_2') }}</li>
+                <li>{{ t('about_how_step_3') }}</li>
+                <li>{{ t('about_how_step_4') }}</li>
+                <li>{{ t('about_how_step_5') }}</li>
+                <li>{{ t('about_how_step_6') }}</li>
+            </ol>
+        </section>
+
         <section class="about-faq" aria-labelledby="about-faq-title">
             <h2 id="about-faq-title" class="about-faq-title">{{ t('about_faq_title') }}</h2>
             <details class="about-faq-item">
@@ -53,18 +65,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script>
-(function () {
-    var items = Array.prototype.slice.call(document.querySelectorAll('.about-faq-item'));
-    if (!items.length) return;
-    items.forEach(function (item) {
-        item.addEventListener('toggle', function () {
-            if (!item.open) return;
-            items.forEach(function (other) {
-                if (other !== item) other.open = false;
-            });
-        });
-    });
-})();
-</script>
+<script src="{{ url_for('static', filename='js/about.js') }}"></script>
 {% endblock %}

@@ -2141,6 +2141,130 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
 .account-history-foot p {
     margin: 0;
 }
+.account-history-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 14px 12px;
+    border-top: 1px solid var(--border);
+}
+.account-order-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.account-order-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 210px;
+    gap: 14px;
+    align-items: stretch;
+}
+.account-order-overview {
+    min-width: 0;
+}
+.account-order-kicker {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.account-order-facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.account-order-fact {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    background: var(--bg-alt);
+    min-width: 0;
+}
+.account-order-fact-label {
+    margin: 0 0 4px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.account-order-fact-value {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--text);
+}
+.account-order-total-card {
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.account-order-total-caption {
+    margin: 0;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.account-order-total-value {
+    margin: 0;
+    font-size: clamp(24px, 2.3vw, 30px);
+    line-height: 1.05;
+    color: var(--text);
+}
+.account-order-items-count {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.account-order-items-panel {
+    margin-top: 12px;
+}
+.account-order-items-title {
+    margin-bottom: 10px;
+}
+.account-order-item-card {
+    border-radius: 10px;
+    overflow: hidden;
+}
+.account-order-items-panel .account-history-item {
+    align-items: center;
+    padding: 11px 12px;
+}
+.account-order-items-panel .account-history-item-title {
+    margin: 0 0 4px;
+    font-size: 14px;
+    line-height: 1.32;
+}
+.account-order-items-panel .account-history-item-meta {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.4;
+}
+.account-order-items-panel .account-history-item-price {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+}
+@media (max-width: 760px) {
+    .account-order-layout {
+        grid-template-columns: 1fr;
+    }
+    .account-order-facts {
+        grid-template-columns: 1fr;
+    }
+    .account-order-total-card {
+        padding: 10px 12px;
+    }
+    .account-order-items-panel .account-history-item {
+        align-items: flex-start;
+    }
+}
 .account-empty {
     margin: 0;
     font-size: 13px;
@@ -2287,6 +2411,87 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
 .members-perks-list li {
     margin-bottom: 8px;
 }
+.members-level-hero {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: clamp(16px, 3vw, 24px);
+    background: linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 14px;
+}
+.members-level-label {
+    margin: 0 0 8px;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.members-level-name {
+    margin: 0 0 14px;
+    font-family: var(--font-brand);
+    font-size: clamp(26px, 5.2vw, 38px);
+    line-height: 1.18;
+    display: block;
+    word-break: break-word;
+}
+.members-level-copy {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+}
+.members-level-hero-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+}
+.members-chip {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.members-chip.is-on {
+    border-color: rgba(174, 132, 47, 0.6);
+}
+.members-chip.is-off {
+    opacity: 0.75;
+}
+.members-tier-grid {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.members-tier-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    background: var(--bg-alt);
+}
+.members-tier-card.is-current {
+    border-color: rgba(174, 132, 47, 0.65);
+    box-shadow: 0 0 0 1px rgba(174, 132, 47, 0.3) inset;
+}
+.members-tier-name {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-family: var(--font-brand);
+}
+.members-tier-rule {
+    margin: 0 0 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.members-tier-benefit {
+    margin: 0;
+    font-size: 12px;
+}
 .members-foot {
     margin: 40px 0 0;
     text-align: center;
@@ -2301,6 +2506,14 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
 }
 .members-foot-link:hover {
     color: var(--text);
+}
+@media (max-width: 720px) {
+    .members-level-hero {
+        grid-template-columns: 1fr;
+    }
+    .members-tier-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* --- ABOUT PAGE --- */
@@ -2358,6 +2571,14 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     border-top: 1px solid var(--border);
     padding-top: 22px;
     margin-top: 8px;
+}
+.about-how-list {
+    margin: 0;
+    padding: 0 0 0 18px;
+    color: var(--text-secondary);
+    display: grid;
+    gap: 8px;
+    line-height: 1.6;
 }
 .about-faq-item {
     border-bottom: 1px solid var(--border);
@@ -3162,17 +3383,58 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     flex-wrap: wrap;
 }
 .upload-preview-item {
-    width: 54px;
-    height: 54px;
+    width: 112px;
+    min-height: 54px;
     border: 1px solid var(--border);
-    overflow: hidden;
+    overflow: visible;
     background: var(--bg);
+    padding: 4px;
+    box-sizing: border-box;
+    position: relative;
+    cursor: grab;
 }
-.upload-preview-item img {
+.upload-preview-item.is-dragging {
+    opacity: 0.65;
+    cursor: grabbing;
+}
+.upload-preview-item.is-drag-over {
+    border-color: var(--text);
+}
+.upload-preview-item img,
+.upload-preview-item video {
     width: 100%;
-    height: 100%;
+    height: 54px;
     object-fit: cover;
     display: block;
+    border-radius: 4px;
+}
+.admin-media-main-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 9px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    border: 1px solid var(--text);
+    background: rgba(0,0,0,.66);
+    color: #fff;
+    padding: 1px 4px;
+}
+.admin-media-controls {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+.admin-media-btn {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 10px;
+    padding: 2px 6px;
+    cursor: pointer;
+}
+.admin-media-btn:hover {
+    border-color: var(--text);
 }
 
 /* --- CAMPAIGN (editorial) --- */
@@ -5949,6 +6211,42 @@ html.pa-lux-site:not([data-theme="dark"]) .members-foot-link {
 html.pa-lux-site:not([data-theme="dark"]) .members-foot-link:hover {
     color: #141416;
 }
+html.pa-lux-site:not([data-theme="dark"]) .members-level-hero {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.78));
+    border-color: rgba(0, 0, 0, 0.14);
+}
+html.pa-lux-site:not([data-theme="dark"]) .members-level-label {
+    color: rgba(20, 20, 22, 0.58);
+}
+html.pa-lux-site:not([data-theme="dark"]) .members-level-name {
+    color: #141416;
+}
+html.pa-lux-site:not([data-theme="dark"]) .members-level-copy {
+    color: rgba(20, 20, 22, 0.7);
+}
+html.pa-lux-site:not([data-theme="dark"]) .members-chip {
+    color: #141416;
+    border-color: rgba(0, 0, 0, 0.16);
+    background: rgba(255, 255, 255, 0.7);
+}
+html.pa-lux-site:not([data-theme="dark"]) .members-chip.is-on {
+    border-color: rgba(122, 87, 24, 0.45);
+}
+html.pa-lux-site:not([data-theme="dark"]) .members-tier-card {
+    background: rgba(255, 255, 255, 0.86);
+    border-color: rgba(0, 0, 0, 0.12);
+}
+html.pa-lux-site:not([data-theme="dark"]) .members-tier-card.is-current {
+    border-color: rgba(122, 87, 24, 0.5);
+    box-shadow: 0 0 0 1px rgba(122, 87, 24, 0.24) inset;
+}
+html.pa-lux-site:not([data-theme="dark"]) .members-tier-name {
+    color: #141416;
+}
+html.pa-lux-site:not([data-theme="dark"]) .members-tier-rule,
+html.pa-lux-site:not([data-theme="dark"]) .members-tier-benefit {
+    color: rgba(20, 20, 22, 0.74);
+}
 html.pa-lux-site:not([data-theme="dark"]) .account-hero-name,
 html.pa-lux-site:not([data-theme="dark"]) .members-title,
 html.pa-lux-site:not([data-theme="dark"]) .about-lead,
@@ -6109,6 +6407,29 @@ html.pa-lux-site:not([data-theme="dark"]) .pa-lux-hero .pa-glass-btn {
     background: rgba(255, 255, 255, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.55);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+/* Light theme: darken liquid-glass outlines so they are visible on pale backgrounds */
+html.pa-lux-site:not([data-theme="dark"]) .liquid-glass::before {
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.26) 0%,
+        rgba(0, 0, 0, 0.15) 20%,
+        rgba(0, 0, 0, 0.06) 40%,
+        rgba(0, 0, 0, 0.06) 60%,
+        rgba(0, 0, 0, 0.15) 80%,
+        rgba(0, 0, 0, 0.26) 100%
+    );
+}
+html.pa-lux-site:not([data-theme="dark"]) .liquid-glass-strong::before {
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.3) 0%,
+        rgba(0, 0, 0, 0.18) 20%,
+        rgba(0, 0, 0, 0.08) 40%,
+        rgba(0, 0, 0, 0.08) 60%,
+        rgba(0, 0, 0, 0.18) 80%,
+        rgba(0, 0, 0, 0.3) 100%
+    );
 }
 html.pa-lux-site:not([data-theme="dark"]) .pa-lux-hero .pa-text-btn {
     color: rgba(255, 255, 255, 0.95);

@@ -1,9 +1,11 @@
 """Rental order schema, checkout, and admin/history queries."""
 from .db import get_db_connection
+from repositories.user_repository import update_user_loyalty
 
 from services.rental_service import RentalAvailabilityError
 
 from .rental_wrappers import _cart_item_period, _is_product_available
+from .constants import LOYALTY_LEVELS
 
 def ensure_app_users_table():
     with get_db_connection() as conn:
@@ -16,10 +18,26 @@ def ensure_app_users_table():
                 email NVARCHAR(255) NOT NULL UNIQUE,
                 password_hash NVARCHAR(500) NOT NULL,
                 display_name NVARCHAR(120) NOT NULL,
+                is_admin BIT NOT NULL DEFAULT 0,
+                is_email_verified BIT NOT NULL DEFAULT 0,
+                email_verification_code_hash NVARCHAR(500) NULL,
+                email_verification_expires_at DATETIME2 NULL,
+                email_verification_attempts INT NOT NULL DEFAULT 0,
+                level_code NVARCHAR(30) NOT NULL DEFAULT N'bronze',
+                lifetime_orders_count INT NOT NULL DEFAULT 0,
+                lifetime_spend_amount INT NOT NULL DEFAULT 0,
                 created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
             );
             """
         )
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'is_admin') IS NULL ALTER TABLE dbo.AppUsers ADD is_admin BIT NOT NULL DEFAULT 0;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'is_email_verified') IS NULL ALTER TABLE dbo.AppUsers ADD is_email_verified BIT NOT NULL DEFAULT 0;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'email_verification_code_hash') IS NULL ALTER TABLE dbo.AppUsers ADD email_verification_code_hash NVARCHAR(500) NULL;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'email_verification_expires_at') IS NULL ALTER TABLE dbo.AppUsers ADD email_verification_expires_at DATETIME2 NULL;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'email_verification_attempts') IS NULL ALTER TABLE dbo.AppUsers ADD email_verification_attempts INT NOT NULL DEFAULT 0;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'level_code') IS NULL ALTER TABLE dbo.AppUsers ADD level_code NVARCHAR(30) NOT NULL DEFAULT N'bronze';")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'lifetime_orders_count') IS NULL ALTER TABLE dbo.AppUsers ADD lifetime_orders_count INT NOT NULL DEFAULT 0;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'lifetime_spend_amount') IS NULL ALTER TABLE dbo.AppUsers ADD lifetime_spend_amount INT NOT NULL DEFAULT 0;")
         conn.commit()
 
 
@@ -34,6 +52,7 @@ def ensure_rental_orders_tables():
                 id INT IDENTITY(1,1) PRIMARY KEY,
                 user_id INT NOT NULL,
                 status NVARCHAR(30) NOT NULL DEFAULT N'created',
+                pickup_code NVARCHAR(40) NULL,
                 total_items INT NOT NULL,
                 total_price INT NOT NULL,
                 rental_start_date DATE NULL,
@@ -72,6 +91,12 @@ def ensure_rental_orders_tables():
         )
         cur.execute(
             """
+            IF COL_LENGTH('dbo.RentalOrders', 'pickup_code') IS NULL
+                ALTER TABLE dbo.RentalOrders ADD pickup_code NVARCHAR(40) NULL;
+            """
+        )
+        cur.execute(
+            """
             IF COL_LENGTH('dbo.RentalOrders', 'rental_end_date') IS NULL
                 ALTER TABLE dbo.RentalOrders ADD rental_end_date DATE NULL;
             """
@@ -93,6 +118,20 @@ def ensure_rental_orders_tables():
             UPDATE RentalOrders
             SET status = N'created'
             WHERE status IS NULL OR LTRIM(RTRIM(status)) = N'';
+            """
+        )
+        cur.execute(
+            """
+            ;WITH totals AS (
+                SELECT order_id, COALESCE(SUM(line_total), 0) AS sum_total
+                FROM RentalOrderItems
+                GROUP BY order_id
+            )
+            UPDATE o
+            SET o.total_price = t.sum_total
+            FROM RentalOrders o
+            INNER JOIN totals t ON t.order_id = o.id
+            WHERE COALESCE(o.total_price, 0) = 0 AND t.sum_total > 0;
             """
         )
         conn.commit()
@@ -127,10 +166,15 @@ def ensure_legacy_balenciaga_coture_brand_rename():
         pass
 
 
-def _create_rental_order(user_id, cart_items):
+def _create_rental_order(user_id, cart_items, discount_percent=0):
     if not cart_items:
         return None
     ensure_rental_orders_tables()
+    try:
+        discount_percent = int(discount_percent or 0)
+    except Exception:
+        discount_percent = 0
+    discount_percent = max(0, min(100, discount_percent))
     normalized_items = []
     unavailable = []
     for item in cart_items:
@@ -141,7 +185,7 @@ def _create_rental_order(user_id, cart_items):
         normalized_items.append((item, start, end, days))
     if unavailable:
         raise RentalAvailabilityError(', '.join(unavailable))
-    total_price = sum(int(item.get('price_per_day', 0) or 0) * days for item, _, _, days in normalized_items)
+    total_price = 0
     total_items = len(cart_items)
     rental_start = min(start for _, start, _, _ in normalized_items)
     rental_end = max(end for _, _, end, _ in normalized_items)
@@ -162,6 +206,9 @@ def _create_rental_order(user_id, cart_items):
             return None
         for item, start, end, days in normalized_items:
             price_per_day = int(item.get('price_per_day', 0) or 0)
+            line_total_raw = price_per_day * days
+            line_total = int(round(line_total_raw * (100 - discount_percent) / 100.0))
+            total_price += line_total
             cur.execute(
                 """
                 INSERT INTO RentalOrderItems (
@@ -179,12 +226,13 @@ def _create_rental_order(user_id, cart_items):
                     (item.get('size') or '').strip() or None,
                     days,
                     price_per_day,
-                    price_per_day * days,
+                    line_total,
                     str(item.get('image') or ''),
                     start,
                     end,
                 ),
             )
+        cur.execute('UPDATE RentalOrders SET total_price = ? WHERE id = ?', (int(total_price), int(order_id)))
         conn.commit()
         return order_id
 
@@ -295,7 +343,7 @@ def _fetch_recent_orders_admin(limit=80):
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT TOP (?) o.id, o.status, o.total_items, o.total_price, o.rental_start_date, o.rental_end_date, o.created_at, u.email
+            SELECT TOP (?) o.id, o.status, o.total_items, o.total_price, o.rental_start_date, o.rental_end_date, o.created_at, u.email, o.pickup_code
             FROM RentalOrders o
             INNER JOIN AppUsers u ON u.id = o.user_id
             ORDER BY o.created_at DESC, o.id DESC
@@ -313,6 +361,7 @@ def _fetch_recent_orders_admin(limit=80):
                 'rental_end_date': r[5],
                 'created_at': r[6],
                 'user_email': r[7] or '',
+                'pickup_code': r[8] or '',
                 'items': [],
             }
             for r in rows
@@ -345,3 +394,38 @@ def _fetch_recent_orders_admin(limit=80):
         for order in orders:
             order['items'] = items_map.get(order['id'], [])
     return orders
+
+
+def _resolve_loyalty_level(orders_count, spend_amount):
+    matched = LOYALTY_LEVELS[0]
+    for lvl in LOYALTY_LEVELS:
+        if orders_count >= lvl['min_orders'] and spend_amount >= lvl['min_spend']:
+            matched = lvl
+    return matched
+
+
+def recalculate_user_loyalty(user_id):
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT COUNT(*), COALESCE(SUM(total_price), 0)
+            FROM RentalOrders
+            WHERE user_id = ? AND status = N'returned'
+            """,
+            (int(user_id),),
+        )
+        row = cur.fetchone()
+        orders_count = int(row[0] or 0) if row else 0
+        spend_amount = int(row[1] or 0) if row else 0
+    level = _resolve_loyalty_level(orders_count, spend_amount)
+    update_user_loyalty(user_id, level['code'], orders_count, spend_amount)
+    return {
+        'level_code': level['code'],
+        'level_title': level['title'],
+        'discount_percent': int(level['discount_percent']),
+        'priority_booking': bool(level['priority_booking']),
+        'offline_events': bool(level['offline_events']),
+        'orders_count': orders_count,
+        'spend_amount': spend_amount,
+    }

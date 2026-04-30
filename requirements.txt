@@ -1,3 +1,5 @@
 Flask
 pyodbc
 deep-translator
+requests
+python-dotenv

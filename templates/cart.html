@@ -27,6 +27,16 @@
             </div>
         </div>
         {% endfor %}
+        <div class="cart-total-row">
+            <span>{{ t('cart_subtotal') }}</span>
+            <span>${{ subtotal }}</span>
+        </div>
+        {% if discount_percent > 0 %}
+        <div class="cart-total-row">
+            <span>{{ t('cart_discount') }} ({{ discount_percent }}%)</span>
+            <span>-${{ discount_amount }}</span>
+        </div>
+        {% endif %}
         <div class="cart-total-row total-display">
             <span>{{ t('total') }}</span>
             <span>${{ total }}</span>
@@ -41,4 +51,7 @@
         <div class="empty-state">{{ t('bag_empty') }}<br><br><a href="{{ url_for('home') }}" class="btn-outline">{{ t('browse') }}</a></div>
     {% endif %}
 </div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 {% endblock %}

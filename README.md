@@ -58,7 +58,30 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Пакеты: Flask, pyodbc, deep-translator (опционально, для переводов в интерфейсе).
+Пакеты: Flask, pyodbc, deep-translator (опционально, для переводов в интерфейсе), requests/python-dotenv (для внешнего media storage и env).
+
+### Новые env для SMTP (email-верификация регистрации)
+
+```powershell
+$env:SMTP_HOST = "smtp.example.com"
+$env:SMTP_PORT = "587"
+$env:SMTP_USER = "no-reply@example.com"
+$env:SMTP_PASS = "app-password"
+$env:SMTP_FROM = "no-reply@example.com"
+$env:SMTP_USE_TLS = "1"
+$env:PICKUP_ADDRESS = "Москва, ул. Пример, 1 (пункт выдачи Protocol Archive)"
+```
+
+При переводе заказа в статус `confirmed` админкой клиенту отправляется email: что заявка одобрена, с упоминанием предмета, адресом пункта выдачи и кодом получения.
+
+### Новые env для Supabase Storage (внешнее хранение фото/видео)
+
+```powershell
+$env:SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
+$env:SUPABASE_BUCKET = "media"
+$env:SUPABASE_PUBLIC_BASE_URL = ""
+```
 
 ## 4. Подключение к SQL Server
 
@@ -174,6 +197,26 @@ flask run --port 5000
 ```
 
 При `python app.py` режим отладки и порт задаются в `app.py`.
+
+## Новая логика доступа и админки
+
+- Регистрация теперь двухэтапная: после формы создаётся пользователь и отправляется 6-значный код на email; вход доступен только после подтверждения.
+- Для админки используется отдельная страница входа: `/admin/login`.
+- Доступ к `/admin*` только у пользователей с `is_admin=1`.
+- В админке добавлено меню разделов: товары, заказы, пользователи, кампания.
+- В разделе пользователей можно назначать/снимать права администратора.
+
+## Уровни и member area
+
+- Уровень пользователя считается по гибридной модели (количество завершённых аренд + суммарный spend).
+- Уровни и пороги заданы в `core/constants.py` (`LOYALTY_LEVELS`).
+- В member area показываются персональные привилегии: приоритет, скидка, доступ к закрытым оффлайн-мероприятиям.
+
+## Media storage
+
+- Загрузки из админки могут идти в Supabase Storage (изображения и видео); в БД хранится URL ассета.
+- Локальные `static/*/uploads` используются как fallback, если Supabase не настроен.
+- Локальные медиа были перенесены в Supabase; проект ориентирован на внешнее хранение ассетов.
 
 ## Чеклист для того, кто разворачивает проект у себя
 

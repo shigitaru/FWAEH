@@ -1,4 +1,6 @@
-from flask import request, session, redirect, url_for, render_template
+from flask import request, session, redirect, url_for, render_template, flash
+from werkzeug.security import check_password_hash
+import secrets
 
 
 def register_admin_routes(app, deps):
@@ -24,9 +26,50 @@ def register_admin_routes(app, deps):
     collect_story_image_urls_from_form = deps['_collect_story_image_urls_from_form']
     save_campaign_upload = deps['_save_campaign_upload']
     insert_campaign_story_return_id = deps['_insert_campaign_story_return_id']
+    list_users_for_admin = deps['_list_users_for_admin']
+    set_admin_flag = deps['_set_admin_flag']
+    recalculate_user_loyalty = deps['recalculate_user_loyalty']
+    user_fetch_by_email = deps['_user_fetch_by_email']
+    send_rental_approved_email = deps['_send_rental_approved_email']
+
+    def _require_admin():
+        if not session.get('user_id') or not bool(session.get('is_admin')):
+            flash(t('admin_need_separate_login'), 'error')
+            return redirect(url_for('admin_login'))
+        return None
+
+    @app.route('/admin/login', methods=['GET', 'POST'])
+    def admin_login():
+        if request.method == 'POST':
+            email = (request.form.get('email') or '').strip().lower()
+            password = request.form.get('password') or ''
+            if not email or not password:
+                flash(t('admin_login_fill_credentials'), 'error')
+                return redirect(url_for('admin_login'))
+            row = user_fetch_by_email(email)
+            if not row or not check_password_hash(row[2], password):
+                flash(t('admin_login_invalid'), 'error')
+                return redirect(url_for('admin_login'))
+            if not bool(row[4]):
+                flash(t('admin_login_no_access'), 'error')
+                return redirect(url_for('admin_login'))
+            session['user_id'] = int(row[0])
+            session['user_email'] = row[1]
+            session['user_display_name'] = row[3]
+            session['is_admin'] = bool(row[4])
+            session['user_level_code'] = (row[9] if len(row) > 9 else 'bronze') or 'bronze'
+            session.modified = True
+            return redirect(url_for('admin_panel', section='products'))
+        return render_template('admin_login.html', active_page='admin', cart_count=get_cart_count(), t=t)
 
     @app.route('/admin', methods=['GET', 'POST'])
     def admin_panel():
+        denied = _require_admin()
+        if denied:
+            return denied
+        section = (request.args.get('section') or 'products').strip().lower()
+        inventory_query = (request.args.get('q') or '').strip()
+        orders_status_filter = (request.args.get('order_status') or '').strip().lower()
         if request.method == 'POST':
             try:
                 category = request.form.get('category', '').strip() or 'rtw'
@@ -44,11 +87,16 @@ def register_admin_routes(app, deps):
                 sizes_raw = request.form.get('sizes', '').strip()
                 uploaded_main = save_uploaded_image(request.files.get('main_image_file'))
                 uploaded_extra = request.files.getlist('extra_image_files')
+                uploaded_unified = request.files.getlist('media_files')
+                if uploaded_unified:
+                    uploaded_main = save_uploaded_image(uploaded_unified[0]) or uploaded_main
+                    for media_item in uploaded_unified[1:]:
+                        uploaded_extra.append(media_item)
                 if uploaded_main:
                     main_image = uploaded_main
                 if not all([serial, brand_name, name, max_days_raw, condition_score_raw]):
                     session['admin_status'] = {'type': 'error', 'message': t('admin_required_fields')}
-                    return redirect(url_for('admin_panel'))
+                    return redirect(url_for('admin_panel', section='products'))
                 max_days = int(max_days_raw)
                 condition_score = int(condition_score_raw)
                 size_values = [s.strip() for s in sizes_raw.split(',') if s.strip()]
@@ -61,7 +109,7 @@ def register_admin_routes(app, deps):
                     main_image = extra_images.pop(0)
                 if not main_image:
                     session['admin_status'] = {'type': 'error', 'message': t('admin_required_main_image')}
-                    return redirect(url_for('admin_panel'))
+                    return redirect(url_for('admin_panel', section='products'))
                 with get_db_connection() as conn:
                     cur = conn.cursor()
                     cur.execute('SELECT id FROM Brands WHERE name = ?', (brand_name,))
@@ -122,17 +170,25 @@ def register_admin_routes(app, deps):
                 session['admin_status'] = {'type': 'success', 'message': t('admin_product_created')}
             except Exception as exc:
                 session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
-            return redirect(url_for('admin_panel'))
-        products = filter_products()
+            return redirect(url_for('admin_panel', section='products'))
+        products = filter_products(query=inventory_query) if inventory_query else filter_products()
         orders_recent = fetch_recent_orders_admin()
+        if orders_status_filter in order_status_flow:
+            orders_recent = [x for x in orders_recent if x.get('status') == orders_status_filter]
+        else:
+            orders_status_filter = ''
         admin_status = session.pop('admin_status', None)
         return render_template(
             'admin.html',
             products=products,
             orders_recent=orders_recent,
+            admin_users=list_users_for_admin(),
+            admin_section=section,
             order_status_flow=order_status_flow,
             brands=get_brands(),
             brands_admin=get_admin_brands(),
+            inventory_query=inventory_query,
+            orders_status_filter=orders_status_filter,
             admin_status=admin_status,
             active_page='admin',
             cart_count=get_cart_count(),
@@ -142,68 +198,131 @@ def register_admin_routes(app, deps):
 
     @app.route('/admin/order/<int:order_id>/status', methods=['POST'])
     def admin_update_order_status(order_id):
+        denied = _require_admin()
+        if denied:
+            return denied
+        current_filter = (request.form.get('order_status_filter') or '').strip().lower()
+        def _orders_redirect():
+            if current_filter in order_status_flow:
+                return redirect(url_for('admin_panel', section='orders', order_status=current_filter))
+            return redirect(url_for('admin_panel', section='orders'))
         next_status = (request.form.get('status') or '').strip().lower()
         if next_status not in order_status_flow:
             session['admin_status'] = {'type': 'error', 'message': t('admin_order_status_invalid')}
-            return redirect(url_for('admin_panel'))
+            return _orders_redirect()
         try:
             ensure_rental_orders_tables()
+            notification_error = None
+            loyalty_recalc_user_id = None
             with get_db_connection() as conn:
                 cur = conn.cursor()
-                cur.execute('SELECT id FROM RentalOrders WHERE id = ?', (order_id,))
-                if not cur.fetchone():
+                cur.execute(
+                    """
+                    SELECT o.id, o.status, o.user_id, u.email, u.display_name
+                    FROM RentalOrders o
+                    INNER JOIN AppUsers u ON u.id = o.user_id
+                    WHERE o.id = ?
+                    """,
+                    (order_id,),
+                )
+                order_row = cur.fetchone()
+                if not order_row:
                     session['admin_status'] = {'type': 'error', 'message': t('admin_order_not_found')}
-                    return redirect(url_for('admin_panel'))
+                    return _orders_redirect()
+                prev_status = (order_row[1] or 'created').strip().lower()
+                user_id = int(order_row[2])
+                user_email = order_row[3] or ''
+                user_name = order_row[4] or ''
                 cur.execute('UPDATE RentalOrders SET status = ? WHERE id = ?', (next_status, order_id))
+                pickup_code = None
+                if next_status == 'confirmed' and prev_status != 'confirmed':
+                    pickup_code = f'PA-{secrets.token_hex(3).upper()}'
+                    cur.execute('UPDATE RentalOrders SET pickup_code = ? WHERE id = ?', (pickup_code, order_id))
+                if next_status == 'returned' and prev_status != 'returned':
+                    loyalty_recalc_user_id = user_id
                 conn.commit()
+            if loyalty_recalc_user_id is not None:
+                recalculate_user_loyalty(loyalty_recalc_user_id)
+            if next_status == 'confirmed' and user_email:
+                try:
+                    with get_db_connection() as conn:
+                        cur = conn.cursor()
+                        cur.execute(
+                            """
+                            SELECT TOP 1 product_name
+                            FROM RentalOrderItems
+                            WHERE order_id = ?
+                            ORDER BY id ASC
+                            """,
+                            (order_id,),
+                        )
+                        item_row = cur.fetchone()
+                    item_name = (item_row[0] if item_row and item_row[0] else f'заказ #{order_id}')
+                    send_rental_approved_email(user_email, user_name, item_name, pickup_code or '—')
+                except Exception as mail_exc:
+                    notification_error = str(mail_exc)
             session['admin_status'] = {'type': 'success', 'message': t('admin_order_status_updated')}
+            if notification_error:
+                session['admin_status'] = {
+                    'type': 'error',
+                    'message': f'{t("admin_status_updated_but_email_failed")}: {notification_error}'
+                }
         except Exception as exc:
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
-        return redirect(url_for('admin_panel'))
+        return _orders_redirect()
 
     @app.route('/admin/product/<int:product_id>/delete', methods=['POST'])
     def admin_delete_product(product_id):
+        denied = _require_admin()
+        if denied:
+            return denied
         try:
             with get_db_connection() as conn:
                 cur = conn.cursor()
                 cur.execute('SELECT id FROM Products WHERE id = ?', (product_id,))
                 if not cur.fetchone():
                     session['admin_status'] = {'type': 'error', 'message': t('admin_product_not_found')}
-                    return redirect(url_for('admin_panel'))
+                    return redirect(url_for('admin_panel', section='inventory'))
                 cur.execute('DELETE FROM Products WHERE id = ?', (product_id,))
                 conn.commit()
             session['admin_status'] = {'type': 'success', 'message': t('admin_product_deleted')}
         except Exception as exc:
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
-        return redirect(url_for('admin_panel'))
+        return redirect(url_for('admin_panel', section='inventory'))
 
     @app.route('/admin/brand/<int:brand_id>/delete', methods=['POST'])
     def admin_delete_brand(brand_id):
+        denied = _require_admin()
+        if denied:
+            return denied
         try:
             with get_db_connection() as conn:
                 cur = conn.cursor()
                 cur.execute('SELECT id FROM Brands WHERE id = ?', (brand_id,))
                 if not cur.fetchone():
                     session['admin_status'] = {'type': 'error', 'message': t('admin_brand_not_found')}
-                    return redirect(url_for('admin_panel'))
+                    return redirect(url_for('admin_panel', section='brands'))
                 cur.execute('SELECT COUNT(*) FROM Products WHERE brand_id = ?', (brand_id,))
                 linked_products = int(cur.fetchone()[0] or 0)
                 if linked_products > 0:
                     session['admin_status'] = {'type': 'error', 'message': t('admin_brand_has_products')}
-                    return redirect(url_for('admin_panel'))
+                    return redirect(url_for('admin_panel', section='brands'))
                 cur.execute('DELETE FROM Brands WHERE id = ?', (brand_id,))
                 conn.commit()
             session['admin_status'] = {'type': 'success', 'message': t('admin_brand_deleted')}
         except Exception as exc:
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
-        return redirect(url_for('admin_panel'))
+        return redirect(url_for('admin_panel', section='brands'))
 
     @app.route('/admin/product/<int:product_id>/edit', methods=['GET', 'POST'])
     def admin_edit_product(product_id):
+        denied = _require_admin()
+        if denied:
+            return denied
         product = find_product(product_id)
         if not product:
             session['admin_status'] = {'type': 'error', 'message': t('admin_product_not_found')}
-            return redirect(url_for('admin_panel'))
+            return redirect(url_for('admin_panel', section='inventory'))
 
         if request.method == 'POST':
             try:
@@ -239,6 +358,13 @@ def register_admin_routes(app, deps):
                         pass
                 uploaded_main = save_uploaded_image(request.files.get('main_image_file'))
                 extra_images = []
+                unified_media = request.files.getlist('media_files')
+                if unified_media:
+                    uploaded_main = save_uploaded_image(unified_media[0]) or uploaded_main
+                    for media_item in unified_media[1:]:
+                        saved = save_uploaded_image(media_item)
+                        if saved:
+                            extra_images.append(saved)
                 for img in request.files.getlist('extra_image_files'):
                     saved = save_uploaded_image(img)
                     if saved:
@@ -312,7 +438,7 @@ def register_admin_routes(app, deps):
                 else:
                     session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
                 return redirect(url_for('admin_edit_product', product_id=product_id))
-            return redirect(url_for('admin_panel'))
+            return redirect(url_for('admin_panel', section='inventory'))
 
         return render_template(
             'admin_edit.html',
@@ -328,6 +454,9 @@ def register_admin_routes(app, deps):
 
     @app.route('/admin/campaign', methods=['GET', 'POST'])
     def admin_campaign():
+        denied = _require_admin()
+        if denied:
+            return denied
         if request.method == 'POST':
             intro_en = request.form.get('intro_en', '').strip()
             intro_ru = request.form.get('intro_ru', '').strip()
@@ -367,6 +496,9 @@ def register_admin_routes(app, deps):
 
     @app.route('/admin/campaign/story/new', methods=['GET', 'POST'])
     def admin_campaign_story_new():
+        denied = _require_admin()
+        if denied:
+            return denied
         if request.method == 'POST':
             headline_en = request.form.get('headline_en', '').strip()
             headline_ru = request.form.get('headline_ru', '').strip()
@@ -422,6 +554,9 @@ def register_admin_routes(app, deps):
 
     @app.route('/admin/campaign/story/<int:story_id>', methods=['GET', 'POST'])
     def admin_campaign_story_edit(story_id):
+        denied = _require_admin()
+        if denied:
+            return denied
         if request.method == 'POST':
             if request.form.get('delete_story'):
                 try:
@@ -489,3 +624,21 @@ def register_admin_routes(app, deps):
             cart_count=get_cart_count(),
             t=t,
         )
+
+    @app.route('/admin/users/<int:user_id>/set-admin', methods=['POST'])
+    def admin_set_user_admin(user_id):
+        denied = _require_admin()
+        if denied:
+            return denied
+        is_admin_raw = str(request.form.get('is_admin') or '').strip().lower()
+        make_admin = is_admin_raw in ('1', 'true', 'yes', 'on')
+        try:
+            current_uid = int(session.get('user_id') or 0)
+            if current_uid and current_uid == int(user_id) and not make_admin:
+                session['admin_status'] = {'type': 'error', 'message': t('admin_self_demote_forbidden')}
+                return redirect(url_for('admin_panel', section='users'))
+            set_admin_flag(user_id, make_admin)
+            session['admin_status'] = {'type': 'success', 'message': t('admin_rights_updated')}
+        except Exception as exc:
+            session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+        return redirect(url_for('admin_panel', section='users'))

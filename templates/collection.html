@@ -8,7 +8,7 @@
 <div class="pa-landing">
     <section class="collection-hero pa-lux-hero" aria-label="{{ t('hero_title') }}">
         <video class="pa-lux-hero-video" autoplay loop muted playsinline webkit-playsinline preload="auto" poster="{{ hero_image }}">
-            <source src="{{ url_for('static', filename='lux_start_local.mp4') }}" type="video/mp4">
+            <source src="{{ hero_video_url }}" type="video/mp4">
         </video>
         <img class="collection-hero-bg pa-lux-hero-fallback" src="{{ hero_image }}" alt="" decoding="async">
         <div class="pa-video-shade" aria-hidden="true"></div>
@@ -37,7 +37,7 @@
 
     <section class="pa-video-section pa-start-section" aria-labelledby="pa-start-title">
         <div class="pa-video-poster" style="background-image: url('{{ hero_image }}');" aria-hidden="true"></div>
-        <video class="pa-hls-video" poster="{{ hero_image }}" data-hls-src="{{ url_for('static', filename='lux_how_local_hls/local.m3u8') }}" autoplay loop muted playsinline webkit-playsinline preload="metadata"></video>
+        <video class="pa-hls-video" poster="{{ hero_image }}" data-hls-src="{{ how_hls_url }}" autoplay loop muted playsinline webkit-playsinline preload="metadata"></video>
         <div class="pa-top-fade" aria-hidden="true"></div>
         <div class="pa-bottom-fade" aria-hidden="true"></div>
         <div class="pa-section-center">
@@ -60,7 +60,7 @@
                 <a href="#collection-catalog" class="pa-glass-btn liquid-glass-strong">{{ t('lux_chess1_cta') }} <span aria-hidden="true">↗</span></a>
             </div>
             <div class="pa-chess-media liquid-glass">
-                <img src="{{ url_for('static', filename='1.png') }}" alt="{{ 'Editorial showcase' if current_lang == 'en' else 'Эстетичный превью-блок' }}" loading="lazy">
+                <img src="{{ showcase_image_1_url }}" alt="{{ 'Editorial showcase' if current_lang == 'en' else 'Эстетичный превью-блок' }}" loading="lazy">
             </div>
         </div>
         <div class="pa-chess-row pa-chess-row--reverse">
@@ -70,7 +70,7 @@
                 <a href="{{ url_for('wishlist_page') }}" class="pa-glass-btn liquid-glass-strong">{{ t('lux_chess2_cta') }} <span aria-hidden="true">↗</span></a>
             </div>
             <div class="pa-chess-media liquid-glass">
-                <img src="{{ url_for('static', filename='2.png') }}" alt="{{ 'Editorial showcase' if current_lang == 'en' else 'Эстетичный превью-блок' }}" loading="lazy">
+                <img src="{{ showcase_image_2_url }}" alt="{{ 'Editorial showcase' if current_lang == 'en' else 'Эстетичный превью-блок' }}" loading="lazy">
             </div>
         </div>
     </section>

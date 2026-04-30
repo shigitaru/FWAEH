@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ t('account_order_title') }} #{{ order.id }}{% endblock %}
+{% block content %}
+<div class="account-page">
+    <div class="account-page-inner">
+        <div class="account-order-top">
+            <a href="{{ url_for('account') }}" class="account-quick-link">{{ t('account_order_back') }}</a>
+            <span class="account-status-badge">{{ t('order_status_' ~ order.status) }}</span>
+        </div>
+
+        <section class="account-panel account-order-layout">
+            <div class="account-order-overview">
+                <p class="account-order-kicker">{{ t('account_order_title') }} #{{ order.id }}</p>
+                <div class="account-order-facts">
+                    <div class="account-order-fact">
+                        <p class="account-order-fact-label">{{ t('account_history_period') }}</p>
+                        <p class="account-order-fact-value">{{ order.rental_start_date or '-' }} - {{ order.rental_end_date or '-' }}</p>
+                    </div>
+                    <div class="account-order-fact">
+                        <p class="account-order-fact-label">{{ t('account_order_pickup_code') }}</p>
+                        <p class="account-order-fact-value">{{ order.pickup_code or t('account_order_pickup_code_empty') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="account-order-total-card">
+                <p class="account-order-total-caption">{{ t('account_history_total') }}</p>
+                <p class="account-order-total-value">${{ order.total_price }}</p>
+                <p class="account-order-items-count">{{ order.total_items }} {{ t('account_history_items') }}</p>
+                {% if order.status == 'created' %}
+                <form method="post" action="{{ url_for('account_cancel_order', order_id=order.id) }}">
+                    <button type="submit" class="account-btn-secondary">{{ t('account_cancel_order') }}</button>
+                </form>
+                {% endif %}
+            </aside>
+        </section>
+
+        <section class="account-panel account-order-items-panel">
+            <h2 class="account-panel-title account-order-items-title">{{ t('account_order_items_title') }}</h2>
+            <div class="account-history-list">
+                {% for item in order['items'] %}
+                <article class="account-history-card account-order-item-card">
+                    <div class="account-history-item">
+                        <div>
+                            <p class="account-history-item-title">{{ item.product_name }}</p>
+                            <p class="account-history-item-meta">{{ item.serial }} · {{ item.brand_name }}{% if item.size_label %} · {{ t('size') }} {{ item.size_label }}{% endif %}</p>
+                        </div>
+                        <p class="account-history-item-price">${{ item.line_total }}</p>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -60,11 +60,13 @@ def get_current_user():
         'id': uid_int,
         'email': session.get('user_email') or '',
         'display_name': session.get('user_display_name') or '',
+        'is_admin': bool(session.get('is_admin')),
+        'level_code': (session.get('user_level_code') or 'bronze'),
     }
 
 
 def _clear_user_session():
-    for k in ('user_id', 'user_email', 'user_display_name'):
+    for k in ('user_id', 'user_email', 'user_display_name', 'is_admin', 'user_level_code'):
         session.pop(k, None)
     session.modified = True
 

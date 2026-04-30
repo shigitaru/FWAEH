@@ -2,6 +2,7 @@
 import os
 from uuid import uuid4
 
+import requests
 from werkzeug.utils import secure_filename
 
 from .config import settings
@@ -10,6 +11,7 @@ from .db import get_db_connection
 UPLOAD_DIR = settings.upload_dir
 CAMPAIGN_UPLOAD_DIR = settings.campaign_upload_dir
 ALLOWED_IMAGE_EXTENSIONS = settings.allowed_image_extensions
+ALLOWED_VIDEO_EXTENSIONS = settings.allowed_video_extensions
 
 def _nullable_str(value):
     """Пустая строка → None для колонок БД (material, origin, condition), чтобы можно было «очистить» поле."""
@@ -77,12 +79,38 @@ def _apply_admin_product_image_changes(cur, product_id, remove_ids, ordered_ids,
 
 
 def _save_uploaded_image(file_storage):
+    return _save_uploaded_media(file_storage, folder='products')
+
+
+def _save_uploaded_media(file_storage, folder='products'):
     if not file_storage or not file_storage.filename:
         return None
     original = secure_filename(file_storage.filename)
     _, ext = os.path.splitext(original.lower())
-    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+    if ext not in ALLOWED_IMAGE_EXTENSIONS and ext not in ALLOWED_VIDEO_EXTENSIONS:
         return None
+    if settings.supabase_url and settings.supabase_service_role_key and settings.supabase_bucket:
+        unique_name = f'{uuid4().hex}{ext}'
+        object_path = f'protocol_archive/{folder}/{unique_name}'
+        upload_url = f'{settings.supabase_url}/storage/v1/object/{settings.supabase_bucket}/{object_path}'
+        body = file_storage.read()
+        file_storage.stream.seek(0)
+        content_type = file_storage.mimetype or ('video/mp4' if ext in ALLOWED_VIDEO_EXTENSIONS else 'image/jpeg')
+        response = requests.post(
+            upload_url,
+            headers={
+                'apikey': settings.supabase_service_role_key,
+                'Authorization': f'Bearer {settings.supabase_service_role_key}',
+                'Content-Type': content_type,
+                'x-upsert': 'false',
+            },
+            data=body,
+            timeout=30,
+        )
+        if response.ok:
+            if settings.supabase_public_base_url:
+                return f'{settings.supabase_public_base_url}/{settings.supabase_bucket}/{object_path}'
+            return f'{settings.supabase_url}/storage/v1/object/public/{settings.supabase_bucket}/{object_path}'
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     filename = f'{uuid4().hex}{ext}'
     abs_path = os.path.join(UPLOAD_DIR, filename)
@@ -91,11 +119,13 @@ def _save_uploaded_image(file_storage):
 
 
 def _save_campaign_upload(file_storage):
+    if settings.supabase_url and settings.supabase_service_role_key and settings.supabase_bucket:
+        return _save_uploaded_media(file_storage, folder='campaign')
     if not file_storage or not file_storage.filename:
         return None
     original = secure_filename(file_storage.filename)
     _, ext = os.path.splitext(original.lower())
-    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+    if ext not in ALLOWED_IMAGE_EXTENSIONS and ext not in ALLOWED_VIDEO_EXTENSIONS:
         return None
     os.makedirs(CAMPAIGN_UPLOAD_DIR, exist_ok=True)
     filename = f'{uuid4().hex}{ext}'

@@ -399,10 +399,26 @@ def create_tables():
                 email NVARCHAR(255) NOT NULL UNIQUE,
                 password_hash NVARCHAR(500) NOT NULL,
                 display_name NVARCHAR(120) NOT NULL,
+                is_admin BIT NOT NULL DEFAULT 0,
+                is_email_verified BIT NOT NULL DEFAULT 0,
+                email_verification_code_hash NVARCHAR(500) NULL,
+                email_verification_expires_at DATETIME2 NULL,
+                email_verification_attempts INT NOT NULL DEFAULT 0,
+                level_code NVARCHAR(30) NOT NULL DEFAULT N'bronze',
+                lifetime_orders_count INT NOT NULL DEFAULT 0,
+                lifetime_spend_amount INT NOT NULL DEFAULT 0,
                 created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
             );
             """
         )
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'is_admin') IS NULL ALTER TABLE dbo.AppUsers ADD is_admin BIT NOT NULL DEFAULT 0;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'is_email_verified') IS NULL ALTER TABLE dbo.AppUsers ADD is_email_verified BIT NOT NULL DEFAULT 0;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'email_verification_code_hash') IS NULL ALTER TABLE dbo.AppUsers ADD email_verification_code_hash NVARCHAR(500) NULL;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'email_verification_expires_at') IS NULL ALTER TABLE dbo.AppUsers ADD email_verification_expires_at DATETIME2 NULL;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'email_verification_attempts') IS NULL ALTER TABLE dbo.AppUsers ADD email_verification_attempts INT NOT NULL DEFAULT 0;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'level_code') IS NULL ALTER TABLE dbo.AppUsers ADD level_code NVARCHAR(30) NOT NULL DEFAULT N'bronze';")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'lifetime_orders_count') IS NULL ALTER TABLE dbo.AppUsers ADD lifetime_orders_count INT NOT NULL DEFAULT 0;")
+        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'lifetime_spend_amount') IS NULL ALTER TABLE dbo.AppUsers ADD lifetime_spend_amount INT NOT NULL DEFAULT 0;")
         cur.execute(
             """
             IF OBJECT_ID('RentalOrders', 'U') IS NULL
@@ -410,6 +426,7 @@ def create_tables():
                 id INT IDENTITY(1,1) PRIMARY KEY,
                 user_id INT NOT NULL,
                 status NVARCHAR(30) NOT NULL DEFAULT N'created',
+                pickup_code NVARCHAR(40) NULL,
                 total_items INT NOT NULL,
                 total_price INT NOT NULL,
                 rental_start_date DATE NULL,
@@ -444,6 +461,12 @@ def create_tables():
             """
             IF COL_LENGTH('dbo.RentalOrders', 'rental_start_date') IS NULL
                 ALTER TABLE dbo.RentalOrders ADD rental_start_date DATE NULL;
+            """
+        )
+        cur.execute(
+            """
+            IF COL_LENGTH('dbo.RentalOrders', 'pickup_code') IS NULL
+                ALTER TABLE dbo.RentalOrders ADD pickup_code NVARCHAR(40) NULL;
             """
         )
         cur.execute(

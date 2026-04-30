@@ -2,7 +2,16 @@ from datetime import datetime
 
 from flask import Flask, request
 
-from core.account_service import _user_fetch_by_email, _user_insert
+from core.account_service import (
+    _increment_verification_attempt,
+    _list_users_for_admin,
+    _mark_email_verified,
+    _set_admin_flag,
+    _set_user_verification_code,
+    _update_user_loyalty,
+    _user_fetch_by_email,
+    _user_insert,
+)
 from core.campaign_service import (
     _collect_story_image_urls_from_form,
     _fetch_campaign_settings_admin,
@@ -15,11 +24,13 @@ from core.campaign_service import (
 from core.catalog import filter_products, find_product, get_admin_brands, get_brands
 from core.constants import (
     ITEM_CATEGORIES,
+    LOYALTY_LEVELS,
     ORDER_STATUS_FLOW,
     SPLASH_IMAGE,
     normalize_item_category_slug,
 )
 from core.db import get_db_connection
+from core.config import settings
 from core.i18n import TRANSLATIONS, get_lang, t, tc, tv
 from core.listing import _collection_listing_data
 from core.media_uploads import (
@@ -33,10 +44,12 @@ from core.rental_orders import (
     _create_rental_order,
     _fetch_recent_orders_admin,
     _fetch_user_rental_history,
+    recalculate_user_loyalty,
     ensure_app_users_table,
     ensure_legacy_balenciaga_coture_brand_rename,
     ensure_rental_orders_tables,
 )
+from core.email_service import send_rental_approved_email, send_verification_email
 from routes.admin import register_admin_routes
 from routes.api import register_api_routes
 from routes.auth import register_auth_routes
@@ -76,10 +89,17 @@ register_auth_routes(
         'get_cart_count': get_cart_count,
         '_fetch_user_rental_history': _fetch_user_rental_history,
         'ensure_app_users_table': ensure_app_users_table,
+        'ensure_rental_orders_tables': ensure_rental_orders_tables,
+        'get_db_connection': get_db_connection,
         '_user_fetch_by_email': _user_fetch_by_email,
         '_user_insert': _user_insert,
+        '_set_user_verification_code': _set_user_verification_code,
+        '_increment_verification_attempt': _increment_verification_attempt,
+        '_mark_email_verified': _mark_email_verified,
+        '_send_verification_email': send_verification_email,
         '_clear_user_session': _clear_user_session,
         'ACC_EMAIL_RE': ACC_EMAIL_RE,
+        'LOYALTY_LEVELS': LOYALTY_LEVELS,
     },
 )
 
@@ -106,6 +126,7 @@ register_public_routes(
         'get_brands': get_brands,
         'get_campaign_index_data': get_campaign_index_data,
         'get_campaign_story_detail': get_campaign_story_detail,
+        'LOYALTY_LEVELS': LOYALTY_LEVELS,
     },
 )
 
@@ -143,6 +164,11 @@ register_admin_routes(
         '_collect_story_image_urls_from_form': _collect_story_image_urls_from_form,
         '_save_campaign_upload': _save_campaign_upload,
         '_insert_campaign_story_return_id': _insert_campaign_story_return_id,
+        '_list_users_for_admin': _list_users_for_admin,
+        '_set_admin_flag': _set_admin_flag,
+        'recalculate_user_loyalty': recalculate_user_loyalty,
+        '_user_fetch_by_email': _user_fetch_by_email,
+        '_send_rental_approved_email': send_rental_approved_email,
     },
 )
 
@@ -163,6 +189,17 @@ def inject_globals():
     path = (getattr(request, 'path', '') or '').lower()
     lux_theme = not path.startswith('/admin')
     admin_site = path.startswith('/admin')
+    has_supabase = bool(settings.supabase_url and settings.supabase_bucket)
+    if has_supabase:
+        base = settings.supabase_public_base_url or f'{settings.supabase_url}/storage/v1/object/public'
+        site_media_base = f'{base}/{settings.supabase_bucket}/protocol_archive/site'
+    else:
+        site_media_base = '/static'
+    hero_video_url = f'{site_media_base}/lux_start_local.mp4'
+    how_hls_url = f'{site_media_base}/lux_how_local_hls/local.m3u8'
+    showcase_image_1_url = f'{site_media_base}/1.png'
+    showcase_image_2_url = f'{site_media_base}/2.png'
+    couture_hero_url = f'{site_media_base}/couture-hero.jpg'
 
     return {
         'current_year': datetime.now().year,
@@ -175,6 +212,11 @@ def inject_globals():
         'item_category_label': item_category_label,
         'lux_theme': lux_theme,
         'admin_site': admin_site,
+        'hero_video_url': hero_video_url,
+        'how_hls_url': how_hls_url,
+        'showcase_image_1_url': showcase_image_1_url,
+        'showcase_image_2_url': showcase_image_2_url,
+        'couture_hero_url': couture_hero_url,
     }
 
 

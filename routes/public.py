@@ -25,6 +25,12 @@ def register_public_routes(app, deps):
     get_brands = deps['get_brands']
     get_campaign_index_data = deps['get_campaign_index_data']
     get_campaign_story_detail = deps['get_campaign_story_detail']
+    loyalty_levels = deps['LOYALTY_LEVELS']
+
+    level_discounts = {
+        str(level.get('code') or '').strip().lower(): int(level.get('discount_percent') or 0)
+        for level in loyalty_levels
+    }
 
     @app.route('/set-lang/<lang>')
     def set_lang(lang):
@@ -192,7 +198,23 @@ def register_public_routes(app, deps):
 
     @app.route('/cart')
     def cart():
-        return render_template('cart.html', cart_items=get_cart(), total=get_cart_total(), active_page='cart', cart_count=get_cart_count(), t=t)
+        user = get_current_user()
+        level_code = (user or {}).get('level_code', 'bronze')
+        discount_percent = int(level_discounts.get((level_code or 'bronze').strip().lower(), 0))
+        subtotal = int(get_cart_total() or 0)
+        discount_amount = int(round(subtotal * discount_percent / 100.0))
+        total = max(0, subtotal - discount_amount)
+        return render_template(
+            'cart.html',
+            cart_items=get_cart(),
+            subtotal=subtotal,
+            discount_percent=discount_percent,
+            discount_amount=discount_amount,
+            total=total,
+            active_page='cart',
+            cart_count=get_cart_count(),
+            t=t,
+        )
 
     @app.route('/cart/clear')
     def clear_cart():
@@ -209,8 +231,10 @@ def register_public_routes(app, deps):
         if not cart_items:
             flash(t('acc_checkout_empty'), 'error')
             return redirect(url_for('cart'))
+        level_code = (user or {}).get('level_code', 'bronze')
+        discount_percent = int(level_discounts.get((level_code or 'bronze').strip().lower(), 0))
         try:
-            order_id = create_rental_order(user['id'], cart_items)
+            order_id = create_rental_order(user['id'], cart_items, discount_percent=discount_percent)
         except rental_availability_error:
             flash(t('acc_checkout_unavailable'), 'error')
             return redirect(url_for('cart'))

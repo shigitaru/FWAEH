@@ -70,3 +70,42 @@ CONDITION_LABELS = [
     {'score': 9, 'en': 'Excellent (9+)', 'ru': 'Отличное (9+)'},
     {'score': 10, 'en': 'Pristine (10)', 'ru': 'Безупречное (10)'},
 ]
+
+LOYALTY_LEVELS = (
+    {
+        'code': 'bronze',
+        'title': 'Bronze',
+        'min_orders': 0,
+        'min_spend': 0,
+        'discount_percent': 0,
+        'priority_booking': False,
+        'offline_events': False,
+    },
+    {
+        'code': 'silver',
+        'title': 'Silver',
+        'min_orders': 3,
+        'min_spend': 300,
+        'discount_percent': 3,
+        'priority_booking': True,
+        'offline_events': False,
+    },
+    {
+        'code': 'gold',
+        'title': 'Gold',
+        'min_orders': 7,
+        'min_spend': 900,
+        'discount_percent': 7,
+        'priority_booking': True,
+        'offline_events': True,
+    },
+    {
+        'code': 'platinum',
+        'title': 'Platinum',
+        'min_orders': 15,
+        'min_spend': 2000,
+        'discount_percent': 10,
+        'priority_booking': True,
+        'offline_events': True,
+    },
+)
