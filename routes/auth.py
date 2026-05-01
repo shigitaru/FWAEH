@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import render_template, request, redirect, url_for, flash, session
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 def register_auth_routes(app, deps):
@@ -22,7 +22,12 @@ def register_auth_routes(app, deps):
     send_verification_email = deps['_send_verification_email']
     clear_user_session = deps['_clear_user_session']
     acc_email_re = deps['ACC_EMAIL_RE']
-    loyalty_levels = deps['LOYALTY_LEVELS']
+    demo_mode = deps['demo_mode']
+    get_loyalty_level = deps['get_loyalty_level']
+    next_loyalty_progress = deps['next_loyalty_progress']
+    couture_min_level = deps['couture_min_level']
+    get_order_review = deps['get_order_review']
+    upsert_order_review = deps['upsert_order_review']
 
     def _code_hash(email, code):
         return hashlib.sha256(f'{email.lower()}::{code}'.encode('utf-8')).hexdigest()
@@ -37,6 +42,58 @@ def register_auth_routes(app, deps):
         session['pending_verify_display_name'] = display_name
         session['pending_verify_next_resend_at'] = (datetime.now(timezone.utc) + timedelta(seconds=30)).isoformat()
         session.modified = True
+
+    def _apply_user_session_from_row(row):
+        session['user_id'] = int(row[0])
+        session['user_email'] = row[1]
+        session['user_display_name'] = row[3]
+        session['is_admin'] = bool(row[4]) if len(row) > 4 else False
+        session['user_level_code'] = (row[9] if len(row) > 9 else 'bronze') or 'bronze'
+        session.modified = True
+
+    def _ensure_demo_user(role):
+        specs = {
+            'bronze': ('demo.bronze@protocol.local', 'Demo Bronze', 'bronze', 0, 0, 0),
+            'gold': ('demo.gold@protocol.local', 'Demo Gold', 'gold', 0, 7, 900),
+            'admin': ('demo.admin@protocol.local', 'Demo Admin', 'platinum', 1, 15, 2000),
+        }
+        spec = specs.get(role)
+        if not spec:
+            return None
+        email, display_name, level_code, is_admin, orders_count, spend_amount = spec
+        password_hash = generate_password_hash('demo-password')
+        ensure_app_users_table()
+        row = user_fetch_by_email(email)
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            if row:
+                cur.execute(
+                    """
+                    UPDATE AppUsers
+                    SET password_hash = ?,
+                        display_name = ?,
+                        is_admin = ?,
+                        is_email_verified = 1,
+                        level_code = ?,
+                        lifetime_orders_count = ?,
+                        lifetime_spend_amount = ?
+                    WHERE email = ?
+                    """,
+                    (password_hash, display_name, int(is_admin), level_code, int(orders_count), int(spend_amount), email),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO AppUsers (
+                        email, password_hash, display_name, is_admin, is_email_verified,
+                        level_code, lifetime_orders_count, lifetime_spend_amount
+                    )
+                    VALUES (?, ?, ?, ?, 1, ?, ?, ?)
+                    """,
+                    (email, password_hash, display_name, int(is_admin), level_code, int(orders_count), int(spend_amount)),
+                )
+            conn.commit()
+        return user_fetch_by_email(email)
 
     @app.route('/account', methods=['GET'])
     def account():
@@ -54,6 +111,7 @@ def register_auth_routes(app, deps):
             cart_count=get_cart_count(),
             history_orders=history_orders,
             history_stats=history_stats,
+            demo_mode=demo_mode,
             t=t,
         )
 
@@ -89,13 +147,22 @@ def register_auth_routes(app, deps):
         if len(row) > 5 and not bool(row[5]):
             flash(t('acc_verify_before_login'), 'error')
             return redirect(url_for('account'))
-        session['user_id'] = int(row[0])
-        session['user_email'] = row[1]
-        session['user_display_name'] = row[3]
-        session['is_admin'] = bool(row[4]) if len(row) > 4 else False
-        session['user_level_code'] = (row[9] if len(row) > 9 else 'bronze') or 'bronze'
-        session.modified = True
+        _apply_user_session_from_row(row)
         flash(t('acc_ok_login'), 'success')
+        return redirect(url_for('account'))
+
+    @app.route('/account/demo-login', methods=['POST'])
+    def account_demo_login():
+        if not demo_mode:
+            flash(t('demo_login_disabled'), 'error')
+            return redirect(url_for('account'))
+        role = (request.form.get('role') or '').strip().lower()
+        row = _ensure_demo_user(role)
+        if not row:
+            flash(t('demo_login_invalid'), 'error')
+            return redirect(url_for('account'))
+        _apply_user_session_from_row(row)
+        flash(t('demo_login_success'), 'success')
         return redirect(url_for('account'))
 
     @app.route('/account/register', methods=['POST'])
@@ -188,11 +255,7 @@ def register_auth_routes(app, deps):
                 flash(t('acc_verify_code_invalid'), 'error')
                 return redirect(url_for('account'))
             mark_email_verified(pending_user_id)
-            session['user_id'] = int(row[0])
-            session['user_email'] = row[1]
-            session['user_display_name'] = row[3]
-            session['is_admin'] = bool(row[4]) if len(row) > 4 else False
-            session['user_level_code'] = (row[9] if len(row) > 9 else 'bronze') or 'bronze'
+            _apply_user_session_from_row(row)
             for k in ('pending_verify_user_id', 'pending_verify_email', 'pending_verify_display_name', 'pending_verify_next_resend_at'):
                 session.pop(k, None)
             session.modified = True
@@ -319,29 +382,99 @@ def register_auth_routes(app, deps):
                 'pickup_code': row[7] or '',
                 'items': items,
             }
+            order_review = get_order_review(order['id'], user_id)
+            order_status_flow = ('created', 'confirmed', 'in_rent', 'returned')
+            order_timeline_index = order_status_flow.index(order['status']) if order['status'] in order_status_flow else -1
             return render_template(
                 'account_order.html',
                 active_page='account',
                 cart_count=get_cart_count(),
                 order=order,
+                order_review=order_review,
+                order_status_flow=order_status_flow,
+                order_timeline_index=order_timeline_index,
                 t=t,
             )
         except Exception:
             flash(t('acc_db_unavailable'), 'error')
             return redirect(url_for('account'))
 
+    @app.route('/account/order/<int:order_id>/review', methods=['POST'])
+    def account_order_review(order_id):
+        user_id = session.get('user_id')
+        if not user_id:
+            flash(t('acc_login_required'), 'error')
+            return redirect(url_for('account'))
+        try:
+            rating = int(request.form.get('rating') or 0)
+        except (TypeError, ValueError):
+            rating = 0
+        body = (request.form.get('body') or '').strip()
+        if rating < 1 or rating > 5:
+            flash(t('review_rating_required'), 'error')
+            return redirect(url_for('account_order_detail', order_id=order_id) + '#order-review')
+        try:
+            ensure_rental_orders_tables()
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    SELECT status
+                    FROM RentalOrders
+                    WHERE id = ? AND user_id = ?
+                    """,
+                    (int(order_id), int(user_id)),
+                )
+                row = cur.fetchone()
+            if not row:
+                flash(t('account_order_not_found'), 'error')
+                return redirect(url_for('account'))
+            status = (row[0] or 'created').strip().lower()
+            if status != 'returned':
+                flash(t('review_returned_only'), 'error')
+                return redirect(url_for('account_order_detail', order_id=order_id) + '#order-review')
+            upsert_order_review(order_id, user_id, rating, body)
+            flash(t('review_saved'), 'success')
+            return redirect(url_for('account_order_detail', order_id=order_id) + '#order-review')
+        except Exception:
+            flash(t('acc_db_unavailable'), 'error')
+            return redirect(url_for('account_order_detail', order_id=order_id))
+
     @app.route('/members')
     def members():
-        if not get_current_user():
+        user = get_current_user()
+        if not user:
             flash(t('acc_login_required'), 'error')
             return redirect(url_for('account'))
         level_code = (session.get('user_level_code') or 'bronze').strip().lower()
-        level = next((x for x in loyalty_levels if x['code'] == level_code), loyalty_levels[0])
+        level = get_loyalty_level(level_code)
+        orders_count = 0
+        spend_amount = 0
+        try:
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    SELECT lifetime_orders_count, lifetime_spend_amount
+                    FROM AppUsers
+                    WHERE id = ?
+                    """,
+                    (int(user['id']),),
+                )
+                row = cur.fetchone()
+            if row:
+                orders_count = int(row[0] or 0)
+                spend_amount = int(row[1] or 0)
+        except Exception:
+            pass
+        loyalty_progress = next_loyalty_progress(level_code, orders_count, spend_amount)
         return render_template(
             'members.html',
             active_page='members',
             cart_count=get_cart_count(),
             user_level_code=level_code,
             member_level=level,
+            loyalty_progress=loyalty_progress,
+            couture_min_level=couture_min_level,
             t=t,
         )

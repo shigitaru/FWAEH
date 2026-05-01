@@ -3,9 +3,40 @@
 {% block title %}{{ t('search') }}{% endblock %}
 {% block content %}
 <div class="search-page">
-    <form action="{{ url_for('search') }}" method="GET">
-        <input type="text" name="q" value="{{ query }}" class="search-input" autofocus
-            placeholder="{{ t('search_placeholder') }}">
+    <form action="{{ url_for('search') }}" method="GET" class="search-form">
+        <div class="search-main-row">
+            <input type="text" name="q" value="{{ query }}" class="search-input" autofocus
+                placeholder="{{ t('search_placeholder') }}" autocomplete="off" data-search-suggest>
+            <button type="submit" class="search-submit-btn">{{ t('filters_apply') }}</button>
+        </div>
+        <div class="search-suggestions" data-search-suggestions hidden></div>
+        <div class="search-filter-grid" aria-label="{{ t('search_filters_title') }}">
+            <select name="category" class="search-filter">
+                <option value="" {% if not active_category %}selected{% endif %}>{{ t('search_category_all') }}</option>
+                <option value="rtw" {% if active_category == 'rtw' %}selected{% endif %}>{{ t('ready_to_wear') }}</option>
+                <option value="couture" {% if active_category == 'couture' %}selected{% endif %}>{{ t('couture_title') }}</option>
+            </select>
+            <select name="brand" class="search-filter">
+                <option value="" {% if not active_brand %}selected{% endif %}>{{ t('filters_brand_all') }}</option>
+                {% for brand in brands %}
+                <option value="{{ brand.slug }}" {% if active_brand == brand.slug %}selected{% endif %}>{{ brand.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="item_category" class="search-filter">
+                <option value="" {% if not active_item_category %}selected{% endif %}>{{ t('filters_item_category_all') }}</option>
+                {% for ic in item_categories %}
+                <option value="{{ ic.slug }}" {% if active_item_category == ic.slug %}selected{% endif %}>{{ ic[current_lang] }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" name="max_price" class="search-filter" min="1" step="1"
+                value="{{ max_price_value }}" placeholder="{{ t('filters_max_price') }}">
+            <select name="sort" class="search-filter">
+                <option value="id" {% if active_sort == 'id' %}selected{% endif %}>{{ t('search_sort_relevance') }}</option>
+                <option value="price_asc" {% if active_sort == 'price_asc' %}selected{% endif %}>{{ t('sort_price_low') }}</option>
+                <option value="price_desc" {% if active_sort == 'price_desc' %}selected{% endif %}>{{ t('sort_price_high') }}</option>
+            </select>
+            <a href="{{ url_for('search') }}" class="search-reset-link">{{ t('filters_reset') }}</a>
+        </div>
     </form>
 
     {% if results %}
@@ -17,8 +48,10 @@
             {% endfor %}
         </div>
     </div>
-    {% elif query %}
+    {% elif search_started and query %}
     <div class="empty-state">{{ t('no_results') }} "{{ query }}"</div>
+    {% elif search_started %}
+    <div class="empty-state">{{ t('no_items') }}</div>
     {% endif %}
 
     <div class="search-brands">

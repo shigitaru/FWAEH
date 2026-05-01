@@ -5,52 +5,88 @@
     <div class="members-page-inner">
         <header class="members-header">
             <p class="members-kicker">{{ t('members_open') }}</p>
-            <h1 class="members-title">Member Privileges</h1>
-            <p class="members-intro">Ваш статус открывает персональные преимущества и закрытые предложения. Чем выше уровень, тем шире доступ и выгоднее условия аренды.</p>
+            <h1 class="members-title">{{ t('members_privileges_title') }}</h1>
+            <p class="members-intro">{{ t('members_privileges_intro') }}</p>
         </header>
+
+        <section class="members-couture-note" aria-labelledby="members-couture-h">
+            <h2 id="members-couture-h" class="members-perks-title">{{ t('members_couture_section_title') }}</h2>
+            <p class="members-intro">{{ t('members_couture_section_lead').format(
+                tier=couture_min_level.title,
+                orders=couture_min_level.min_orders,
+                spend=couture_min_level.min_spend
+            ) }}</p>
+        </section>
 
         <section class="members-level-hero" aria-label="Current level">
             <div class="members-level-hero-main">
-                <p class="members-level-label">Текущий уровень</p>
+                <p class="members-level-label">{{ t('members_current_level') }}</p>
                 <h2 class="members-level-name">{{ member_level.title }}</h2>
-                <p class="members-level-copy">Ваша персональная скидка сейчас: <strong>{{ member_level.discount_percent }}%</strong></p>
+                <p class="members-level-copy">{{ t('members_current_discount').format(discount=member_level.discount_percent) }}</p>
             </div>
             <div class="members-level-hero-meta">
-                <div class="members-chip {{ 'is-on' if member_level.priority_booking else 'is-off' }}">Приоритет к новым дропам: {{ 'ON' if member_level.priority_booking else 'OFF' }}</div>
-                <div class="members-chip {{ 'is-on' if member_level.offline_events else 'is-off' }}">Закрытые оффлайн-ивенты: {{ 'ON' if member_level.offline_events else 'OFF' }}</div>
+                <div class="members-chip {{ 'is-on' if member_level.priority_booking else 'is-off' }}">{{ t('members_priority_chip').format(status=t('status_on') if member_level.priority_booking else t('status_off')) }}</div>
+                <div class="members-chip {{ 'is-on' if member_level.offline_events else 'is-off' }}">{{ t('members_events_chip').format(status=t('status_on') if member_level.offline_events else t('status_off')) }}</div>
+                <div class="members-chip {{ 'is-on' if member_level.couture_access else 'is-off' }}">
+                    {% if member_level.couture_access %}
+                    {{ t('members_couture_access_available') }}
+                    {% else %}
+                    {{ t('members_couture_access_locked').format(tier=couture_min_level.title) }}
+                    {% endif %}
+                </div>
             </div>
         </section>
 
         <section class="members-tier-grid" aria-label="Membership tiers">
             <article class="members-tier-card {% if user_level_code == 'bronze' %}is-current{% endif %}">
                 <p class="members-tier-name">Bronze</p>
-                <p class="members-tier-rule">Входной статус</p>
-                <p class="members-tier-benefit">Скидка до 0%</p>
+                <p class="members-tier-rule">{{ t('members_tier_bronze_rule') }}</p>
+                <p class="members-tier-benefit">{{ t('members_tier_bronze_benefit') }}</p>
             </article>
             <article class="members-tier-card {% if user_level_code == 'silver' %}is-current{% endif %}">
                 <p class="members-tier-name">Silver</p>
-                <p class="members-tier-rule">от 3 завершённых аренд и 300$ суммарно</p>
-                <p class="members-tier-benefit">Скидка 3% + ранний доступ</p>
+                <p class="members-tier-rule">{{ t('members_tier_silver_rule') }}</p>
+                <p class="members-tier-benefit">{{ t('members_tier_silver_benefit') }}</p>
             </article>
             <article class="members-tier-card {% if user_level_code == 'gold' %}is-current{% endif %}">
                 <p class="members-tier-name">Gold</p>
-                <p class="members-tier-rule">от 7 завершённых аренд и 900$ суммарно</p>
-                <p class="members-tier-benefit">Скидка 7% + закрытые оффлайн-мероприятия</p>
+                <p class="members-tier-rule">{{ t('members_tier_gold_rule') }}</p>
+                <p class="members-tier-benefit">{{ t('members_tier_gold_benefit') }}</p>
             </article>
             <article class="members-tier-card {% if user_level_code == 'platinum' %}is-current{% endif %}">
                 <p class="members-tier-name">Platinum</p>
-                <p class="members-tier-rule">от 15 завершённых аренд и 2000$ суммарно</p>
-                <p class="members-tier-benefit">Скидка 10% + максимальный приоритет</p>
+                <p class="members-tier-rule">{{ t('members_tier_platinum_rule') }}</p>
+                <p class="members-tier-benefit">{{ t('members_tier_platinum_benefit') }}</p>
             </article>
         </section>
 
+        <section class="members-progress-card" aria-labelledby="members-progress-h">
+            <h2 id="members-progress-h" class="members-perks-title">{{ t('members_progress_title') }}</h2>
+            {% if loyalty_progress.is_max %}
+            <p class="members-intro">{{ t('members_progress_max').format(tier=member_level.title) }}</p>
+            {% else %}
+            <p class="members-intro">{{ t('members_progress_to_next').format(
+                tier=loyalty_progress.next_level.title,
+                orders=loyalty_progress.remaining_orders,
+                spend=loyalty_progress.remaining_spend
+            ) }}</p>
+            <div class="members-progress-meter" aria-label="{{ loyalty_progress.percent }}%">
+                <span style="width: {{ loyalty_progress.percent }}%"></span>
+            </div>
+            <div class="members-progress-meta">
+                <span>{{ t('members_progress_current_orders').format(count=loyalty_progress.orders_count) }}</span>
+                <span>${{ loyalty_progress.spend_amount }}</span>
+            </div>
+            {% endif %}
+        </section>
+
         <section class="members-perks" aria-labelledby="members-perks-h">
-            <h2 id="members-perks-h" class="members-perks-title">Что вы получаете на уровне {{ member_level.title }}</h2>
+            <h2 id="members-perks-h" class="members-perks-title">{{ t('members_level_perks_title').format(tier=member_level.title) }}</h2>
             <ul class="members-perks-list">
-                <li>Персональная скидка на аренду: {{ member_level.discount_percent }}%</li>
-                <li>Приоритет к новым дропам: {{ 'доступен' if member_level.priority_booking else 'пока недоступен' }}</li>
-                <li>Закрытые оффлайн мероприятия: {{ 'доступны' if member_level.offline_events else 'повысьте уровень' }}</li>
-                <li>Статус участника фиксируется автоматически по завершённым заказам.</li>
+                <li>{{ t('members_level_perk_discount').format(discount=member_level.discount_percent) }}</li>
+                <li>{{ t('members_level_perk_priority').format(status=t('members_status_available') if member_level.priority_booking else t('members_status_unavailable')) }}</li>
+                <li>{{ t('members_level_perk_events').format(status=t('members_status_available_plural') if member_level.offline_events else t('members_status_upgrade')) }}</li>
+                <li>{{ t('members_level_perk_auto') }}</li>
             </ul>
         </section>
 

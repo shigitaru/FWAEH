@@ -1,11 +1,16 @@
 """Rental order schema, checkout, and admin/history queries."""
+from datetime import date, timedelta
+
+from .catalog import find_product
 from .db import get_db_connection
 from repositories.user_repository import update_user_loyalty
 
-from services.rental_service import RentalAvailabilityError
+from services.rental_service import RentalAvailabilityError, CoutureAccessError
 
+from .constants import ACTIVE_RENTAL_STATUSES
+from .couture_access import is_couture_product, user_can_rent_couture
+from .loyalty import resolve_loyalty_level
 from .rental_wrappers import _cart_item_period, _is_product_available
-from .constants import LOYALTY_LEVELS
 
 def ensure_app_users_table():
     with get_db_connection() as conn:
@@ -137,6 +142,40 @@ def ensure_rental_orders_tables():
         conn.commit()
 
 
+def get_product_occupied_periods(product_id, days_ahead=60):
+    ensure_rental_orders_tables()
+    today = date.today()
+    horizon = today + timedelta(days=int(days_ahead or 60))
+    statuses = tuple(ACTIVE_RENTAL_STATUSES)
+    placeholders = ','.join('?' for _ in statuses)
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT i.rental_start_date, i.rental_end_date, o.status
+                FROM RentalOrderItems i
+                INNER JOIN RentalOrders o ON o.id = i.order_id
+                WHERE i.product_id = ?
+                  AND o.status IN ({placeholders})
+                  AND i.rental_start_date < ?
+                  AND i.rental_end_date > ?
+                ORDER BY i.rental_start_date ASC
+                """,
+                (int(product_id), *statuses, horizon, today),
+            )
+            return [
+                {
+                    'start_date': r[0].isoformat() if r[0] else '',
+                    'end_date': r[1].isoformat() if r[1] else '',
+                    'status': (r[2] or '').strip().lower(),
+                }
+                for r in cur.fetchall()
+            ]
+    except Exception:
+        return []
+
+
 def ensure_legacy_balenciaga_coture_brand_rename():
     """Переименовать бренд Balenciaga Coture → Balenciaga Couture в уже существующей БД."""
     try:
@@ -166,6 +205,35 @@ def ensure_legacy_balenciaga_coture_brand_rename():
         pass
 
 
+def _db_user_can_access_couture(user_id):
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return False
+    code = 'bronze'
+    is_admin = False
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                'SELECT level_code, is_admin FROM AppUsers WHERE id = ?',
+                (uid,),
+            )
+            row = cur.fetchone()
+    except Exception:
+        row = None
+    if row:
+        raw_code = getattr(row, 'level_code', None)
+        if raw_code is None:
+            raw_code = row[0]
+        code = str(raw_code or 'bronze')
+        adm = getattr(row, 'is_admin', None)
+        if adm is None:
+            adm = row[1]
+        is_admin = bool(adm)
+    return user_can_rent_couture({'level_code': code, 'is_admin': is_admin})
+
+
 def _create_rental_order(user_id, cart_items, discount_percent=0):
     if not cart_items:
         return None
@@ -175,6 +243,17 @@ def _create_rental_order(user_id, cart_items, discount_percent=0):
     except Exception:
         discount_percent = 0
     discount_percent = max(0, min(100, discount_percent))
+    may_couture = _db_user_can_access_couture(user_id)
+    for item in cart_items:
+        pid_raw = item.get('product_id')
+        try:
+            product_id = int(pid_raw) if pid_raw is not None else None
+        except (TypeError, ValueError):
+            product_id = None
+        if not may_couture and product_id:
+            prod = find_product(product_id)
+            if is_couture_product(prod):
+                raise CoutureAccessError()
     normalized_items = []
     unavailable = []
     for item in cart_items:
@@ -363,6 +442,8 @@ def _fetch_recent_orders_admin(limit=80):
                 'user_email': r[7] or '',
                 'pickup_code': r[8] or '',
                 'items': [],
+                'review': None,
+                'is_late': (r[1] or '').strip().lower() == 'in_rent' and r[5] is not None and r[5] < date.today(),
             }
             for r in rows
         ]
@@ -391,18 +472,59 @@ def _fetch_recent_orders_admin(limit=80):
                     'size_label': item_row[5] or '',
                 }
             )
+        try:
+            cur.execute(
+                f"""
+                SELECT r.order_id, r.rating, r.body, r.created_at, r.updated_at, u.display_name
+                FROM RentalOrderReviews r
+                INNER JOIN AppUsers u ON u.id = r.user_id
+                WHERE r.order_id IN ({placeholders})
+                """,
+                tuple(order_ids),
+            )
+            reviews_map = {
+                int(row[0]): {
+                    'rating': int(row[1] or 0),
+                    'body': row[2] or '',
+                    'created_at': row[3],
+                    'updated_at': row[4],
+                    'display_name': row[5] or '',
+                }
+                for row in cur.fetchall()
+            }
+        except Exception:
+            reviews_map = {}
         for order in orders:
             order['items'] = items_map.get(order['id'], [])
+            order['review'] = reviews_map.get(order['id'])
     return orders
 
 
-def _resolve_loyalty_level(orders_count, spend_amount):
-    matched = LOYALTY_LEVELS[0]
-    for lvl in LOYALTY_LEVELS:
-        if orders_count >= lvl['min_orders'] and spend_amount >= lvl['min_spend']:
-            matched = lvl
-    return matched
-
+def get_admin_dashboard_stats():
+    ensure_rental_orders_tables()
+    stats = {
+        'active_rentals': 0,
+        'pending_orders': 0,
+        'users': 0,
+        'products': 0,
+        'couture_items': 0,
+    }
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM RentalOrders WHERE status = N'in_rent'")
+            stats['active_rentals'] = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute("SELECT COUNT(*) FROM RentalOrders WHERE status = N'created'")
+            stats['pending_orders'] = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute("SELECT COUNT(*) FROM AppUsers")
+            stats['users'] = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute("SELECT COUNT(*) FROM Products")
+            stats['products'] = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute("SELECT COUNT(*) FROM Products WHERE category = N'couture'")
+            stats['couture_items'] = int((cur.fetchone() or [0])[0] or 0)
+    except Exception:
+        pass
+    return stats
 
 def recalculate_user_loyalty(user_id):
     with get_db_connection() as conn:
@@ -418,7 +540,7 @@ def recalculate_user_loyalty(user_id):
         row = cur.fetchone()
         orders_count = int(row[0] or 0) if row else 0
         spend_amount = int(row[1] or 0) if row else 0
-    level = _resolve_loyalty_level(orders_count, spend_amount)
+    level = resolve_loyalty_level(orders_count, spend_amount)
     update_user_loyalty(user_id, level['code'], orders_count, spend_amount)
     return {
         'level_code': level['code'],

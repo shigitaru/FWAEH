@@ -80,6 +80,7 @@ LOYALTY_LEVELS = (
         'discount_percent': 0,
         'priority_booking': False,
         'offline_events': False,
+        'couture_access': False,
     },
     {
         'code': 'silver',
@@ -89,6 +90,7 @@ LOYALTY_LEVELS = (
         'discount_percent': 3,
         'priority_booking': True,
         'offline_events': False,
+        'couture_access': False,
     },
     {
         'code': 'gold',
@@ -98,6 +100,7 @@ LOYALTY_LEVELS = (
         'discount_percent': 7,
         'priority_booking': True,
         'offline_events': True,
+        'couture_access': True,
     },
     {
         'code': 'platinum',
@@ -107,5 +110,6 @@ LOYALTY_LEVELS = (
         'discount_percent': 10,
         'priority_booking': True,
         'offline_events': True,
+        'couture_access': True,
     },
 )

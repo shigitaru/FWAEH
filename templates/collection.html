@@ -60,7 +60,7 @@
                 <a href="#collection-catalog" class="pa-glass-btn liquid-glass-strong">{{ t('lux_chess1_cta') }} <span aria-hidden="true">↗</span></a>
             </div>
             <div class="pa-chess-media liquid-glass">
-                <img src="{{ showcase_image_1_url }}" alt="{{ 'Editorial showcase' if current_lang == 'en' else 'Эстетичный превью-блок' }}" loading="lazy">
+                <img src="{{ showcase_image_1_url }}" alt="{{ t('showcase_image_alt') }}" loading="lazy">
             </div>
         </div>
         <div class="pa-chess-row pa-chess-row--reverse">
@@ -70,7 +70,7 @@
                 <a href="{{ url_for('wishlist_page') }}" class="pa-glass-btn liquid-glass-strong">{{ t('lux_chess2_cta') }} <span aria-hidden="true">↗</span></a>
             </div>
             <div class="pa-chess-media liquid-glass">
-                <img src="{{ showcase_image_2_url }}" alt="{{ 'Editorial showcase' if current_lang == 'en' else 'Эстетичный превью-блок' }}" loading="lazy">
+                <img src="{{ showcase_image_2_url }}" alt="{{ t('showcase_image_alt') }}" loading="lazy">
             </div>
         </div>
     </section>
@@ -270,6 +270,19 @@
                 <div class="refine-acc-panel" hidden>
                     <input type="number" name="max_price" class="refine-input" min="1" step="1"
                         placeholder="—" value="{{ max_price_value }}" id="refine-max-price">
+                </div>
+            </div>
+
+            <div class="refine-acc">
+                <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
+                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
+                    <span class="refine-acc-label">{{ t('refine_acc_availability') }}</span>
+                    <span class="refine-acc-icon" aria-hidden="true"></span>
+                </button>
+                <div class="refine-acc-panel" hidden>
+                    <input type="date" name="available_start" class="refine-input" value="{{ available_start_value }}">
+                    <input type="number" name="available_days" class="refine-input" min="1" max="30" step="1"
+                        placeholder="{{ t('days_label') }}" value="{{ available_days_value }}">
                 </div>
             </div>
 

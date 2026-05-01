@@ -27,6 +27,7 @@ class Settings:
     supabase_service_role_key: str
     supabase_bucket: str
     supabase_public_base_url: str
+    demo_mode: bool
 
 
 def load_settings() -> Settings:
@@ -62,6 +63,7 @@ def load_settings() -> Settings:
         supabase_service_role_key=os.getenv('SUPABASE_SERVICE_ROLE_KEY', '').strip(),
         supabase_bucket=os.getenv('SUPABASE_BUCKET', 'media').strip(),
         supabase_public_base_url=os.getenv('SUPABASE_PUBLIC_BASE_URL', '').strip().rstrip('/'),
+        demo_mode=os.getenv('DEMO_MODE', '0').strip().lower() in ('1', 'true', 'yes', 'on'),
     )
 
 

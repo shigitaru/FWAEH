@@ -15,6 +15,7 @@ def register_admin_routes(app, deps):
     apply_admin_product_image_changes = deps['_apply_admin_product_image_changes']
     filter_products = deps['filter_products']
     fetch_recent_orders_admin = deps['_fetch_recent_orders_admin']
+    get_admin_dashboard_stats = deps['get_admin_dashboard_stats']
     get_brands = deps['get_brands']
     get_admin_brands = deps['get_admin_brands']
     get_cart_count = deps['get_cart_count']
@@ -28,6 +29,8 @@ def register_admin_routes(app, deps):
     insert_campaign_story_return_id = deps['_insert_campaign_story_return_id']
     list_users_for_admin = deps['_list_users_for_admin']
     set_admin_flag = deps['_set_admin_flag']
+    update_user_loyalty = deps['_update_user_loyalty']
+    loyalty_levels = deps['LOYALTY_LEVELS']
     recalculate_user_loyalty = deps['recalculate_user_loyalty']
     user_fetch_by_email = deps['_user_fetch_by_email']
     send_rental_approved_email = deps['_send_rental_approved_email']
@@ -182,9 +185,11 @@ def register_admin_routes(app, deps):
             'admin.html',
             products=products,
             orders_recent=orders_recent,
+            admin_dashboard=get_admin_dashboard_stats(),
             admin_users=list_users_for_admin(),
             admin_section=section,
             order_status_flow=order_status_flow,
+            loyalty_levels=loyalty_levels,
             brands=get_brands(),
             brands_admin=get_admin_brands(),
             inventory_query=inventory_query,
@@ -249,16 +254,15 @@ def register_admin_routes(app, deps):
                         cur = conn.cursor()
                         cur.execute(
                             """
-                            SELECT TOP 1 product_name
+                            SELECT product_name
                             FROM RentalOrderItems
                             WHERE order_id = ?
                             ORDER BY id ASC
                             """,
                             (order_id,),
                         )
-                        item_row = cur.fetchone()
-                    item_name = (item_row[0] if item_row and item_row[0] else f'заказ #{order_id}')
-                    send_rental_approved_email(user_email, user_name, item_name, pickup_code or '—')
+                        item_names = [str(r[0] or '').strip() for r in cur.fetchall() if str(r[0] or '').strip()]
+                    send_rental_approved_email(user_email, user_name, item_names or [f'заказ #{order_id}'], pickup_code or '—')
                 except Exception as mail_exc:
                     notification_error = str(mail_exc)
             session['admin_status'] = {'type': 'success', 'message': t('admin_order_status_updated')}
@@ -639,6 +643,39 @@ def register_admin_routes(app, deps):
                 return redirect(url_for('admin_panel', section='users'))
             set_admin_flag(user_id, make_admin)
             session['admin_status'] = {'type': 'success', 'message': t('admin_rights_updated')}
+        except Exception as exc:
+            session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+        return redirect(url_for('admin_panel', section='users'))
+
+    @app.route('/admin/users/<int:user_id>/level', methods=['POST'])
+    def admin_set_user_level(user_id):
+        denied = _require_admin()
+        if denied:
+            return denied
+        level_code = (request.form.get('level_code') or '').strip().lower()
+        allowed_codes = {str(level.get('code')).lower() for level in loyalty_levels}
+        if level_code not in allowed_codes:
+            session['admin_status'] = {'type': 'error', 'message': t('admin_user_level_invalid')}
+            return redirect(url_for('admin_panel', section='users'))
+        try:
+            target = None
+            for user in list_users_for_admin():
+                if int(getattr(user, 'id', user[0]) or 0) == int(user_id):
+                    target = user
+                    break
+            if not target:
+                session['admin_status'] = {'type': 'error', 'message': t('admin_user_not_found')}
+                return redirect(url_for('admin_panel', section='users'))
+            update_user_loyalty(
+                user_id,
+                level_code,
+                int(getattr(target, 'lifetime_orders_count', target[6]) or 0),
+                int(getattr(target, 'lifetime_spend_amount', target[7]) or 0),
+            )
+            if int(session.get('user_id') or 0) == int(user_id):
+                session['user_level_code'] = level_code
+                session.modified = True
+            session['admin_status'] = {'type': 'success', 'message': t('admin_user_level_updated')}
         except Exception as exc:
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
         return redirect(url_for('admin_panel', section='users'))

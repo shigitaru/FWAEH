@@ -21,7 +21,7 @@ from core.campaign_service import (
     get_campaign_index_data,
     get_campaign_story_detail,
 )
-from core.catalog import filter_products, find_product, get_admin_brands, get_brands
+from core.catalog import filter_products, find_product, get_admin_brands, get_brands, get_related_products
 from core.constants import (
     ITEM_CATEGORIES,
     LOYALTY_LEVELS,
@@ -29,10 +29,17 @@ from core.constants import (
     SPLASH_IMAGE,
     normalize_item_category_slug,
 )
+from core.couture_access import (
+    can_rent_product,
+    couture_gate_message_key,
+    couture_minimum_level,
+    format_couture_message,
+)
 from core.db import get_db_connection
 from core.config import settings
 from core.i18n import TRANSLATIONS, get_lang, t, tc, tv
 from core.listing import _collection_listing_data
+from core.loyalty import cart_totals_for_level, get_loyalty_level, next_loyalty_progress
 from core.media_uploads import (
     _apply_admin_product_image_changes,
     _fetch_product_image_rows,
@@ -40,10 +47,16 @@ from core.media_uploads import (
     _save_campaign_upload,
     _save_uploaded_image,
 )
+from core.product_reviews import (
+    get_order_review,
+    upsert_order_review,
+)
 from core.rental_orders import (
     _create_rental_order,
     _fetch_recent_orders_admin,
     _fetch_user_rental_history,
+    get_admin_dashboard_stats,
+    get_product_occupied_periods,
     recalculate_user_loyalty,
     ensure_app_users_table,
     ensure_legacy_balenciaga_coture_brand_rename,
@@ -54,7 +67,7 @@ from routes.admin import register_admin_routes
 from routes.api import register_api_routes
 from routes.auth import register_auth_routes
 from routes.public import register_public_routes
-from services.rental_service import RentalAvailabilityError
+from services.rental_service import RentalAvailabilityError, CoutureAccessError
 from core.session_cart import (
     ACC_EMAIL_RE,
     _clear_user_session,
@@ -99,7 +112,12 @@ register_auth_routes(
         '_send_verification_email': send_verification_email,
         '_clear_user_session': _clear_user_session,
         'ACC_EMAIL_RE': ACC_EMAIL_RE,
-        'LOYALTY_LEVELS': LOYALTY_LEVELS,
+        'demo_mode': settings.demo_mode,
+        'get_loyalty_level': get_loyalty_level,
+        'next_loyalty_progress': next_loyalty_progress,
+        'couture_min_level': couture_minimum_level(),
+        'get_order_review': get_order_review,
+        'upsert_order_review': upsert_order_review,
     },
 )
 
@@ -119,14 +137,19 @@ register_public_routes(
         'get_wishlist_ids': get_wishlist_ids,
         'filter_products': filter_products,
         'find_product': find_product,
+        'get_related_products': get_related_products,
         '_parse_iso_date': _parse_iso_date,
         '_is_product_available': _is_product_available,
         '_create_rental_order': _create_rental_order,
         'RentalAvailabilityError': RentalAvailabilityError,
+        'CoutureAccessError': CoutureAccessError,
         'get_brands': get_brands,
         'get_campaign_index_data': get_campaign_index_data,
         'get_campaign_story_detail': get_campaign_story_detail,
-        'LOYALTY_LEVELS': LOYALTY_LEVELS,
+        'cart_totals_for_level': cart_totals_for_level,
+        'can_rent_product': can_rent_product,
+        'couture_gate_message_key': couture_gate_message_key,
+        'format_couture_message': format_couture_message,
     },
 )
 
@@ -135,7 +158,10 @@ register_api_routes(
     {
         '_parse_iso_date': _parse_iso_date,
         'find_product': find_product,
+        'filter_products': filter_products,
+        'get_brands': get_brands,
         '_is_product_available': _is_product_available,
+        'get_product_occupied_periods': get_product_occupied_periods,
     },
 )
 
@@ -153,6 +179,7 @@ register_admin_routes(
         '_apply_admin_product_image_changes': _apply_admin_product_image_changes,
         'filter_products': filter_products,
         '_fetch_recent_orders_admin': _fetch_recent_orders_admin,
+        'get_admin_dashboard_stats': get_admin_dashboard_stats,
         'get_brands': get_brands,
         'get_admin_brands': get_admin_brands,
         'get_cart_count': get_cart_count,
@@ -166,6 +193,8 @@ register_admin_routes(
         '_insert_campaign_story_return_id': _insert_campaign_story_return_id,
         '_list_users_for_admin': _list_users_for_admin,
         '_set_admin_flag': _set_admin_flag,
+        '_update_user_loyalty': _update_user_loyalty,
+        'LOYALTY_LEVELS': LOYALTY_LEVELS,
         'recalculate_user_loyalty': recalculate_user_loyalty,
         '_user_fetch_by_email': _user_fetch_by_email,
         '_send_rental_approved_email': send_rental_approved_email,
@@ -217,6 +246,7 @@ def inject_globals():
         'showcase_image_1_url': showcase_image_1_url,
         'showcase_image_2_url': showcase_image_2_url,
         'couture_hero_url': couture_hero_url,
+        'demo_mode': settings.demo_mode,
     }
 
 

@@ -459,6 +459,23 @@ def create_tables():
         )
         cur.execute(
             """
+            IF OBJECT_ID('RentalOrderReviews', 'U') IS NULL
+            CREATE TABLE RentalOrderReviews (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                order_id INT NOT NULL,
+                user_id INT NOT NULL,
+                rating INT NOT NULL,
+                body NVARCHAR(1000) NULL,
+                created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+                updated_at DATETIME2 NULL,
+                CONSTRAINT FK_RentalOrderReviews_Order FOREIGN KEY (order_id) REFERENCES RentalOrders(id) ON DELETE CASCADE,
+                CONSTRAINT FK_RentalOrderReviews_AppUsers FOREIGN KEY (user_id) REFERENCES AppUsers(id),
+                CONSTRAINT UQ_RentalOrderReviews_OrderUser UNIQUE (order_id, user_id)
+            );
+            """
+        )
+        cur.execute(
+            """
             IF COL_LENGTH('dbo.RentalOrders', 'rental_start_date') IS NULL
                 ALTER TABLE dbo.RentalOrders ADD rental_start_date DATE NULL;
             """

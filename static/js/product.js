@@ -22,6 +22,7 @@
     var thumbsRail = document.getElementById("product-thumbs-rail");
     var prevBtn = document.getElementById("gallery-prev");
     var nextBtn = document.getElementById("gallery-next");
+    var occupancyCalendar = document.getElementById("product-occupancy-calendar");
     var images = thumbs.length ? thumbs.map(function (t) { return t.dataset.src; }) : [mainImg ? mainImg.src : ""];
     var currentIndex = 0;
 
@@ -34,10 +35,18 @@
     function setTotalForDays(d) {
         if (total) total.innerText = String(p * d);
     }
-    function setAvailabilityState(available, startDate, endDate) {
+    function setAvailabilityState(available, startDate, endDate, nextAvailable) {
         if (!availabilityText) return;
         var label = available ? cfg.available_text : cfg.unavailable_text;
-        availabilityText.textContent = label + " (" + startDate + " - " + endDate + ")";
+        var text = label + " (" + startDate + " - " + endDate + ")";
+        if (!available) {
+            if (nextAvailable && nextAvailable.start_date && nextAvailable.end_date) {
+                text += ". " + cfg.nearest_available_text + ": " + nextAvailable.start_date + " - " + nextAvailable.end_date + ".";
+            } else if (cfg.no_nearest_available_text) {
+                text += ". " + cfg.no_nearest_available_text;
+            }
+        }
+        availabilityText.textContent = text;
         availabilityText.classList.toggle("is-available", !!available);
         availabilityText.classList.toggle("is-unavailable", !available);
     }
@@ -53,7 +62,70 @@
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data || !data.ok) return;
-                setAvailabilityState(data.available, data.start_date, data.end_date);
+                setAvailabilityState(data.available, data.start_date, data.end_date, data.next_available);
+            })
+            .catch(function () {});
+    }
+    function isoDate(d) {
+        return d.toISOString().slice(0, 10);
+    }
+    function renderOccupancyCalendar(periods) {
+        if (!occupancyCalendar) return;
+        var occupied = {};
+        (periods || []).forEach(function (p) {
+            if (!p.start_date || !p.end_date) return;
+            var cursor = new Date(p.start_date + "T00:00:00");
+            var end = new Date(p.end_date + "T00:00:00");
+            while (cursor < end) {
+                occupied[isoDate(cursor)] = true;
+                cursor.setDate(cursor.getDate() + 1);
+            }
+        });
+        var groups = {};
+        for (var i = 0; i < 60; i++) {
+            var day = new Date();
+            day.setDate(day.getDate() + i);
+            var key = isoDate(day);
+            var monthKey = String(day.getFullYear()) + "-" + String(day.getMonth());
+            if (!groups[monthKey]) {
+                groups[monthKey] = {
+                    label: day.toLocaleDateString(cfg.calendar_locale || "en-US", { month: "long", year: "numeric" }),
+                    days: []
+                };
+            }
+            groups[monthKey].days.push({ date: day, key: key, booked: !!occupied[key] });
+        }
+        occupancyCalendar.innerHTML = "";
+        Object.keys(groups).forEach(function (monthKey) {
+            var group = groups[monthKey];
+            var section = document.createElement("div");
+            section.className = "occupancy-month";
+            var title = document.createElement("div");
+            title.className = "occupancy-month-title";
+            title.textContent = group.label;
+            var grid = document.createElement("div");
+            grid.className = "occupancy-month-grid";
+            group.days.forEach(function (entry) {
+                var day = entry.date;
+                var key = entry.key;
+                var cell = document.createElement("span");
+                cell.className = "occupancy-day" + (entry.booked ? " is-booked" : " is-free");
+                cell.title = key + " · " + (entry.booked ? cfg.calendar_booked_text : cfg.calendar_free_text);
+                cell.textContent = String(day.getDate());
+                grid.appendChild(cell);
+            });
+            section.appendChild(title);
+            section.appendChild(grid);
+            occupancyCalendar.appendChild(section);
+        });
+    }
+    function loadOccupancyCalendar() {
+        if (!occupancyCalendar || !cfg.occupancy_url || !window.fetch) return;
+        fetch(cfg.occupancy_url, { credentials: "same-origin", headers: { Accept: "application/json" } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                if (!data || !data.ok) return;
+                renderOccupancyCalendar(data.periods || []);
             })
             .catch(function () {});
     }
@@ -133,6 +205,7 @@
     if (inp) setDays(inp.value);
     setImage(0);
     refreshAvailability();
+    loadOccupancyCalendar();
 
     var form = document.getElementById("add-to-bag-form");
     if (!form || !window.fetch) return;

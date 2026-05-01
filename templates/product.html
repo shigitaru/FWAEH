@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import 'macros/store_product.html' as store with context %}
 {% block title %}{{ product.name }}{% endblock %}
 {% block content %}
 <div class="product-detail">
@@ -84,10 +85,28 @@
             <div class="availability-status {% if selected_available %}is-available{% else %}is-unavailable{% endif %}" id="availability-text">
                 {% if selected_available %}{{ t('product_available_for_dates') }}{% else %}{{ t('product_unavailable_for_dates') }}{% endif %} ({{ selected_start_date }} - {{ selected_end_date }})
             </div>
+            {% if product.category == 'couture' and not can_rent_product %}
+            <div class="availability-status is-unavailable couture-rent-gate" role="status">{{ couture_rent_notice }}</div>
+            {% endif %}
             <button type="submit" class="btn-primary">{{ t('add_to_bag') }}</button>
         </form>
     </div>
     </div>
+    <section class="product-occupancy" aria-labelledby="product-occupancy-title">
+        <h2 id="product-occupancy-title" class="product-section-title">{{ t('product_occupancy_title') }}</h2>
+        <div class="product-occupancy-calendar" id="product-occupancy-calendar"></div>
+        <p class="product-occupancy-note">{{ t('product_occupancy_note') }}</p>
+    </section>
+    {% if related_products %}
+    <section class="related-products" aria-labelledby="related-products-title">
+        <h2 id="related-products-title" class="product-section-title">{{ t('related_products_title') }}</h2>
+        <div class="product-grid product-grid--related">
+            {% for p in related_products %}
+            {{ store.store_product_card(p) }}
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}
 {% block scripts %}
@@ -98,7 +117,13 @@
         'selected_start_date': selected_start_date,
         'available_text': t('product_available_for_dates'),
         'unavailable_text': t('product_unavailable_for_dates'),
-        'availability_url': url_for('api_product_availability', product_id=product.id)
+        'nearest_available_text': t('product_nearest_available_dates'),
+        'no_nearest_available_text': t('product_no_nearest_available_dates'),
+        'availability_url': url_for('api_product_availability', product_id=product.id),
+        'occupancy_url': url_for('api_product_occupancy', product_id=product.id),
+        'calendar_booked_text': t('product_calendar_booked'),
+        'calendar_free_text': t('product_calendar_free'),
+        'calendar_locale': 'en-US' if current_lang == 'en' else 'ru-RU'
     } | tojson
 }}</script>
 <script src="{{ url_for('static', filename='js/product.js') }}"></script>

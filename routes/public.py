@@ -18,6 +18,7 @@ def register_public_routes(app, deps):
     get_wishlist_ids = deps['get_wishlist_ids']
     filter_products = deps['filter_products']
     find_product = deps['find_product']
+    get_related_products = deps['get_related_products']
     parse_iso_date = deps['_parse_iso_date']
     is_product_available = deps['_is_product_available']
     create_rental_order = deps['_create_rental_order']
@@ -25,12 +26,11 @@ def register_public_routes(app, deps):
     get_brands = deps['get_brands']
     get_campaign_index_data = deps['get_campaign_index_data']
     get_campaign_story_detail = deps['get_campaign_story_detail']
-    loyalty_levels = deps['LOYALTY_LEVELS']
-
-    level_discounts = {
-        str(level.get('code') or '').strip().lower(): int(level.get('discount_percent') or 0)
-        for level in loyalty_levels
-    }
+    CoutureAccessError = deps['CoutureAccessError']
+    cart_totals_for_level = deps['cart_totals_for_level']
+    can_rent_product = deps['can_rent_product']
+    couture_gate_message_key = deps['couture_gate_message_key']
+    format_couture_message = deps['format_couture_message']
 
     @app.route('/set-lang/<lang>')
     def set_lang(lang):
@@ -68,9 +68,6 @@ def register_public_routes(app, deps):
 
     @app.route('/couture')
     def couture():
-        if not get_current_user():
-            flash(t('acc_couture_members_only'), 'error')
-            return redirect(url_for('account'))
         products = filter_products(category='couture')
         return render_template('couture.html', products=products, active_page='couture', cart_count=get_cart_count(), t=t, tv=tv)
 
@@ -79,15 +76,19 @@ def register_public_routes(app, deps):
         product = find_product(product_id)
         if not product:
             return 'Not found', 404
-        if product.get('category') == 'couture' and not get_current_user():
-            flash(t('acc_couture_members_only'), 'error')
-            return redirect(url_for('account'))
+        user = get_current_user()
+        can_rent = can_rent_product(user, product)
+        couture_rent_notice = ''
+        if not can_rent:
+            key = couture_gate_message_key(user, surface='product')
+            couture_rent_notice = format_couture_message(t, key)
         days = int(request.args.get('days', 1))
         days = min(max(days, 1), product['max_days'])
         selected_start = parse_iso_date(request.args.get('start_date')) or date.today()
         selected_end = selected_start + timedelta(days=days)
         total = product['price'] * days
         available = is_product_available(product['id'], selected_start, selected_end)
+        related_products = get_related_products(product, limit=4)
         return render_template(
             'product.html',
             product=product,
@@ -96,6 +97,9 @@ def register_public_routes(app, deps):
             selected_end_date=selected_end.isoformat(),
             selected_available=available,
             total_price=total,
+            can_rent_product=can_rent,
+            couture_rent_notice=couture_rent_notice,
+            related_products=related_products,
             active_page='product',
             cart_count=get_cart_count(),
             t=t,
@@ -111,7 +115,8 @@ def register_public_routes(app, deps):
             product_id = int(payload.get('product_id'))
         except (TypeError, ValueError):
             return jsonify(ok=False, error='bad_id'), 400
-        if not find_product(product_id):
+        product = find_product(product_id)
+        if not product:
             return jsonify(ok=False, error='not_found'), 404
         ids = list(get_wishlist_ids())
         if product_id in ids:
@@ -157,11 +162,16 @@ def register_public_routes(app, deps):
             if _cart_add_wants_json():
                 return jsonify(ok=False, error='not_found'), 404
             return redirect(url_for('home'))
-        if product.get('category') == 'couture' and not get_current_user():
+        user = get_current_user()
+        if not can_rent_product(user, product):
             if _cart_add_wants_json():
-                return jsonify(ok=False, error='login_required'), 403
-            flash(t('acc_couture_cart_login'), 'error')
-            return redirect(url_for('account'))
+                error = 'login_required' if not user else 'loyalty_required'
+                return jsonify(ok=False, error=error), 403
+            key = couture_gate_message_key(user, surface='cart')
+            flash(format_couture_message(t, key), 'error')
+            if not user:
+                return redirect(url_for('account'))
+            return redirect(url_for('product_detail', product_id=product_id))
         days = min(max(days, 1), product['max_days'])
         end_date = start_date + timedelta(days=days)
         if not is_product_available(product['id'], start_date, end_date):
@@ -200,17 +210,14 @@ def register_public_routes(app, deps):
     def cart():
         user = get_current_user()
         level_code = (user or {}).get('level_code', 'bronze')
-        discount_percent = int(level_discounts.get((level_code or 'bronze').strip().lower(), 0))
-        subtotal = int(get_cart_total() or 0)
-        discount_amount = int(round(subtotal * discount_percent / 100.0))
-        total = max(0, subtotal - discount_amount)
+        totals = cart_totals_for_level(get_cart_total(), level_code)
         return render_template(
             'cart.html',
             cart_items=get_cart(),
-            subtotal=subtotal,
-            discount_percent=discount_percent,
-            discount_amount=discount_amount,
-            total=total,
+            subtotal=totals['subtotal'],
+            discount_percent=totals['discount_percent'],
+            discount_amount=totals['discount_amount'],
+            total=totals['total'],
             active_page='cart',
             cart_count=get_cart_count(),
             t=t,
@@ -231,12 +238,19 @@ def register_public_routes(app, deps):
         if not cart_items:
             flash(t('acc_checkout_empty'), 'error')
             return redirect(url_for('cart'))
+        if request.form.get('accept_terms') != '1':
+            flash(t('cart_terms_required'), 'error')
+            return redirect(url_for('cart'))
         level_code = (user or {}).get('level_code', 'bronze')
-        discount_percent = int(level_discounts.get((level_code or 'bronze').strip().lower(), 0))
+        totals = cart_totals_for_level(get_cart_total(), level_code)
         try:
-            order_id = create_rental_order(user['id'], cart_items, discount_percent=discount_percent)
+            order_id = create_rental_order(user['id'], cart_items, discount_percent=totals['discount_percent'])
         except rental_availability_error:
             flash(t('acc_checkout_unavailable'), 'error')
+            return redirect(url_for('cart'))
+        except CoutureAccessError:
+            key = couture_gate_message_key(user, surface='checkout')
+            flash(format_couture_message(t, key), 'error')
             return redirect(url_for('cart'))
         except Exception:
             order_id = None
@@ -251,22 +265,42 @@ def register_public_routes(app, deps):
     @app.route('/search')
     def search():
         q = request.args.get('q', '').strip()
-        if not q:
+        category = (request.args.get('category') or '').strip().lower()
+        if category not in ('rtw', 'couture'):
+            category = ''
+        brand = (request.args.get('brand') or '').strip()
+        item_category = (request.args.get('item_category') or '').strip()
+        sort = (request.args.get('sort') or 'id').strip().lower()
+        if sort not in ('id', 'price_asc', 'price_desc'):
+            sort = 'id'
+        max_price_raw = (request.args.get('max_price') or '').strip()
+        max_price = None
+        if max_price_raw.isdigit():
+            max_price = int(max_price_raw)
+        search_started = bool(q or category or brand or item_category or max_price is not None or sort != 'id')
+        if not search_started:
             results = []
         else:
             results = filter_products(
-                category=None,
-                query=q,
-                brand=None,
+                category=category or None,
+                query=q or None,
+                brand=brand or None,
+                item_category=item_category or None,
                 min_condition=0,
-                max_price=None,
-                sort='id',
+                max_price=max_price,
+                sort=sort,
             )
         return render_template(
             'search.html',
             brands=get_brands(),
             results=results,
             query=q,
+            active_category=category,
+            active_brand=brand,
+            active_item_category=item_category,
+            active_sort=sort,
+            max_price_value=max_price_raw if max_price_raw.isdigit() else '',
+            search_started=search_started,
             active_page='search',
             cart_count=get_cart_count(),
             t=t,

@@ -1,7 +1,41 @@
 """Product catalog: DB queries with in-memory fallback."""
 from .db import get_db_connection
 
-from .constants import BRANDS, PRODUCTS, _resolve_brand_css
+from datetime import date, timedelta
+
+from .constants import ACTIVE_RENTAL_STATUSES, BRANDS, PRODUCTS, _resolve_brand_css
+
+
+def _search_rank(product, query):
+    q = (query or '').strip().lower()
+    if not q:
+        return 99
+    fields = {
+        'serial': str(product.get('serial') or '').lower(),
+        'name': str(product.get('name') or '').lower(),
+        'brand': str(product.get('brand') or '').lower(),
+        'material': str(product.get('material') or '').lower(),
+        'origin': str(product.get('origin') or '').lower(),
+        'condition': str(product.get('condition') or '').lower(),
+        'item_category': str(product.get('item_category') or '').lower(),
+    }
+    if fields['serial'] == q:
+        return 0
+    if fields['name'] == q:
+        return 1
+    if fields['name'].startswith(q):
+        return 2
+    if fields['brand'] == q or fields['brand'].startswith(q):
+        return 3
+    if q in fields['serial']:
+        return 4
+    if q in fields['name']:
+        return 5
+    if q in fields['brand']:
+        return 6
+    if any(q in fields[key] for key in ('material', 'origin', 'condition', 'item_category')):
+        return 7
+    return 99
 
 def _attach_related_data(products):
     if not products:
@@ -27,6 +61,51 @@ def _attach_related_data(products):
     for p in products:
         p['images'] = img_map.get(p['id'], [p['image']])
         p['sizes'] = size_map.get(p['id'], p.get('sizes', []))
+
+
+def _attach_availability_badges(products, selected_start=None, selected_end=None):
+    if not products:
+        return
+    today = date.today()
+    default_end = today + timedelta(days=1)
+    selected_mode = bool(selected_start and selected_end)
+    try:
+        ids = [int(p['id']) for p in products]
+        placeholders = ','.join('?' for _ in ids)
+        statuses = tuple(ACTIVE_RENTAL_STATUSES)
+        status_placeholders = ','.join('?' for _ in statuses)
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT product_id, rental_start_date, rental_end_date
+                FROM RentalOrderItems i
+                INNER JOIN RentalOrders o ON o.id = i.order_id
+                WHERE product_id IN ({placeholders})
+                  AND o.status IN ({status_placeholders})
+                  AND rental_end_date > ?
+                  AND rental_start_date < ?
+                """,
+                (*ids, *statuses, today, today + timedelta(days=14)),
+            )
+            periods = {}
+            for row in cur.fetchall():
+                periods.setdefault(int(row[0]), []).append((row[1], row[2]))
+        for product in products:
+            pid = int(product.get('id') or 0)
+            rows = periods.get(pid, [])
+            if selected_mode:
+                unavailable = any(start < selected_end and end > selected_start for start, end in rows)
+                product['availability_badge'] = 'unavailable_dates' if unavailable else 'available_now'
+            elif any(start <= today and end > today for start, end in rows):
+                product['availability_badge'] = 'booked_soon'
+            elif rows:
+                product['availability_badge'] = 'booked_soon'
+            else:
+                product['availability_badge'] = 'available_now'
+    except Exception:
+        for product in products:
+            product.setdefault('availability_badge', 'available_now')
 
 def get_brands():
     try:
@@ -127,6 +206,8 @@ def filter_products(
     min_condition=0,
     max_price=None,
     sort='id',
+    available_start=None,
+    available_end=None,
 ):
     sort = (sort or 'id').lower()
     if sort not in ('id', 'price_asc', 'price_desc'):
@@ -152,19 +233,50 @@ def filter_products(
             params.append(btrim)
             params.append(f'%{btrim}%')
         if query:
-            sql += ' AND (p.name LIKE ? OR p.serial LIKE ? OR b.name LIKE ? OR p.material LIKE ?)'
+            sql += ' AND (p.name LIKE ? OR p.serial LIKE ? OR b.name LIKE ? OR p.material LIKE ? OR p.origin LIKE ? OR p.[condition] LIKE ? OR p.item_category LIKE ?)'
             q = f'%{query}%'
-            params.extend([q, q, q, q])
+            params.extend([q, q, q, q, q, q, q])
         if min_condition > 0:
             sql += ' AND p.condition_score >= ?'
             params.append(min_condition)
         if max_price is not None and max_price > 0:
             sql += ' AND p.price <= ?'
             params.append(max_price)
+        if available_start and available_end:
+            statuses = tuple(ACTIVE_RENTAL_STATUSES)
+            placeholders = ','.join('?' for _ in statuses)
+            sql += f"""
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM RentalOrderItems roi
+                    INNER JOIN RentalOrders ro ON ro.id = roi.order_id
+                    WHERE roi.product_id = p.id
+                      AND ro.status IN ({placeholders})
+                      AND roi.rental_start_date < ?
+                      AND roi.rental_end_date > ?
+                )
+            """
+            params.extend([*statuses, available_end, available_start])
         if sort == 'price_asc':
             sql += ' ORDER BY p.price ASC, p.id'
         elif sort == 'price_desc':
             sql += ' ORDER BY p.price DESC, p.id'
+        elif query:
+            sql += '''
+                ORDER BY CASE
+                    WHEN LOWER(p.serial) = LOWER(?) THEN 0
+                    WHEN LOWER(p.name) = LOWER(?) THEN 1
+                    WHEN LOWER(p.name) LIKE LOWER(?) THEN 2
+                    WHEN LOWER(b.name) = LOWER(?) OR LOWER(b.name) LIKE LOWER(?) THEN 3
+                    WHEN LOWER(p.serial) LIKE LOWER(?) THEN 4
+                    WHEN LOWER(p.name) LIKE LOWER(?) THEN 5
+                    WHEN LOWER(b.name) LIKE LOWER(?) THEN 6
+                    ELSE 7
+                END,
+                p.id
+            '''
+            qraw = query.strip()
+            params.extend([qraw, qraw, f'{qraw}%', qraw, f'{qraw}%', f'%{qraw}%', f'%{qraw}%', f'%{qraw}%'])
         else:
             sql += ' ORDER BY p.id'
         with get_db_connection() as conn:
@@ -187,6 +299,7 @@ def filter_products(
             'image': row.main_image,
         } for row in rows]
         _attach_related_data(results)
+        _attach_availability_badges(results, available_start, available_end)
         return results
     except Exception:
         results = PRODUCTS.copy()
@@ -202,11 +315,15 @@ def filter_products(
             ]
         if query:
             q = query.lower()
-            mat = (lambda p: (p.get('material') or '').lower())
+            text = (
+                lambda p: ' '.join(
+                    str(p.get(k) or '').lower()
+                    for k in ('name', 'serial', 'brand', 'material', 'origin', 'condition', 'item_category')
+                )
+            )
             results = [
                 p for p in results
-                if q in p['name'].lower() or q in p['serial'].lower()
-                or q in p['brand'].lower() or q in mat(p)
+                if q in text(p)
             ]
         if min_condition > 0:
             results = [p for p in results if p['condition_score'] >= min_condition]
@@ -216,4 +333,39 @@ def filter_products(
             results.sort(key=lambda p: (p['price'], p['id']))
         elif sort == 'price_desc':
             results.sort(key=lambda p: (p['price'], p['id']), reverse=True)
+        elif query:
+            results.sort(key=lambda p: (_search_rank(p, query), p['id']))
+        _attach_availability_badges(results, available_start, available_end)
         return results
+
+
+def get_related_products(product, limit=4):
+    if not product:
+        return []
+    try:
+        candidates = filter_products(category=product.get('category'), sort='id')
+    except Exception:
+        candidates = PRODUCTS.copy()
+    pid = int(product.get('id') or 0)
+    brand = (product.get('brand') or '').strip().lower()
+    item_category = (product.get('item_category') or '').strip()
+    price = int(product.get('price') or 0)
+
+    def score(p):
+        s = 0
+        if (p.get('brand') or '').strip().lower() == brand:
+            s += 4
+        if item_category and (p.get('item_category') or '') == item_category:
+            s += 3
+        p_price = int(p.get('price') or 0)
+        if price and abs(p_price - price) <= max(50, int(price * 0.25)):
+            s += 1
+        return s
+
+    ranked = [
+        (score(p), p)
+        for p in candidates
+        if int(p.get('id') or 0) != pid
+    ]
+    ranked.sort(key=lambda pair: (-pair[0], int(pair[1].get('id') or 0)))
+    return [p for s, p in ranked if s > 0][:int(limit or 4)]

@@ -1,4 +1,6 @@
 """Collection listing request context (filters, brands, clear URL)."""
+from datetime import date, timedelta
+
 from flask import request, url_for
 
 from .catalog import filter_products, get_brands
@@ -20,6 +22,18 @@ def _collection_listing_data(for_home=False):
         v = int(max_price_raw)
         if v > 0:
             max_price = v
+    available_start_raw = (request.args.get('available_start') or '').strip()
+    available_days_raw = (request.args.get('available_days') or '').strip()
+    available_start = None
+    available_days = 0
+    try:
+        if available_start_raw:
+            available_start = date.fromisoformat(available_start_raw)
+    except Exception:
+        available_start = None
+    if available_days_raw.isdigit():
+        available_days = max(1, min(30, int(available_days_raw)))
+    available_end = available_start + timedelta(days=available_days) if available_start and available_days else None
     products = filter_products(
         category='rtw',
         query=None,
@@ -28,10 +42,13 @@ def _collection_listing_data(for_home=False):
         min_condition=min_cond,
         max_price=max_price,
         sort=sort,
+        available_start=available_start,
+        available_end=available_end,
     )
     clear_listing_url = url_for('home' if for_home else 'collection')
     has_filters = bool(
         brand or active_item_category or min_cond > 0 or max_price is not None or sort != 'id'
+        or bool(available_start and available_days)
     )
     filter_count = sum(
         1
@@ -41,6 +58,7 @@ def _collection_listing_data(for_home=False):
             min_cond > 0,
             max_price is not None,
             sort != 'id',
+            bool(available_start and available_days),
         )
         if cond
     )
@@ -52,6 +70,8 @@ def _collection_listing_data(for_home=False):
         'min_condition': min_cond,
         'active_sort': sort,
         'max_price_value': max_price_raw if max_price_raw.isdigit() else '',
+        'available_start_value': available_start.isoformat() if available_start else '',
+        'available_days_value': str(available_days) if available_days else '',
         'has_active_filters': has_filters,
         'active_filter_count': filter_count,
         'condition_labels': CONDITION_LABELS,

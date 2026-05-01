@@ -11,6 +11,14 @@
         <section class="account-panel account-order-layout">
             <div class="account-order-overview">
                 <p class="account-order-kicker">{{ t('account_order_title') }} #{{ order.id }}</p>
+                <div class="order-timeline" aria-label="{{ t('order_timeline_title') }}">
+                    {% for status_value in order_status_flow %}
+                    <div class="order-timeline-step {% if loop.index0 <= order_timeline_index %}is-complete{% endif %} {% if status_value == order.status %}is-current{% endif %}">
+                        <span class="order-timeline-dot"></span>
+                        <span>{{ t('order_status_' ~ status_value) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
                 <div class="account-order-facts">
                     <div class="account-order-fact">
                         <p class="account-order-fact-label">{{ t('account_history_period') }}</p>
@@ -35,6 +43,20 @@
             </aside>
         </section>
 
+        <section class="account-panel rental-agreement-preview">
+            <h2 class="account-panel-title">{{ t('rental_agreement_title') }}</h2>
+            <div class="rental-agreement-grid">
+                <span>{{ t('account_history_period') }}</span>
+                <strong>{{ order.rental_start_date or '-' }} - {{ order.rental_end_date or '-' }}</strong>
+                <span>{{ t('account_history_status') }}</span>
+                <strong>{{ t('order_status_' ~ order.status) }}</strong>
+                <span>{{ t('account_history_total') }}</span>
+                <strong>${{ order.total_price }}</strong>
+                <span>{{ t('rental_agreement_responsibility') }}</span>
+                <strong>{{ t('rental_agreement_responsibility_value') }}</strong>
+            </div>
+        </section>
+
         <section class="account-panel account-order-items-panel">
             <h2 class="account-panel-title account-order-items-title">{{ t('account_order_items_title') }}</h2>
             <div class="account-history-list">
@@ -50,6 +72,37 @@
                 </article>
                 {% endfor %}
             </div>
+        </section>
+
+        <section class="account-panel order-review-panel" id="order-review">
+            <div class="product-section-head">
+                <h2 class="account-panel-title">{{ t('reviews_title') }}</h2>
+                {% if order_review %}
+                <span class="product-review-summary">{{ order_review.rating }}/5</span>
+                {% endif %}
+            </div>
+            {% if order.status == 'returned' %}
+            <form method="post" action="{{ url_for('account_order_review', order_id=order.id) }}" class="review-form review-form--order">
+                <div class="review-rating-block" role="radiogroup" aria-label="{{ t('review_rating_label') }}">
+                    <span class="review-mini-label">{{ t('review_rating_label') }}</span>
+                    <div class="review-stars">
+                        {% for score in [5, 4, 3, 2, 1] %}
+                        <label>
+                            <input type="radio" name="rating" value="{{ score }}" {% if (order_review and order_review.rating == score) or (not order_review and score == 5) %}checked{% endif %}>
+                            <span aria-hidden="true">★</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="review-copy-block">
+                    <label for="review-body" class="review-mini-label">{{ t('review_body_label') }}</label>
+                    <textarea id="review-body" name="body" rows="4" maxlength="1000" class="review-textarea" placeholder="{{ t('review_body_placeholder') }}">{{ order_review.body if order_review else '' }}</textarea>
+                </div>
+                <button type="submit" class="account-btn-primary review-submit-btn">{{ t('review_submit_update') if order_review else t('review_submit') }}</button>
+            </form>
+            {% else %}
+            <p class="product-occupancy-note">{{ t('review_returned_hint') }}</p>
+            {% endif %}
         </section>
     </div>
 </div>

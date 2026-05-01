@@ -109,6 +109,25 @@
                     </div>
                     <button type="submit" class="account-btn-primary">{{ t('acc_submit_login') }}</button>
                 </form>
+                {% if demo_mode %}
+                <div class="demo-login-panel">
+                    <p class="account-card-lead">{{ t('demo_login_title') }}</p>
+                    <div class="demo-login-actions">
+                        <form method="post" action="{{ url_for('account_demo_login') }}">
+                            <input type="hidden" name="role" value="bronze">
+                            <button type="submit" class="account-btn-secondary">{{ t('demo_login_bronze') }}</button>
+                        </form>
+                        <form method="post" action="{{ url_for('account_demo_login') }}">
+                            <input type="hidden" name="role" value="gold">
+                            <button type="submit" class="account-btn-secondary">{{ t('demo_login_gold') }}</button>
+                        </form>
+                        <form method="post" action="{{ url_for('account_demo_login') }}">
+                            <input type="hidden" name="role" value="admin">
+                            <button type="submit" class="account-btn-secondary">{{ t('demo_login_admin') }}</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
             </section>
             <section class="account-card account-card--register" aria-labelledby="acc-reg-heading">
                 <h2 id="acc-reg-heading" class="account-card-title">{{ t('account_register_title') }}</h2>
@@ -145,17 +164,17 @@
         </div>
         {% if session.get('pending_verify_user_id') %}
         <section class="account-card" style="margin-top:16px;" aria-labelledby="acc-verify-heading">
-            <h2 id="acc-verify-heading" class="account-card-title">Подтверждение email</h2>
-            <p class="account-card-lead">Мы отправили код на {{ session.get('pending_verify_email') }}.</p>
+            <h2 id="acc-verify-heading" class="account-card-title">{{ t('acc_verify_title') }}</h2>
+            <p class="account-card-lead">{{ t('acc_verify_lead').format(email=session.get('pending_verify_email')) }}</p>
             <form method="post" action="{{ url_for('account_verify_email') }}" class="account-form" autocomplete="one-time-code">
                 <div class="account-field">
-                    <label class="account-label" for="acc-verify-code">Код подтверждения</label>
+                    <label class="account-label" for="acc-verify-code">{{ t('acc_verify_code_label') }}</label>
                     <input id="acc-verify-code" type="text" name="code" required minlength="6" maxlength="6" class="account-input" placeholder="000000">
                 </div>
-                <button type="submit" class="account-btn-primary">Подтвердить</button>
+                <button type="submit" class="account-btn-primary">{{ t('acc_verify_submit') }}</button>
             </form>
             <form method="post" action="{{ url_for('account_resend_verification') }}" class="account-form" style="margin-top:8px;">
-                <button type="submit" class="account-btn-secondary">Отправить код ещё раз</button>
+                <button type="submit" class="account-btn-secondary">{{ t('acc_verify_resend') }}</button>
             </form>
         </section>
         {% endif %}

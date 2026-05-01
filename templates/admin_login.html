@@ -1,21 +1,21 @@
 {% extends "base.html" %}
-{% block title %}Admin Login{% endblock %}
+{% block title %}{{ t('admin_login_title') }}{% endblock %}
 {% block content %}
 <div class="account-page">
     <div class="account-page-inner">
         <section class="account-card" aria-labelledby="admin-login-heading">
-            <h2 id="admin-login-heading" class="account-card-title">Вход в админку</h2>
-            <p class="account-card-lead">Доступ только для аккаунтов с правами администратора.</p>
+            <h2 id="admin-login-heading" class="account-card-title">{{ t('admin_login_title') }}</h2>
+            <p class="account-card-lead">{{ t('admin_login_lead') }}</p>
             <form method="post" action="{{ url_for('admin_login') }}" class="account-form" autocomplete="on">
                 <div class="account-field">
-                    <label class="account-label" for="admin-login-email">Email</label>
+                    <label class="account-label" for="admin-login-email">{{ t('acc_email') }}</label>
                     <input id="admin-login-email" type="email" name="email" required class="account-input" autocomplete="email">
                 </div>
                 <div class="account-field">
-                    <label class="account-label" for="admin-login-password">Пароль</label>
+                    <label class="account-label" for="admin-login-password">{{ t('acc_password') }}</label>
                     <input id="admin-login-password" type="password" name="password" required class="account-input" autocomplete="current-password">
                 </div>
-                <button type="submit" class="account-btn-primary">Войти</button>
+                <button type="submit" class="account-btn-primary">{{ t('admin_login_submit') }}</button>
             </form>
         </section>
     </div>

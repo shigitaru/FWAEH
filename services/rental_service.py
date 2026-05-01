@@ -5,6 +5,10 @@ class RentalAvailabilityError(Exception):
     pass
 
 
+class CoutureAccessError(Exception):
+    """Cart contains couture items but the user's loyalty tier is too low."""
+
+
 def parse_iso_date(raw_value):
     try:
         return datetime.strptime(str(raw_value or '').strip(), '%Y-%m-%d').date()

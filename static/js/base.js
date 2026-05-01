@@ -169,6 +169,146 @@
     })();
 
     (function () {
+        function closeAll(except) {
+            document.querySelectorAll(".custom-select.is-open").forEach(function (root) {
+                if (root !== except) {
+                    root.classList.remove("is-open");
+                    var btn = root.querySelector(".custom-select-btn");
+                    if (btn) btn.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
+        function enhanceSelect(select) {
+            if (!select || select.dataset.customSelectReady === "1" || select.multiple) return;
+            select.dataset.customSelectReady = "1";
+            select.classList.add("native-select-hidden");
+            var root = document.createElement("div");
+            root.className = "custom-select";
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "custom-select-btn";
+            btn.setAttribute("aria-haspopup", "listbox");
+            btn.setAttribute("aria-expanded", "false");
+            var label = document.createElement("span");
+            label.className = "custom-select-label";
+            var icon = document.createElement("span");
+            icon.className = "custom-select-icon";
+            icon.setAttribute("aria-hidden", "true");
+            btn.appendChild(label);
+            btn.appendChild(icon);
+            var list = document.createElement("div");
+            list.className = "custom-select-list";
+            list.setAttribute("role", "listbox");
+            Array.prototype.forEach.call(select.options, function (opt) {
+                var item = document.createElement("button");
+                item.type = "button";
+                item.className = "custom-select-option";
+                item.setAttribute("role", "option");
+                item.dataset.value = opt.value;
+                item.textContent = opt.textContent;
+                item.disabled = opt.disabled;
+                item.addEventListener("click", function () {
+                    select.value = opt.value;
+                    select.dispatchEvent(new Event("change", { bubbles: true }));
+                    root.classList.remove("is-open");
+                    btn.setAttribute("aria-expanded", "false");
+                    sync();
+                    btn.focus();
+                });
+                list.appendChild(item);
+            });
+            function sync() {
+                var selected = select.options[select.selectedIndex];
+                label.textContent = selected ? selected.textContent : "";
+                Array.prototype.forEach.call(list.children, function (item) {
+                    var active = selected && item.dataset.value === selected.value;
+                    item.classList.toggle("is-selected", !!active);
+                    item.setAttribute("aria-selected", active ? "true" : "false");
+                });
+            }
+            select.parentNode.insertBefore(root, select.nextSibling);
+            root.appendChild(btn);
+            root.appendChild(list);
+            sync();
+            select.addEventListener("change", sync);
+            btn.addEventListener("click", function () {
+                var open = root.classList.contains("is-open");
+                closeAll(root);
+                root.classList.toggle("is-open", !open);
+                btn.setAttribute("aria-expanded", open ? "false" : "true");
+            });
+            btn.addEventListener("keydown", function (e) {
+                if (e.key === "Escape") {
+                    root.classList.remove("is-open");
+                    btn.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
+        function initCustomSelects() {
+            document.querySelectorAll("select").forEach(enhanceSelect);
+        }
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".custom-select")) closeAll(null);
+        });
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") closeAll(null);
+        });
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", initCustomSelects);
+        } else {
+            initCustomSelects();
+        }
+    })();
+
+    (function () {
+        var input = document.querySelector("[data-search-suggest]");
+        var box = document.querySelector("[data-search-suggestions]");
+        if (!input || !box || !window.fetch) return;
+        var timer = 0;
+        function hide() {
+            box.hidden = true;
+            box.innerHTML = "";
+        }
+        function render(items) {
+            if (!items || !items.length) {
+                hide();
+                return;
+            }
+            box.innerHTML = "";
+            items.forEach(function (item) {
+                var a = document.createElement("a");
+                a.href = item.url || "#";
+                a.className = "search-suggestion-item";
+                var label = document.createElement("span");
+                label.textContent = item.label || "";
+                var meta = document.createElement("small");
+                meta.textContent = item.meta || item.type || "";
+                a.appendChild(label);
+                a.appendChild(meta);
+                box.appendChild(a);
+            });
+            box.hidden = false;
+        }
+        input.addEventListener("input", function () {
+            var q = input.value.trim();
+            if (timer) clearTimeout(timer);
+            if (q.length < 2) {
+                hide();
+                return;
+            }
+            timer = setTimeout(function () {
+                fetch("/api/search-suggestions?q=" + encodeURIComponent(q), { headers: { Accept: "application/json" } })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) { render(data && data.ok ? data.suggestions : []); })
+                    .catch(hide);
+            }, 160);
+        });
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".search-form")) hide();
+        });
+    })();
+
+    (function () {
         var i18nEl = document.getElementById("pa-cart-toast-i18n");
         try {
             if (i18nEl) window.paCartToastI18n = JSON.parse(i18nEl.textContent);

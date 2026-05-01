@@ -12,6 +12,13 @@
         <span>{{ admin_status.message }}</span>
     </div>
     {% endif %}
+    <section class="admin-dashboard-grid" aria-label="{{ t('admin_dashboard_title') }}">
+        <article class="admin-dashboard-card"><span>{{ t('admin_dashboard_active_rentals') }}</span><strong>{{ admin_dashboard.active_rentals }}</strong></article>
+        <article class="admin-dashboard-card"><span>{{ t('admin_dashboard_pending_orders') }}</span><strong>{{ admin_dashboard.pending_orders }}</strong></article>
+        <article class="admin-dashboard-card"><span>{{ t('admin_dashboard_users') }}</span><strong>{{ admin_dashboard.users }}</strong></article>
+        <article class="admin-dashboard-card"><span>{{ t('admin_dashboard_products') }}</span><strong>{{ admin_dashboard.products }}</strong></article>
+        <article class="admin-dashboard-card"><span>{{ t('admin_dashboard_couture_items') }}</span><strong>{{ admin_dashboard.couture_items }}</strong></article>
+    </section>
     <nav class="account-quick-links" style="margin-bottom:14px;">
         <a href="{{ url_for('admin_panel', section='products') }}" class="account-quick-link">{{ t('admin_section_products') }}</a>
         <a href="{{ url_for('admin_panel', section='inventory') }}" class="account-quick-link">{{ t('admin_section_inventory') }}</a>
@@ -99,11 +106,24 @@
         </form>
         <div class="admin-brands-list admin-orders-list">
             {% for o in orders_recent %}
-            <div class="admin-brand-row admin-order-row">
+            <div class="admin-brand-row admin-order-row {% if o.is_late %}is-late{% endif %}">
                 <div class="admin-brand-meta">
                     <span class="admin-brand-name">#{{ o.id }} · {{ o.user_email }}</span>
                     <span class="admin-brand-count">{{ t('admin_order_period') }}: {{ o.rental_start_date or '-' }} - {{ o.rental_end_date or '-' }} · {{ o.total_items }} {{ t('admin_order_items') }} · ${{ o.total_price }}</span>
+                    {% if o.is_late %}
+                    <span class="admin-late-badge">{{ t('admin_order_late') }}</span>
+                    {% endif %}
                     <span class="admin-brand-count">{{ t('admin_order_pickup_code') }}: {{ o.pickup_code or t('admin_order_pickup_code_empty') }}</span>
+                    {% if o.review %}
+                    <div class="admin-order-review">
+                        <div class="admin-order-review-head">
+                            <span>{{ t('reviews_title') }}</span>
+                            <strong>{{ o.review.rating }}/5</strong>
+                        </div>
+                        <p>{{ o.review.body or t('admin_order_review_no_text') }}</p>
+                        <span class="admin-order-item-meta">{{ o.review.display_name }}</span>
+                    </div>
+                    {% endif %}
                     {% if o['items'] %}
                     <div class="admin-order-items">
                         {% for it in o['items'] %}
@@ -179,6 +199,14 @@
                     <span class="admin-brand-name">{{ u.display_name }} · {{ u.email }}</span>
                     <span class="admin-brand-count">{{ t('admin_user_level') }}: {{ u.level_code }} · {{ t('admin_user_verified') }}: {{ t('status_yes') if u.is_email_verified else t('status_no') }} · {{ t('admin_user_orders') }}: {{ u.lifetime_orders_count }} · {{ t('admin_user_spend') }}: ${{ u.lifetime_spend_amount }}</span>
                 </div>
+                <form method="post" action="{{ url_for('admin_set_user_level', user_id=u.id) }}" class="admin-user-level-form">
+                    <select name="level_code" class="admin-user-level-select" aria-label="{{ t('admin_user_level') }}">
+                        {% for level in loyalty_levels %}
+                        <option value="{{ level.code }}" {% if level.code == u.level_code %}selected{% endif %}>{{ level.title }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="admin-brand-delete-btn">{{ t('admin_user_level_set') }}</button>
+                </form>
                 <form method="post" action="{{ url_for('admin_set_user_admin', user_id=u.id) }}">
                     <input type="hidden" name="is_admin" value="{{ 0 if u.is_admin else 1 }}">
                     <button type="submit" class="admin-brand-delete-btn">{{ t('admin_user_demote') if u.is_admin else t('admin_user_promote') }}</button>

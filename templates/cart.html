@@ -2,8 +2,16 @@
 {% block title %}{{ t('bag') }}{% endblock %}
 {% block content %}
 <div class="cart-page">
-    <div class="section-title">{{ t('your_bag') }} ({{ cart_count }})</div>
+    <div class="cart-header">
+        <div>
+            <p class="cart-kicker">{{ t('bag') }}</p>
+            <h1 class="section-title">{{ t('your_bag') }}</h1>
+        </div>
+        <span class="cart-count-pill">{{ t('cart_items_count').format(count=cart_count) }}</span>
+    </div>
     {% if cart_items %}
+    <div class="cart-layout">
+        <div class="cart-items-list">
         {% for item in cart_items %}
         <div class="cart-item">
             <div class="cart-item-image-wrap">
@@ -12,13 +20,13 @@
             <div class="cart-item-info">
                 <div class="cart-item-name">{{ item.name }}</div>
                 <div class="cart-item-meta">
-                    {{ item.serial }} — {{ item.brand }}<br>
+                    <span>{{ item.serial }} — {{ item.brand }}</span>
                     {% if item.size %}
-                    {{ t('size') }}: {{ item.size }}<br>
+                    <span>{{ t('size') }}: {{ item.size }}</span>
                     {% endif %}
-                    {{ t('period') }}: {{ item.days }} {{ t('days_label') }}<br>
-                    {{ t('rental_start_date') }}: {{ item.start_date }}<br>
-                    {{ t('rental_end_date') }}: {{ item.end_date }}
+                    <span>{{ t('period') }}: {{ item.days }} {{ t('days_label') }}</span>
+                    <span>{{ t('rental_start_date') }}: {{ item.start_date }}</span>
+                    <span>{{ t('rental_end_date') }}: {{ item.end_date }}</span>
                 </div>
             </div>
             <div class="cart-item-right">
@@ -27,11 +35,25 @@
             </div>
         </div>
         {% endfor %}
+        </div>
+        <aside class="cart-summary-card">
+            <p class="cart-summary-kicker">{{ t('total') }}</p>
+        <div class="rental-agreement-preview rental-agreement-preview--cart">
+            <h2 class="cart-agreement-title">{{ t('rental_agreement_title') }}</h2>
+            <div class="rental-agreement-grid">
+                <span>{{ t('account_order_items_title') }}</span>
+                <strong>{{ cart_items|length }}</strong>
+                <span>{{ t('account_history_period') }}</span>
+                <strong>{{ cart_items[0].start_date }} - {{ cart_items[0].end_date }}</strong>
+                <span>{{ t('account_history_total') }}</span>
+                <strong>${{ total }}</strong>
+            </div>
+        </div>
+        {% if discount_percent > 0 %}
         <div class="cart-total-row">
             <span>{{ t('cart_subtotal') }}</span>
             <span>${{ subtotal }}</span>
         </div>
-        {% if discount_percent > 0 %}
         <div class="cart-total-row">
             <span>{{ t('cart_discount') }} ({{ discount_percent }}%)</span>
             <span>-${{ discount_amount }}</span>
@@ -42,11 +64,17 @@
             <span>${{ total }}</span>
         </div>
         <form method="post" action="{{ url_for('cart_checkout') }}">
+            <label class="cart-terms-check">
+                <input type="checkbox" name="accept_terms" value="1" required>
+                <span>{{ t('cart_terms_accept') }}</span>
+            </label>
             <button type="submit" class="btn-primary cart-checkout-btn">{{ t('checkout') }}</button>
         </form>
         <div class="cart-clear-wrap">
             <a href="{{ url_for('clear_cart') }}" class="cart-clear-link">{{ t('clear_bag') }}</a>
         </div>
+        </aside>
+    </div>
     {% else %}
         <div class="empty-state">{{ t('bag_empty') }}<br><br><a href="{{ url_for('home') }}" class="btn-outline">{{ t('browse') }}</a></div>
     {% endif %}
