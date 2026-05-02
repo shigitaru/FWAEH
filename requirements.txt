@@ -3,3 +3,4 @@ pyodbc
 deep-translator
 requests
 python-dotenv
+gunicorn
