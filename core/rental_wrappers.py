@@ -1,4 +1,6 @@
 """Thin wrappers around rental_service for DB availability checks."""
+import logging
+
 from .db import get_db_connection
 from .constants import ACTIVE_RENTAL_STATUSES
 from services.rental_service import (
@@ -6,6 +8,8 @@ from services.rental_service import (
     cart_item_period as rental_cart_item_period,
     is_product_available as rental_is_product_available,
 )
+
+logger = logging.getLogger(__name__)
 
 def _parse_iso_date(raw_value):
     return rental_parse_iso_date(raw_value)
@@ -21,4 +25,5 @@ def _is_product_available(product_id, start_date, end_date, *, exclude_order_id=
             get_db_connection, ACTIVE_RENTAL_STATUSES, product_id, start_date, end_date, exclude_order_id=exclude_order_id
         )
     except Exception:
+        logger.exception('Availability check failed for product %s', product_id)
         return True

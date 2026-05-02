@@ -1,9 +1,13 @@
 """Product catalog: DB queries with in-memory fallback."""
+import logging
+
 from .db import get_db_connection
 
 from datetime import date, timedelta
 
 from .constants import ACTIVE_RENTAL_STATUSES, BRANDS, PRODUCTS, _resolve_brand_css
+
+logger = logging.getLogger(__name__)
 
 
 def _search_rank(product, query):
@@ -78,13 +82,13 @@ def _attach_availability_badges(products, selected_start=None, selected_end=None
             cur = conn.cursor()
             cur.execute(
                 f"""
-                SELECT product_id, rental_start_date, rental_end_date
+                SELECT i.product_id, i.rental_start_date, i.rental_end_date
                 FROM RentalOrderItems i
                 INNER JOIN RentalOrders o ON o.id = i.order_id
-                WHERE product_id IN ({placeholders})
+                WHERE i.product_id IN ({placeholders})
                   AND o.status IN ({status_placeholders})
-                  AND rental_end_date > ?
-                  AND rental_start_date < ?
+                  AND i.rental_end_date > ?
+                  AND i.rental_start_date < ?
                 """,
                 (*ids, *statuses, today, today + timedelta(days=14)),
             )
@@ -104,6 +108,7 @@ def _attach_availability_badges(products, selected_start=None, selected_end=None
             else:
                 product['availability_badge'] = 'available_now'
     except Exception:
+        logger.exception('Failed to attach availability badges')
         for product in products:
             product.setdefault('availability_badge', 'available_now')
 
@@ -126,6 +131,7 @@ def get_brands():
             })
         return out
     except Exception:
+        logger.exception('Failed to load brands from database; using fallback brands')
         return [dict(b, css_class=_resolve_brand_css(b['name'], b.get('css_class'))) for b in BRANDS]
 
 
@@ -158,6 +164,7 @@ def get_admin_brands():
             })
         return out
     except Exception:
+        logger.exception('Failed to load admin brands')
         return []
 
 
@@ -168,7 +175,7 @@ def find_product(product_id):
             cur.execute(
                 '''
                 SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
-                       p.condition_score, p.material, p.origin, p.[condition], p.main_image
+                       p.condition_score, p.material, p.origin, p.condition, p.main_image
                 FROM Products p
                 JOIN Brands b ON b.id = p.brand_id
                 WHERE p.id = ?
@@ -196,6 +203,7 @@ def find_product(product_id):
         _attach_related_data([product])
         return product
     except Exception:
+        logger.exception('Failed to find product %s in database; using fallback catalog', product_id)
         return next((p for p in PRODUCTS if p['id'] == product_id), None)
 
 def filter_products(
@@ -215,7 +223,7 @@ def filter_products(
     try:
         sql = '''
             SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
-                   p.condition_score, p.material, p.origin, p.[condition], p.main_image
+                   p.condition_score, p.material, p.origin, p.condition, p.main_image
             FROM Products p
             JOIN Brands b ON b.id = p.brand_id
             WHERE 1=1
@@ -233,7 +241,7 @@ def filter_products(
             params.append(btrim)
             params.append(f'%{btrim}%')
         if query:
-            sql += ' AND (p.name LIKE ? OR p.serial LIKE ? OR b.name LIKE ? OR p.material LIKE ? OR p.origin LIKE ? OR p.[condition] LIKE ? OR p.item_category LIKE ?)'
+            sql += ' AND (p.name LIKE ? OR p.serial LIKE ? OR b.name LIKE ? OR p.material LIKE ? OR p.origin LIKE ? OR p.condition LIKE ? OR p.item_category LIKE ?)'
             q = f'%{query}%'
             params.extend([q, q, q, q, q, q, q])
         if min_condition > 0:
@@ -302,6 +310,7 @@ def filter_products(
         _attach_availability_badges(results, available_start, available_end)
         return results
     except Exception:
+        logger.exception('Failed to filter products from database; using fallback catalog')
         results = PRODUCTS.copy()
         if category:
             results = [p for p in results if p['category'] == category]
@@ -345,6 +354,7 @@ def get_related_products(product, limit=4):
     try:
         candidates = filter_products(category=product.get('category'), sort='id')
     except Exception:
+        logger.exception('Failed to load related products; using fallback catalog')
         candidates = PRODUCTS.copy()
     pid = int(product.get('id') or 0)
     brand = (product.get('brand') or '').strip().lower()

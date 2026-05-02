@@ -1,7 +1,7 @@
 """
 Initialize the Supabase/PostgreSQL schema and optionally seed demo content.
 
-Run after setting DB_ENGINE=postgres and POSTGRES_CONNECTION_STRING/SUPABASE_DB_URL:
+Run after setting POSTGRES_CONNECTION_STRING/SUPABASE_DB_URL:
     python scripts/init_postgres_db.py
 
 Optional:
@@ -15,7 +15,7 @@ if _APP_ROOT not in sys.path:
     sys.path.insert(0, _APP_ROOT)
 
 from core.config import settings  # noqa: E402
-from core.db import get_db_connection, using_postgres  # noqa: E402
+from core.db import get_db_connection  # noqa: E402
 from core.pg_schema import ensure_postgres_schema  # noqa: E402
 from seed_defaults import (  # noqa: E402
     DEFAULT_CAMPAIGN_SETTINGS,
@@ -157,8 +157,6 @@ def _seed_campaign(cur):
 
 
 def main():
-    if not using_postgres():
-        raise SystemExit("Set DB_ENGINE=postgres before running this script.")
     if not settings.postgres_connection_string:
         raise SystemExit("Set POSTGRES_CONNECTION_STRING or SUPABASE_DB_URL first.")
     ensure_postgres_schema()

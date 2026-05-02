@@ -1,4 +1,5 @@
 """Product and campaign file uploads and admin image mutations."""
+import logging
 import os
 from uuid import uuid4
 
@@ -12,6 +13,7 @@ UPLOAD_DIR = settings.upload_dir
 CAMPAIGN_UPLOAD_DIR = settings.campaign_upload_dir
 ALLOWED_IMAGE_EXTENSIONS = settings.allowed_image_extensions
 ALLOWED_VIDEO_EXTENSIONS = settings.allowed_video_extensions
+logger = logging.getLogger(__name__)
 
 def _nullable_str(value):
     """Пустая строка → None для колонок БД (material, origin, condition), чтобы можно было «очистить» поле."""
@@ -32,6 +34,7 @@ def _fetch_product_image_rows(product_id):
             )
             return [{'id': r.id, 'url': r.image_url} for r in cur.fetchall()]
     except Exception:
+        logger.exception('Failed to fetch product images for product %s', product_id)
         return []
 
 

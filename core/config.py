@@ -9,10 +9,6 @@ load_dotenv(os.path.join(_ROOT_DIR, '.env'), override=True)
 
 @dataclass(frozen=True)
 class Settings:
-    db_engine: str
-    db_name: str
-    db_server: str
-    db_connection_string: str
     postgres_connection_string: str
     upload_dir: str
     campaign_upload_dir: str
@@ -37,29 +33,12 @@ class Settings:
 
 def load_settings() -> Settings:
     base_dir = os.path.dirname(__file__)
-    db_engine = os.getenv('DB_ENGINE', 'mssql').strip().lower()
-    db_name = os.getenv('DB_NAME', 'ProtocolArchive')
-    db_server = os.getenv('DB_SERVER', r'SHIGITARU\SQLEXPRESS')
-    db_connection_string = os.getenv(
-        'DB_CONNECTION_STRING',
-        f'DRIVER={{ODBC Driver 17 for SQL Server}};'
-        f'SERVER={db_server};'
-        f'DATABASE={db_name};'
-        'Trusted_Connection=yes;'
-        'Encrypt=yes;'
-        'TrustServerCertificate=yes;'
-        'MARS_Connection=no;'
-    )
     postgres_connection_string = (
         os.getenv('POSTGRES_CONNECTION_STRING', '')
         or os.getenv('SUPABASE_DB_URL', '')
         or os.getenv('DATABASE_URL', '')
     ).strip()
     return Settings(
-        db_engine=db_engine,
-        db_name=db_name,
-        db_server=db_server,
-        db_connection_string=db_connection_string,
         postgres_connection_string=postgres_connection_string,
         upload_dir=os.path.join(base_dir, 'static', 'products', 'uploads'),
         campaign_upload_dir=os.path.join(base_dir, 'static', 'campaign', 'uploads'),

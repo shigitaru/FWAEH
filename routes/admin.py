@@ -124,8 +124,8 @@ def register_admin_routes(app, deps):
                         cur.execute(
                             '''
                             INSERT INTO Brands (name, slug, css_class)
-                            OUTPUT INSERTED.id
                             VALUES (?, ?, ?)
+                            RETURNING id
                             ''',
                             (brand_name, brand_name, '')
                         )
@@ -135,9 +135,9 @@ def register_admin_routes(app, deps):
                         raise ValueError(t('admin_brand_resolve_error'))
                     cur.execute(
                         '''
-                        INSERT INTO Products (brand_id, category, item_category, serial, name, price, max_days, condition_score, material, origin, [condition], main_image)
-                        OUTPUT INSERTED.id
+                        INSERT INTO Products (brand_id, category, item_category, serial, name, price, max_days, condition_score, material, origin, condition, main_image)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        RETURNING id
                         ''',
                         (
                             brand_id,
@@ -396,8 +396,8 @@ def register_admin_routes(app, deps):
                         cur.execute(
                             '''
                             INSERT INTO Brands (name, slug, css_class)
-                            OUTPUT INSERTED.id
                             VALUES (?, ?, ?)
+                            RETURNING id
                             ''',
                             (brand_name, brand_name, '')
                         )
@@ -408,7 +408,7 @@ def register_admin_routes(app, deps):
                     cur.execute(
                         '''
                         UPDATE Products SET brand_id=?, category=?, item_category=?, serial=?, name=?, price=?, max_days=?,
-                        condition_score=?, material=?, origin=?, [condition]=?, main_image=?
+                        condition_score=?, material=?, origin=?, condition=?, main_image=?
                         WHERE id=?
                         ''',
                         (

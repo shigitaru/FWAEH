@@ -1,9 +1,12 @@
 import hashlib
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import render_template, request, redirect, url_for, flash, session
 from werkzeug.security import check_password_hash, generate_password_hash
+
+logger = logging.getLogger(__name__)
 
 
 def register_auth_routes(app, deps):
@@ -105,6 +108,7 @@ def register_auth_routes(app, deps):
             try:
                 history_orders, history_stats = fetch_user_rental_history(user['id'])
             except Exception:
+                logger.exception('Failed to load account history for user %s', user.get('id'))
                 history_orders, history_stats = [], None
         return render_template(
             'account.html',
@@ -140,6 +144,7 @@ def register_auth_routes(app, deps):
             ensure_app_users_table()
             row = user_fetch_by_email(email)
         except Exception:
+            logger.exception('Failed to load account user during login: %s', email)
             flash(t('acc_db_unavailable'), 'error')
             return redirect(url_for('account'))
         if not row or not check_password_hash(row[2], password):
@@ -278,6 +283,7 @@ def register_auth_routes(app, deps):
             flash(t('acc_ok_email_verified'), 'success')
             return redirect(url_for('account'))
         except Exception:
+            logger.exception('Failed to verify email for pending user %s', pending_user_id)
             flash(t('acc_db_unavailable'), 'error')
             return redirect(url_for('account'))
 
@@ -295,12 +301,13 @@ def register_auth_routes(app, deps):
                 if datetime.now(timezone.utc) < datetime.fromisoformat(next_resend_at):
                     flash(t('acc_resend_wait'), 'error')
                     return redirect(url_for('account'))
-            except Exception:
-                pass
+            except ValueError:
+                logger.warning('Ignoring malformed pending_verify_next_resend_at: %s', next_resend_at)
         try:
             _issue_verification_code(pending_email, pending_name, pending_user_id)
             flash(t('acc_resend_sent'), 'success')
         except Exception:
+            logger.exception('Failed to resend verification email for user %s', pending_user_id)
             flash(t('acc_resend_failed'), 'error')
         return redirect(url_for('account_verify_page'))
 
@@ -337,10 +344,11 @@ def register_auth_routes(app, deps):
                 if status != 'created':
                     flash(t('account_cancel_not_allowed'), 'error')
                     return redirect(url_for('account'))
-                cur.execute("UPDATE RentalOrders SET status = N'cancelled' WHERE id = ?", (int(order_id),))
+                cur.execute("UPDATE RentalOrders SET status = 'cancelled' WHERE id = ?", (int(order_id),))
                 conn.commit()
             flash(t('account_cancel_success'), 'success')
         except Exception:
+            logger.exception('Failed to cancel order %s for user %s', order_id, user_id)
             flash(t('acc_db_unavailable'), 'error')
         return redirect(url_for('account'))
 
@@ -412,6 +420,7 @@ def register_auth_routes(app, deps):
                 t=t,
             )
         except Exception:
+            logger.exception('Failed to load order %s for user %s', order_id, user_id)
             flash(t('acc_db_unavailable'), 'error')
             return redirect(url_for('account'))
 
@@ -453,6 +462,7 @@ def register_auth_routes(app, deps):
             flash(t('review_saved'), 'success')
             return redirect(url_for('account_order_detail', order_id=order_id) + '#order-review')
         except Exception:
+            logger.exception('Failed to save review for order %s by user %s', order_id, user_id)
             flash(t('acc_db_unavailable'), 'error')
             return redirect(url_for('account_order_detail', order_id=order_id))
 
@@ -482,6 +492,7 @@ def register_auth_routes(app, deps):
                 orders_count = int(row[0] or 0)
                 spend_amount = int(row[1] or 0)
         except Exception:
+            logger.exception('Failed to load loyalty counters for user %s', user.get('id'))
             pass
         loyalty_progress = next_loyalty_progress(level_code, orders_count, spend_amount)
         return render_template(

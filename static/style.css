@@ -2319,7 +2319,9 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     color: var(--text);
 }
 .account-stat-value--text {
-    font-size: 14px;
+    font-size: clamp(14px, 1.7vw, 21px);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
 }
 .account-quick-actions {
     margin-top: 18px;

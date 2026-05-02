@@ -1,7 +1,7 @@
 """
-Демо-каталог и кампания: единый источник для init_db и fallback в app.py.
+Демо-каталог и кампания: единый источник для PostgreSQL seed-скрипта и fallback в app.py.
 Редактируйте этот файл, чтобы «зашитые» товары и картинки кампании всегда
-восстанавливались после пустой БД или запуска scripts/seed_demo_content.py.
+восстанавливались после пустой БД или запуска scripts/init_postgres_db.py.
 """
 from __future__ import annotations
 
@@ -467,7 +467,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
 ]
 
-# «Вшитые» товары — порядок витрины при scripts/seed_demo_content.py
+# «Вшитые» товары — порядок витрины при scripts/init_postgres_db.py
 DEMO_WIRED_PRODUCT_SERIALS = ("RO-0001", "RS-0001", "YZY-9999", "BAL-0001", "BC-0001")
 
 

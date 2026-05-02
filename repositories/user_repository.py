@@ -33,8 +33,8 @@ def insert_user(email_norm, password_hash, display_name):
         cur.execute(
             """
             INSERT INTO AppUsers (email, password_hash, display_name)
-            OUTPUT INSERTED.id
             VALUES (?, ?, ?)
+            RETURNING id
             """,
             (email_norm, password_hash, display_name),
         )
@@ -95,9 +95,10 @@ def list_users_for_admin(limit=200):
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT TOP (?) id, email, display_name, is_admin, is_email_verified, level_code, lifetime_orders_count, lifetime_spend_amount
+            SELECT id, email, display_name, is_admin, is_email_verified, level_code, lifetime_orders_count, lifetime_spend_amount
             FROM AppUsers
             ORDER BY created_at DESC, id DESC
+            LIMIT ?
             """,
             (int(limit),),
         )

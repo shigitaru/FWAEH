@@ -1,5 +1,6 @@
 """UI strings, value maps, and translation helpers (t, tc, tv)."""
 import hashlib
+import logging
 import re
 from flask import session
 
@@ -9,6 +10,7 @@ except Exception:
     GoogleTranslator = None
 
 AUTO_TRANSLATE_CACHE = {}
+logger = logging.getLogger(__name__)
 
 TRANSLATIONS = {
     'en': {
@@ -1126,14 +1128,14 @@ def _translate_for_display_cached(text, source_lang, target_lang):
             AUTO_TRANSLATE_CACHE[cache_key] = out.strip()
             return AUTO_TRANSLATE_CACHE[cache_key]
     except Exception:
-        pass
+        logger.debug('Primary display translation failed', exc_info=True)
     try:
         out = GoogleTranslator(source='auto', target=target_lang).translate(text)
         if out:
             AUTO_TRANSLATE_CACHE[cache_key] = out.strip()
             return AUTO_TRANSLATE_CACHE[cache_key]
     except Exception:
-        pass
+        logger.debug('Fallback display translation failed', exc_info=True)
     return None
 
 
@@ -1186,7 +1188,7 @@ def tv(value):
                     AUTO_TRANSLATE_CACHE[cache_key] = auto_value
                     return auto_value
             except Exception:
-                pass
+                logger.debug('Value translation to English failed', exc_info=True)
         return s
 
     ru_map = VALUE_TRANSLATIONS.get(lang, {})
@@ -1213,5 +1215,5 @@ def tv(value):
                 AUTO_TRANSLATE_CACHE[cache_key] = auto_value
                 return auto_value
         except Exception:
-            pass
+            logger.debug('Value translation to Russian failed', exc_info=True)
     return value

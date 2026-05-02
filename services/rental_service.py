@@ -12,7 +12,7 @@ class CoutureAccessError(Exception):
 def parse_iso_date(raw_value):
     try:
         return datetime.strptime(str(raw_value or '').strip(), '%Y-%m-%d').date()
-    except Exception:
+    except (TypeError, ValueError):
         return None
 
 
@@ -40,7 +40,7 @@ def is_product_available(get_db_connection, active_statuses, product_id, start_d
     statuses = tuple(active_statuses)
     placeholders = ','.join('?' for _ in statuses)
     sql = f"""
-        SELECT TOP 1 1
+        SELECT 1
         FROM RentalOrderItems i
         INNER JOIN RentalOrders o ON o.id = i.order_id
         WHERE i.product_id = ?
@@ -52,6 +52,7 @@ def is_product_available(get_db_connection, active_statuses, product_id, start_d
     if exclude_order_id is not None:
         sql += " AND o.id <> ?"
         params.append(int(exclude_order_id))
+    sql += " LIMIT 1"
     with get_db_connection() as conn:
         cur = conn.cursor()
         cur.execute(sql, tuple(params))

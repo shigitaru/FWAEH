@@ -1,32 +1,10 @@
 """Order reviews: schema and read/write helpers."""
-from .db import get_db_connection, using_postgres
+from .db import get_db_connection
 from .pg_schema import ensure_postgres_schema
 
 
 def ensure_order_reviews_table():
-    if using_postgres():
-        ensure_postgres_schema()
-        return
-    with get_db_connection() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            IF OBJECT_ID('RentalOrderReviews', 'U') IS NULL
-            CREATE TABLE RentalOrderReviews (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                order_id INT NOT NULL,
-                user_id INT NOT NULL,
-                rating INT NOT NULL,
-                body NVARCHAR(1000) NULL,
-                created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-                updated_at DATETIME2 NULL,
-                CONSTRAINT FK_RentalOrderReviews_Order FOREIGN KEY (order_id) REFERENCES RentalOrders(id) ON DELETE CASCADE,
-                CONSTRAINT FK_RentalOrderReviews_AppUsers FOREIGN KEY (user_id) REFERENCES AppUsers(id),
-                CONSTRAINT UQ_RentalOrderReviews_OrderUser UNIQUE (order_id, user_id)
-            );
-            """
-        )
-        conn.commit()
+    ensure_postgres_schema()
 
 
 def get_order_review(order_id, user_id):

@@ -1,8 +1,9 @@
 """Rental order schema, checkout, and admin/history queries."""
+import logging
 from datetime import date, timedelta
 
 from .catalog import find_product
-from .db import get_db_connection, using_postgres
+from .db import get_db_connection
 from .pg_schema import ensure_postgres_schema
 from repositories.user_repository import update_user_loyalty
 
@@ -13,140 +14,14 @@ from .couture_access import is_couture_product, user_can_rent_couture
 from .loyalty import resolve_loyalty_level
 from .rental_wrappers import _cart_item_period, _is_product_available
 
+logger = logging.getLogger(__name__)
+
 def ensure_app_users_table():
-    if using_postgres():
-        ensure_postgres_schema()
-        return
-    with get_db_connection() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            IF OBJECT_ID('AppUsers', 'U') IS NULL
-            CREATE TABLE AppUsers (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                email NVARCHAR(255) NOT NULL UNIQUE,
-                password_hash NVARCHAR(500) NOT NULL,
-                display_name NVARCHAR(120) NOT NULL,
-                is_admin BIT NOT NULL DEFAULT 0,
-                is_email_verified BIT NOT NULL DEFAULT 0,
-                email_verification_code_hash NVARCHAR(500) NULL,
-                email_verification_expires_at DATETIME2 NULL,
-                email_verification_attempts INT NOT NULL DEFAULT 0,
-                level_code NVARCHAR(30) NOT NULL DEFAULT N'bronze',
-                lifetime_orders_count INT NOT NULL DEFAULT 0,
-                lifetime_spend_amount INT NOT NULL DEFAULT 0,
-                created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
-            );
-            """
-        )
-        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'is_admin') IS NULL ALTER TABLE dbo.AppUsers ADD is_admin BIT NOT NULL DEFAULT 0;")
-        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'is_email_verified') IS NULL ALTER TABLE dbo.AppUsers ADD is_email_verified BIT NOT NULL DEFAULT 0;")
-        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'email_verification_code_hash') IS NULL ALTER TABLE dbo.AppUsers ADD email_verification_code_hash NVARCHAR(500) NULL;")
-        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'email_verification_expires_at') IS NULL ALTER TABLE dbo.AppUsers ADD email_verification_expires_at DATETIME2 NULL;")
-        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'email_verification_attempts') IS NULL ALTER TABLE dbo.AppUsers ADD email_verification_attempts INT NOT NULL DEFAULT 0;")
-        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'level_code') IS NULL ALTER TABLE dbo.AppUsers ADD level_code NVARCHAR(30) NOT NULL DEFAULT N'bronze';")
-        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'lifetime_orders_count') IS NULL ALTER TABLE dbo.AppUsers ADD lifetime_orders_count INT NOT NULL DEFAULT 0;")
-        cur.execute("IF COL_LENGTH('dbo.AppUsers', 'lifetime_spend_amount') IS NULL ALTER TABLE dbo.AppUsers ADD lifetime_spend_amount INT NOT NULL DEFAULT 0;")
-        conn.commit()
+    ensure_postgres_schema()
 
 
 def ensure_rental_orders_tables():
-    if using_postgres():
-        ensure_postgres_schema()
-        return
-    ensure_app_users_table()
-    with get_db_connection() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            IF OBJECT_ID('RentalOrders', 'U') IS NULL
-            CREATE TABLE RentalOrders (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                user_id INT NOT NULL,
-                status NVARCHAR(30) NOT NULL DEFAULT N'created',
-                pickup_code NVARCHAR(40) NULL,
-                total_items INT NOT NULL,
-                total_price INT NOT NULL,
-                rental_start_date DATE NULL,
-                rental_end_date DATE NULL,
-                created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-                CONSTRAINT FK_RentalOrders_AppUsers FOREIGN KEY (user_id) REFERENCES AppUsers(id) ON DELETE CASCADE
-            );
-            """
-        )
-        cur.execute(
-            """
-            IF OBJECT_ID('RentalOrderItems', 'U') IS NULL
-            CREATE TABLE RentalOrderItems (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                order_id INT NOT NULL,
-                product_id INT NULL,
-                serial NVARCHAR(50) NOT NULL,
-                brand_name NVARCHAR(120) NOT NULL,
-                product_name NVARCHAR(180) NOT NULL,
-                size_label NVARCHAR(40) NULL,
-                rental_days INT NOT NULL,
-                price_per_day INT NOT NULL,
-                line_total INT NOT NULL,
-                image_url NVARCHAR(500) NULL,
-                rental_start_date DATE NULL,
-                rental_end_date DATE NULL,
-                CONSTRAINT FK_RentalOrderItems_Order FOREIGN KEY (order_id) REFERENCES RentalOrders(id) ON DELETE CASCADE
-            );
-            """
-        )
-        cur.execute(
-            """
-            IF COL_LENGTH('dbo.RentalOrders', 'rental_start_date') IS NULL
-                ALTER TABLE dbo.RentalOrders ADD rental_start_date DATE NULL;
-            """
-        )
-        cur.execute(
-            """
-            IF COL_LENGTH('dbo.RentalOrders', 'pickup_code') IS NULL
-                ALTER TABLE dbo.RentalOrders ADD pickup_code NVARCHAR(40) NULL;
-            """
-        )
-        cur.execute(
-            """
-            IF COL_LENGTH('dbo.RentalOrders', 'rental_end_date') IS NULL
-                ALTER TABLE dbo.RentalOrders ADD rental_end_date DATE NULL;
-            """
-        )
-        cur.execute(
-            """
-            IF COL_LENGTH('dbo.RentalOrderItems', 'rental_start_date') IS NULL
-                ALTER TABLE dbo.RentalOrderItems ADD rental_start_date DATE NULL;
-            """
-        )
-        cur.execute(
-            """
-            IF COL_LENGTH('dbo.RentalOrderItems', 'rental_end_date') IS NULL
-                ALTER TABLE dbo.RentalOrderItems ADD rental_end_date DATE NULL;
-            """
-        )
-        cur.execute(
-            """
-            UPDATE RentalOrders
-            SET status = N'created'
-            WHERE status IS NULL OR LTRIM(RTRIM(status)) = N'';
-            """
-        )
-        cur.execute(
-            """
-            ;WITH totals AS (
-                SELECT order_id, COALESCE(SUM(line_total), 0) AS sum_total
-                FROM RentalOrderItems
-                GROUP BY order_id
-            )
-            UPDATE o
-            SET o.total_price = t.sum_total
-            FROM RentalOrders o
-            INNER JOIN totals t ON t.order_id = o.id
-            WHERE COALESCE(o.total_price, 0) = 0 AND t.sum_total > 0;
-            """
-        )
-        conn.commit()
+    ensure_postgres_schema()
 
 
 def get_product_occupied_periods(product_id, days_ahead=60):
@@ -180,6 +55,7 @@ def get_product_occupied_periods(product_id, days_ahead=60):
                 for r in cur.fetchall()
             ]
     except Exception:
+        logger.exception('Failed to load occupied periods for product %s', product_id)
         return []
 
 
@@ -188,9 +64,6 @@ def ensure_legacy_balenciaga_coture_brand_rename():
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("SELECT OBJECT_ID('dbo.Brands', 'U')")
-            if cur.fetchone()[0] is None:
-                return
             cur.execute("SELECT 1 FROM Brands WHERE name = ?", ("Balenciaga Coture",))
             if not cur.fetchone():
                 return
@@ -201,15 +74,13 @@ def ensure_legacy_balenciaga_coture_brand_rename():
                 "UPDATE Brands SET name = ?, slug = ? WHERE name = ?",
                 ("Balenciaga Couture", "Balenciaga Couture", "Balenciaga Coture"),
             )
-            cur.execute("SELECT OBJECT_ID('dbo.RentalOrderItems', 'U')")
-            if cur.fetchone()[0] is not None:
-                cur.execute(
-                    "UPDATE RentalOrderItems SET brand_name = ? WHERE brand_name = ?",
-                    ("Balenciaga Couture", "Balenciaga Coture"),
-                )
+            cur.execute(
+                "UPDATE RentalOrderItems SET brand_name = ? WHERE brand_name = ?",
+                ("Balenciaga Couture", "Balenciaga Coture"),
+            )
             conn.commit()
     except Exception:
-        pass
+        logger.exception('Failed to apply legacy Balenciaga Couture rename')
 
 
 def _db_user_can_access_couture(user_id):
@@ -228,6 +99,7 @@ def _db_user_can_access_couture(user_id):
             )
             row = cur.fetchone()
     except Exception:
+        logger.exception('Failed to load couture access for user %s', user_id)
         row = None
     if row:
         raw_code = getattr(row, 'level_code', None)
@@ -247,7 +119,7 @@ def _create_rental_order(user_id, cart_items, discount_percent=0):
     ensure_rental_orders_tables()
     try:
         discount_percent = int(discount_percent or 0)
-    except Exception:
+    except (TypeError, ValueError):
         discount_percent = 0
     discount_percent = max(0, min(100, discount_percent))
     may_couture = _db_user_can_access_couture(user_id)
@@ -280,8 +152,8 @@ def _create_rental_order(user_id, cart_items, discount_percent=0):
         cur.execute(
             """
             INSERT INTO RentalOrders (user_id, status, total_items, total_price, rental_start_date, rental_end_date)
-            OUTPUT INSERTED.id
-            VALUES (?, N'created', ?, ?, ?, ?)
+            VALUES (?, 'created', ?, ?, ?, ?)
+            RETURNING id
             """,
             (int(user_id), total_items, total_price, rental_start, rental_end),
         )
@@ -336,12 +208,13 @@ def _fetch_user_rental_history(user_id, limit=8):
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT TOP (?) id, status, total_items, total_price, rental_start_date, rental_end_date, created_at
+            SELECT id, status, total_items, total_price, rental_start_date, rental_end_date, created_at
             FROM RentalOrders
             WHERE user_id = ?
             ORDER BY created_at DESC, id DESC
+            LIMIT ?
             """,
-            (int(limit), int(user_id)),
+            (int(user_id), int(limit)),
         )
         order_rows = cur.fetchall()
         if order_rows:
@@ -400,12 +273,13 @@ def _fetch_user_rental_history(user_id, limit=8):
             stats['total_spend'] = int(base_stats[2] or 0)
         cur.execute(
             """
-            SELECT TOP 1 brand_name, COUNT(*) AS c
+            SELECT brand_name, COUNT(*) AS c
             FROM RentalOrderItems i
             INNER JOIN RentalOrders o ON o.id = i.order_id
             WHERE o.user_id = ?
             GROUP BY brand_name
             ORDER BY c DESC, brand_name ASC
+            LIMIT 1
             """,
             (int(user_id),),
         )
@@ -429,10 +303,11 @@ def _fetch_recent_orders_admin(limit=80):
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT TOP (?) o.id, o.status, o.total_items, o.total_price, o.rental_start_date, o.rental_end_date, o.created_at, u.email, o.pickup_code
+            SELECT o.id, o.status, o.total_items, o.total_price, o.rental_start_date, o.rental_end_date, o.created_at, u.email, o.pickup_code
             FROM RentalOrders o
             INNER JOIN AppUsers u ON u.id = o.user_id
             ORDER BY o.created_at DESC, o.id DESC
+            LIMIT ?
             """,
             (int(limit),),
         )
@@ -500,6 +375,7 @@ def _fetch_recent_orders_admin(limit=80):
                 for row in cur.fetchall()
             }
         except Exception:
+            logger.exception('Failed to load reviews for recent admin orders')
             reviews_map = {}
         for order in orders:
             order['items'] = items_map.get(order['id'], [])
@@ -519,18 +395,18 @@ def get_admin_dashboard_stats():
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("SELECT COUNT(*) FROM RentalOrders WHERE status = N'in_rent'")
+            cur.execute("SELECT COUNT(*) FROM RentalOrders WHERE status = 'in_rent'")
             stats['active_rentals'] = int((cur.fetchone() or [0])[0] or 0)
-            cur.execute("SELECT COUNT(*) FROM RentalOrders WHERE status = N'created'")
+            cur.execute("SELECT COUNT(*) FROM RentalOrders WHERE status = 'created'")
             stats['pending_orders'] = int((cur.fetchone() or [0])[0] or 0)
             cur.execute("SELECT COUNT(*) FROM AppUsers")
             stats['users'] = int((cur.fetchone() or [0])[0] or 0)
             cur.execute("SELECT COUNT(*) FROM Products")
             stats['products'] = int((cur.fetchone() or [0])[0] or 0)
-            cur.execute("SELECT COUNT(*) FROM Products WHERE category = N'couture'")
+            cur.execute("SELECT COUNT(*) FROM Products WHERE category = 'couture'")
             stats['couture_items'] = int((cur.fetchone() or [0])[0] or 0)
     except Exception:
-        pass
+        logger.exception('Failed to load admin dashboard stats')
     return stats
 
 def recalculate_user_loyalty(user_id):
@@ -540,7 +416,7 @@ def recalculate_user_loyalty(user_id):
             """
             SELECT COUNT(*), COALESCE(SUM(total_price), 0)
             FROM RentalOrders
-            WHERE user_id = ? AND status = N'returned'
+            WHERE user_id = ? AND status = 'returned'
             """,
             (int(user_id),),
         )
