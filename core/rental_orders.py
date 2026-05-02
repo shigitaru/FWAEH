@@ -2,7 +2,8 @@
 from datetime import date, timedelta
 
 from .catalog import find_product
-from .db import get_db_connection
+from .db import get_db_connection, using_postgres
+from .pg_schema import ensure_postgres_schema
 from repositories.user_repository import update_user_loyalty
 
 from services.rental_service import RentalAvailabilityError, CoutureAccessError
@@ -13,6 +14,9 @@ from .loyalty import resolve_loyalty_level
 from .rental_wrappers import _cart_item_period, _is_product_available
 
 def ensure_app_users_table():
+    if using_postgres():
+        ensure_postgres_schema()
+        return
     with get_db_connection() as conn:
         cur = conn.cursor()
         cur.execute(
@@ -47,6 +51,9 @@ def ensure_app_users_table():
 
 
 def ensure_rental_orders_tables():
+    if using_postgres():
+        ensure_postgres_schema()
+        return
     ensure_app_users_table()
     with get_db_connection() as conn:
         cur = conn.cursor()

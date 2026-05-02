@@ -1,8 +1,12 @@
 """Order reviews: schema and read/write helpers."""
-from .db import get_db_connection
+from .db import get_db_connection, using_postgres
+from .pg_schema import ensure_postgres_schema
 
 
 def ensure_order_reviews_table():
+    if using_postgres():
+        ensure_postgres_schema()
+        return
     with get_db_connection() as conn:
         cur = conn.cursor()
         cur.execute(

@@ -1,7 +1,7 @@
 """Campaign page public data and admin/campaign DB helpers."""
 from flask import request
 
-from .db import get_db_connection
+from .db import get_db_connection, using_postgres
 from .i18n import TRANSLATIONS, _campaign_bilingual_display, get_lang, t
 
 from .media_uploads import _save_campaign_upload
@@ -13,15 +13,26 @@ def get_campaign_index_data():
             cur = conn.cursor()
             cur.execute('SELECT intro_en, intro_ru, tagline_en, tagline_ru FROM CampaignSettings WHERE id=1')
             srow = cur.fetchone()
-            cur.execute(
-                """
-                SELECT s.id, s.sort_order, s.headline_en, s.headline_ru, s.credits_en, s.credits_ru,
-                    (SELECT TOP 1 image_url FROM CampaignStoryImages i WHERE i.story_id = s.id ORDER BY i.sort_order, i.id) AS cover_url,
-                    (SELECT COUNT(*) FROM CampaignStoryImages i2 WHERE i2.story_id = s.id) AS img_count
-                FROM CampaignStories s
-                ORDER BY s.sort_order, s.id
-                """
-            )
+            if using_postgres():
+                cur.execute(
+                    """
+                    SELECT s.id, s.sort_order, s.headline_en, s.headline_ru, s.credits_en, s.credits_ru,
+                        (SELECT image_url FROM CampaignStoryImages i WHERE i.story_id = s.id ORDER BY i.sort_order, i.id LIMIT 1) AS cover_url,
+                        (SELECT COUNT(*) FROM CampaignStoryImages i2 WHERE i2.story_id = s.id) AS img_count
+                    FROM CampaignStories s
+                    ORDER BY s.sort_order, s.id
+                    """
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT s.id, s.sort_order, s.headline_en, s.headline_ru, s.credits_en, s.credits_ru,
+                        (SELECT TOP 1 image_url FROM CampaignStoryImages i WHERE i.story_id = s.id ORDER BY i.sort_order, i.id) AS cover_url,
+                        (SELECT COUNT(*) FROM CampaignStoryImages i2 WHERE i2.story_id = s.id) AS img_count
+                    FROM CampaignStories s
+                    ORDER BY s.sort_order, s.id
+                    """
+                )
             story_rows = cur.fetchall()
         lang = get_lang()
         if srow:
@@ -171,6 +182,19 @@ def _fetch_campaign_story_admin(story_id):
         return None, []
 
 def _insert_campaign_story_return_id(cur, params):
+    if using_postgres():
+        cur.execute(
+            """
+            INSERT INTO CampaignStories (sort_order, headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
+            """,
+            params,
+        )
+        row = cur.fetchone()
+        if row is None or row[0] is None:
+            raise RuntimeError('CampaignStories insert: could not read new id')
+        return int(row[0])
     """
     Вставка CampaignStories и получение id. SCOPE_IDENTITY() должен быть в том же T-SQL batch,
     что и INSERT: отдельный execute() в pyodbc — это новый batch, и SCOPE_IDENTITY() даёт NULL.
