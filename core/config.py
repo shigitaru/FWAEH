@@ -24,6 +24,8 @@ class Settings:
     smtp_pass: str
     smtp_from: str
     smtp_use_tls: bool
+    resend_api_key: str
+    resend_from: str
     pickup_address: str
     supabase_url: str
     supabase_service_role_key: str
@@ -68,6 +70,8 @@ def load_settings() -> Settings:
         smtp_pass=os.getenv('SMTP_PASS', '').strip(),
         smtp_from=os.getenv('SMTP_FROM', '').strip(),
         smtp_use_tls=os.getenv('SMTP_USE_TLS', '1').strip().lower() not in ('0', 'false', 'no'),
+        resend_api_key=os.getenv('RESEND_API_KEY', '').strip(),
+        resend_from=os.getenv('RESEND_FROM', '').strip(),
         pickup_address=os.getenv('PICKUP_ADDRESS', 'Москва, пункт выдачи Protocol Archive').strip(),
         supabase_url=os.getenv('SUPABASE_URL', '').strip().rstrip('/'),
         supabase_service_role_key=os.getenv('SUPABASE_SERVICE_ROLE_KEY', '').strip(),

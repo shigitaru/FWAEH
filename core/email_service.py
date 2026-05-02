@@ -3,6 +3,8 @@ import smtplib
 import socket
 from email.message import EmailMessage
 
+import requests
+
 from .config import settings
 
 
@@ -48,12 +50,41 @@ def _send_smtp_message(msg):
         smtp.send_message(msg)
 
 
+def _send_resend_message(msg):
+    sender = settings.resend_from or msg['From']
+    if not sender:
+        raise RuntimeError('RESEND_FROM or SMTP_FROM is required')
+    response = requests.post(
+        'https://api.resend.com/emails',
+        headers={
+            'Authorization': f'Bearer {settings.resend_api_key}',
+            'Content-Type': 'application/json',
+        },
+        json={
+            'from': sender,
+            'to': [msg['To']],
+            'subject': msg['Subject'],
+            'text': msg.get_content(),
+        },
+        timeout=20,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f'Resend email failed: {response.status_code} {response.text}')
+
+
+def _send_message(msg):
+    if settings.resend_api_key:
+        _send_resend_message(msg)
+        return
+    _send_smtp_message(msg)
+
+
 def send_verification_email(email_to, display_name, code):
-    if not settings.smtp_host or not settings.smtp_from:
-        raise RuntimeError('SMTP is not configured')
+    if not settings.resend_api_key and (not settings.smtp_host or not settings.smtp_from):
+        raise RuntimeError('Email delivery is not configured')
     msg = EmailMessage()
     msg['Subject'] = 'Protocol Archive - Email verification code'
-    msg['From'] = settings.smtp_from
+    msg['From'] = settings.resend_from or settings.smtp_from
     msg['To'] = email_to
     msg.set_content(
         (
@@ -63,12 +94,12 @@ def send_verification_email(email_to, display_name, code):
             'If you did not request registration, ignore this email.'
         )
     )
-    _send_smtp_message(msg)
+    _send_message(msg)
 
 
 def send_rental_approved_email(email_to, display_name, product_names, pickup_code):
-    if not settings.smtp_host or not settings.smtp_from:
-        raise RuntimeError('SMTP is not configured')
+    if not settings.resend_api_key and (not settings.smtp_host or not settings.smtp_from):
+        raise RuntimeError('Email delivery is not configured')
     if isinstance(product_names, (list, tuple)):
         names = [str(x).strip() for x in product_names if str(x or '').strip()]
     else:
@@ -80,7 +111,7 @@ def send_rental_approved_email(email_to, display_name, product_names, pickup_cod
     intro = 'Ваша заявка на аренду одобрена.' if len(names) > 1 else f'Ваша заявка на аренду предмета "{names[0]}" одобрена.'
     msg = EmailMessage()
     msg['Subject'] = 'Protocol Archive - Ваша заявка одобрена'
-    msg['From'] = settings.smtp_from
+    msg['From'] = settings.resend_from or settings.smtp_from
     msg['To'] = email_to
     msg.set_content(
         (
@@ -92,6 +123,6 @@ def send_rental_approved_email(email_to, display_name, product_names, pickup_cod
             'Покажите этот код сотруднику пункта выдачи.'
         )
     )
-    _send_smtp_message(msg)
+    _send_message(msg)
 
 
