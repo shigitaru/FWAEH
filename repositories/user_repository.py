@@ -129,3 +129,37 @@ def update_user_loyalty(user_id, level_code, orders_count, spend_amount):
             (str(level_code), int(orders_count), int(spend_amount), int(user_id)),
         )
         conn.commit()
+
+
+def upsert_demo_user(email, password_hash, display_name, is_admin, level_code, orders_count, spend_amount):
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT id FROM AppUsers WHERE email = ?', (email,))
+        row = cur.fetchone()
+        if row:
+            cur.execute(
+                """
+                UPDATE AppUsers
+                SET password_hash = ?,
+                    display_name = ?,
+                    is_admin = ?,
+                    is_email_verified = 1,
+                    level_code = ?,
+                    lifetime_orders_count = ?,
+                    lifetime_spend_amount = ?
+                WHERE email = ?
+                """,
+                (password_hash, display_name, int(is_admin), level_code, int(orders_count), int(spend_amount), email),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO AppUsers (
+                    email, password_hash, display_name, is_admin, is_email_verified,
+                    level_code, lifetime_orders_count, lifetime_spend_amount
+                )
+                VALUES (?, ?, ?, ?, 1, ?, ?, ?)
+                """,
+                (email, password_hash, display_name, int(is_admin), level_code, int(orders_count), int(spend_amount)),
+            )
+        conn.commit()

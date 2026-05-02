@@ -1,8 +1,25 @@
 """PostgreSQL schema helpers for Supabase/Render deployments."""
+import threading
+
 from .db import get_db_connection
+
+_schema_lock = threading.Lock()
+_schema_initialized = False
 
 
 def ensure_postgres_schema():
+    """Apply DDL once per process (hot paths call this safely)."""
+    global _schema_initialized
+    if _schema_initialized:
+        return
+    with _schema_lock:
+        if _schema_initialized:
+            return
+        _ensure_postgres_schema_once()
+        _schema_initialized = True
+
+
+def _ensure_postgres_schema_once():
     with get_db_connection() as conn:
         cur = conn.cursor()
         cur.execute(

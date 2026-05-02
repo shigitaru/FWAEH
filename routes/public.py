@@ -18,6 +18,7 @@ def register_public_routes(app, deps):
     get_wishlist_ids = deps['get_wishlist_ids']
     filter_products = deps['filter_products']
     find_product = deps['find_product']
+    find_products_by_ids = deps['find_products_by_ids']
     get_related_products = deps['get_related_products']
     parse_iso_date = deps['_parse_iso_date']
     is_product_available = deps['_is_product_available']
@@ -132,11 +133,8 @@ def register_public_routes(app, deps):
     @app.route('/wishlist')
     def wishlist_page():
         ids = get_wishlist_ids()
-        products = []
-        for pid in ids:
-            p = find_product(pid)
-            if p:
-                products.append(p)
+        by_id = find_products_by_ids(ids)
+        products = [by_id[i] for i in ids if i in by_id]
         return render_template(
             'wishlist.html',
             products=products,

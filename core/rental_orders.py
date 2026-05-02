@@ -2,17 +2,22 @@
 import logging
 from datetime import date, timedelta
 
-from .catalog import find_product
+from .catalog import find_product, find_products_by_ids
 from .db import get_db_connection
 from .pg_schema import ensure_postgres_schema
 from repositories.user_repository import update_user_loyalty
 
-from services.rental_service import RentalAvailabilityError, CoutureAccessError
+from services.rental_service import (
+    CoutureAccessError,
+    RentalAvailabilityError,
+    fetch_active_rental_periods,
+    rental_booking_overlaps,
+)
 
 from .constants import ACTIVE_RENTAL_STATUSES
 from .couture_access import is_couture_product, user_can_rent_couture
 from .loyalty import resolve_loyalty_level
-from .rental_wrappers import _cart_item_period, _is_product_available
+from .rental_wrappers import _cart_item_period
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +128,16 @@ def _create_rental_order(user_id, cart_items, discount_percent=0):
         discount_percent = 0
     discount_percent = max(0, min(100, discount_percent))
     may_couture = _db_user_can_access_couture(user_id)
+    cart_product_ids = []
+    for item in cart_items:
+        pid_raw = item.get('product_id')
+        try:
+            product_id = int(pid_raw) if pid_raw is not None else None
+        except (TypeError, ValueError):
+            product_id = None
+        if product_id is not None:
+            cart_product_ids.append(product_id)
+    products_by_id = find_products_by_ids(cart_product_ids) if cart_product_ids else {}
     for item in cart_items:
         pid_raw = item.get('product_id')
         try:
@@ -130,25 +145,34 @@ def _create_rental_order(user_id, cart_items, discount_percent=0):
         except (TypeError, ValueError):
             product_id = None
         if not may_couture and product_id:
-            prod = find_product(product_id)
+            prod = products_by_id.get(product_id)
             if is_couture_product(prod):
                 raise CoutureAccessError()
     normalized_items = []
     unavailable = []
+    period_product_ids = []
     for item in cart_items:
         start, end, days = _cart_item_period(item)
-        product_id = int(item.get('product_id')) if item.get('product_id') is not None else None
-        if not _is_product_available(product_id, start, end):
-            unavailable.append(str(item.get('serial') or product_id or 'item'))
-        normalized_items.append((item, start, end, days))
-    if unavailable:
-        raise RentalAvailabilityError(', '.join(unavailable))
+        pid_raw = item.get('product_id')
+        try:
+            product_id = int(pid_raw) if pid_raw is not None else None
+        except (TypeError, ValueError):
+            product_id = None
+        if product_id is not None:
+            period_product_ids.append(product_id)
+        normalized_items.append((item, start, end, days, product_id))
     total_price = 0
     total_items = len(cart_items)
-    rental_start = min(start for _, start, _, _ in normalized_items)
-    rental_end = max(end for _, _, end, _ in normalized_items)
+    rental_start = min(start for _, start, _, _, _ in normalized_items)
+    rental_end = max(end for _, _, end, _, _ in normalized_items)
     with get_db_connection() as conn:
         cur = conn.cursor()
+        periods_map = fetch_active_rental_periods(cur, ACTIVE_RENTAL_STATUSES, period_product_ids)
+        for item, start, end, days, product_id in normalized_items:
+            if not product_id or rental_booking_overlaps(periods_map.get(product_id, []), start, end):
+                unavailable.append(str(item.get('serial') or product_id or 'item'))
+        if unavailable:
+            raise RentalAvailabilityError(', '.join(unavailable))
         cur.execute(
             """
             INSERT INTO RentalOrders (user_id, status, total_items, total_price, rental_start_date, rental_end_date)
@@ -162,7 +186,7 @@ def _create_rental_order(user_id, cart_items, discount_percent=0):
         if not order_id:
             conn.rollback()
             return None
-        for item, start, end, days in normalized_items:
+        for item, start, end, days, product_id in normalized_items:
             price_per_day = int(item.get('price_per_day', 0) or 0)
             line_total_raw = price_per_day * days
             line_total = int(round(line_total_raw * (100 - discount_percent) / 100.0))
@@ -395,16 +419,23 @@ def get_admin_dashboard_stats():
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("SELECT COUNT(*) FROM RentalOrders WHERE status = 'in_rent'")
-            stats['active_rentals'] = int((cur.fetchone() or [0])[0] or 0)
-            cur.execute("SELECT COUNT(*) FROM RentalOrders WHERE status = 'created'")
-            stats['pending_orders'] = int((cur.fetchone() or [0])[0] or 0)
-            cur.execute("SELECT COUNT(*) FROM AppUsers")
-            stats['users'] = int((cur.fetchone() or [0])[0] or 0)
-            cur.execute("SELECT COUNT(*) FROM Products")
-            stats['products'] = int((cur.fetchone() or [0])[0] or 0)
-            cur.execute("SELECT COUNT(*) FROM Products WHERE category = 'couture'")
-            stats['couture_items'] = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute(
+                """
+                SELECT
+                    (SELECT COUNT(*) FROM RentalOrders WHERE status = 'in_rent') AS active_rentals,
+                    (SELECT COUNT(*) FROM RentalOrders WHERE status = 'created') AS pending_orders,
+                    (SELECT COUNT(*) FROM AppUsers) AS users_count,
+                    (SELECT COUNT(*) FROM Products) AS products_count,
+                    (SELECT COUNT(*) FROM Products WHERE category = 'couture') AS couture_items
+                """
+            )
+            row = cur.fetchone()
+            if row:
+                stats['active_rentals'] = int(row[0] or 0)
+                stats['pending_orders'] = int(row[1] or 0)
+                stats['users'] = int(row[2] or 0)
+                stats['products'] = int(row[3] or 0)
+                stats['couture_items'] = int(row[4] or 0)
     except Exception:
         logger.exception('Failed to load admin dashboard stats')
     return stats

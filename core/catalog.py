@@ -41,45 +41,51 @@ def _search_rank(product, query):
         return 7
     return 99
 
-def _attach_related_data(products):
+def _attach_related_data(products, conn=None):
     if not products:
         return
     ids = [p['id'] for p in products]
     placeholders = ','.join('?' for _ in ids)
-    with get_db_connection() as conn:
-        cur = conn.cursor()
+
+    def _load(cur):
         cur.execute(
             f'SELECT product_id, image_url FROM ProductImages WHERE product_id IN ({placeholders}) ORDER BY sort_order, id',
-            ids
+            ids,
         )
         img_map = {}
         for row in cur.fetchall():
             img_map.setdefault(row.product_id, []).append(row.image_url)
         cur.execute(
             f'SELECT product_id, size_label FROM ProductSizes WHERE product_id IN ({placeholders}) ORDER BY id',
-            ids
+            ids,
         )
         size_map = {}
         for row in cur.fetchall():
             size_map.setdefault(row.product_id, []).append(row.size_label)
+        return img_map, size_map
+
+    if conn is not None:
+        img_map, size_map = _load(conn.cursor())
+    else:
+        with get_db_connection() as c:
+            img_map, size_map = _load(c.cursor())
     for p in products:
         p['images'] = img_map.get(p['id'], [p['image']])
         p['sizes'] = size_map.get(p['id'], p.get('sizes', []))
 
 
-def _attach_availability_badges(products, selected_start=None, selected_end=None):
+def _attach_availability_badges(products, selected_start=None, selected_end=None, conn=None):
     if not products:
         return
     today = date.today()
-    default_end = today + timedelta(days=1)
     selected_mode = bool(selected_start and selected_end)
     try:
         ids = [int(p['id']) for p in products]
         placeholders = ','.join('?' for _ in ids)
         statuses = tuple(ACTIVE_RENTAL_STATUSES)
         status_placeholders = ','.join('?' for _ in statuses)
-        with get_db_connection() as conn:
-            cur = conn.cursor()
+
+        def _load_periods(cur):
             cur.execute(
                 f"""
                 SELECT i.product_id, i.rental_start_date, i.rental_end_date
@@ -95,6 +101,13 @@ def _attach_availability_badges(products, selected_start=None, selected_end=None
             periods = {}
             for row in cur.fetchall():
                 periods.setdefault(int(row[0]), []).append((row[1], row[2]))
+            return periods
+
+        if conn is not None:
+            periods = _load_periods(conn.cursor())
+        else:
+            with get_db_connection() as c:
+                periods = _load_periods(c.cursor())
         for product in products:
             pid = int(product.get('id') or 0)
             rows = periods.get(pid, [])
@@ -168,43 +181,71 @@ def get_admin_brands():
         return []
 
 
-def find_product(product_id):
-    try:
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute(
-                '''
+def find_products_by_ids(product_ids):
+    """Load multiple catalog rows in one round trip; returns dict[id -> product]."""
+    ids = []
+    for x in product_ids:
+        if x is None:
+            continue
+        try:
+            ids.append(int(x))
+        except (TypeError, ValueError):
+            continue
+    ids = list(dict.fromkeys(ids))
+    if not ids:
+        return {}
+    placeholders = ','.join('?' for _ in ids)
+    sql = f'''
                 SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
                        p.condition_score, p.material, p.origin, p.condition, p.main_image
                 FROM Products p
                 JOIN Brands b ON b.id = p.brand_id
-                WHERE p.id = ?
-                ''',
-                (product_id,)
-            )
-            row = cur.fetchone()
-        if not row:
-            return None
-        product = {
-            'id': row.id,
-            'category': row.category,
-            'item_category': getattr(row, 'item_category', None),
-            'serial': row.serial,
-            'brand': row.brand,
-            'name': row.name,
-            'price': row.price,
-            'max_days': row.max_days,
-            'condition_score': row.condition_score,
-            'material': row.material,
-            'origin': row.origin,
-            'condition': row.condition,
-            'image': row.main_image,
-        }
-        _attach_related_data([product])
-        return product
+                WHERE p.id IN ({placeholders})
+                '''
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, ids)
+            rows = cur.fetchall()
+            products = []
+            for row in rows:
+                products.append({
+                    'id': row.id,
+                    'category': row.category,
+                    'item_category': getattr(row, 'item_category', None),
+                    'serial': row.serial,
+                    'brand': row.brand,
+                    'name': row.name,
+                    'price': row.price,
+                    'max_days': row.max_days,
+                    'condition_score': row.condition_score,
+                    'material': row.material,
+                    'origin': row.origin,
+                    'condition': row.condition,
+                    'image': row.main_image,
+                })
+            _attach_related_data(products, conn=conn)
+            return {p['id']: p for p in products}
     except Exception:
-        logger.exception('Failed to find product %s in database; using fallback catalog', product_id)
-        return next((p for p in PRODUCTS if p['id'] == product_id), None)
+        logger.exception('Failed to batch-load products from database; using fallback catalog')
+        qs = []
+        for pid in ids:
+            p = next((x for x in PRODUCTS if x['id'] == pid), None)
+            if p:
+                qs.append(dict(p))
+        _attach_related_data(qs)
+        return {p['id']: p for p in qs}
+
+
+def find_product(product_id):
+    try:
+        pid = int(product_id)
+    except (TypeError, ValueError):
+        return None
+    found = find_products_by_ids([pid])
+    if pid in found:
+        return found[pid]
+    return next((p for p in PRODUCTS if p['id'] == pid), None)
 
 def filter_products(
     category=None,
@@ -291,23 +332,23 @@ def filter_products(
             cur = conn.cursor()
             cur.execute(sql, params)
             rows = cur.fetchall()
-        results = [{
-            'id': row.id,
-            'category': row.category,
-            'item_category': getattr(row, 'item_category', None),
-            'serial': row.serial,
-            'brand': row.brand,
-            'name': row.name,
-            'price': row.price,
-            'max_days': row.max_days,
-            'condition_score': row.condition_score,
-            'material': row.material,
-            'origin': row.origin,
-            'condition': row.condition,
-            'image': row.main_image,
-        } for row in rows]
-        _attach_related_data(results)
-        _attach_availability_badges(results, available_start, available_end)
+            results = [{
+                'id': row.id,
+                'category': row.category,
+                'item_category': getattr(row, 'item_category', None),
+                'serial': row.serial,
+                'brand': row.brand,
+                'name': row.name,
+                'price': row.price,
+                'max_days': row.max_days,
+                'condition_score': row.condition_score,
+                'material': row.material,
+                'origin': row.origin,
+                'condition': row.condition,
+                'image': row.main_image,
+            } for row in rows]
+            _attach_related_data(results, conn=conn)
+            _attach_availability_badges(results, available_start, available_end, conn=conn)
         return results
     except Exception:
         logger.exception('Failed to filter products from database; using fallback catalog')
@@ -351,31 +392,78 @@ def filter_products(
 def get_related_products(product, limit=4):
     if not product:
         return []
-    try:
-        candidates = filter_products(category=product.get('category'), sort='id')
-    except Exception:
-        logger.exception('Failed to load related products; using fallback catalog')
-        candidates = PRODUCTS.copy()
     pid = int(product.get('id') or 0)
-    brand = (product.get('brand') or '').strip().lower()
+    category = product.get('category') or ''
+    brand = (product.get('brand') or '').strip()
     item_category = (product.get('item_category') or '').strip()
     price = int(product.get('price') or 0)
+    price_band = max(50, int(price * 0.25)) if price else 0
+    lim = int(limit or 4)
+    candidate_cap = max(lim * 6, 24)
 
     def score(p):
         s = 0
-        if (p.get('brand') or '').strip().lower() == brand:
+        if (p.get('brand') or '').strip().lower() == brand.lower():
             s += 4
         if item_category and (p.get('item_category') or '') == item_category:
             s += 3
         p_price = int(p.get('price') or 0)
-        if price and abs(p_price - price) <= max(50, int(price * 0.25)):
+        if price and abs(p_price - price) <= price_band:
             s += 1
         return s
 
-    ranked = [
-        (score(p), p)
-        for p in candidates
-        if int(p.get('id') or 0) != pid
-    ]
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                '''
+                SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
+                       p.condition_score, p.material, p.origin, p.condition, p.main_image
+                FROM Products p
+                JOIN Brands b ON b.id = p.brand_id
+                WHERE p.category = ? AND p.id <> ?
+                ORDER BY (
+                    (CASE WHEN LOWER(TRIM(b.name)) = LOWER(?) THEN 4 ELSE 0 END)
+                  + (CASE WHEN ? <> '' AND COALESCE(p.item_category, '') = ? THEN 3 ELSE 0 END)
+                  + (CASE WHEN ? > 0 AND ABS(p.price - ?) <= ? THEN 1 ELSE 0 END)
+                ) DESC,
+                p.id
+                LIMIT ?
+                ''',
+                (
+                    category,
+                    pid,
+                    brand,
+                    item_category,
+                    item_category,
+                    price,
+                    price,
+                    price_band,
+                    candidate_cap,
+                ),
+            )
+            rows = cur.fetchall()
+            candidates = [{
+                'id': row.id,
+                'category': row.category,
+                'item_category': getattr(row, 'item_category', None),
+                'serial': row.serial,
+                'brand': row.brand,
+                'name': row.name,
+                'price': row.price,
+                'max_days': row.max_days,
+                'condition_score': row.condition_score,
+                'material': row.material,
+                'origin': row.origin,
+                'condition': row.condition,
+                'image': row.main_image,
+            } for row in rows]
+            _attach_related_data(candidates, conn=conn)
+    except Exception:
+        logger.exception('Failed to load related products from database; using fallback catalog')
+        candidates = [dict(p) for p in PRODUCTS if p.get('category') == category and int(p.get('id') or 0) != pid]
+        _attach_related_data(candidates)
+
+    ranked = [(score(p), p) for p in candidates if int(p.get('id') or 0) != pid]
     ranked.sort(key=lambda pair: (-pair[0], int(pair[1].get('id') or 0)))
-    return [p for s, p in ranked if s > 0][:int(limit or 4)]
+    return [p for s, p in ranked if s > 0][:lim]

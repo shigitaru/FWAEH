@@ -21,7 +21,14 @@ from core.campaign_service import (
     get_campaign_index_data,
     get_campaign_story_detail,
 )
-from core.catalog import filter_products, find_product, get_admin_brands, get_brands, get_related_products
+from core.catalog import (
+    filter_products,
+    find_product,
+    find_products_by_ids,
+    get_admin_brands,
+    get_brands,
+    get_related_products,
+)
 from core.constants import (
     ITEM_CATEGORIES,
     LOYALTY_LEVELS,
@@ -37,6 +44,7 @@ from core.couture_access import (
 )
 from core.db import get_db_connection
 from core.config import settings
+from core.pg_schema import ensure_postgres_schema
 from core.i18n import TRANSLATIONS, get_lang, t, tc, tv
 from core.listing import _collection_listing_data
 from core.loyalty import cart_totals_for_level, get_loyalty_level, next_loyalty_progress
@@ -63,6 +71,13 @@ from core.rental_orders import (
     ensure_rental_orders_tables,
 )
 from core.email_service import send_rental_approved_email, send_verification_email
+from repositories.order_repository import (
+    fetch_account_order_detail,
+    fetch_order_status_for_user,
+    fetch_user_loyalty_counters,
+    try_cancel_user_order,
+)
+from repositories.user_repository import upsert_demo_user
 from routes.admin import register_admin_routes
 from routes.api import register_api_routes
 from routes.auth import register_auth_routes
@@ -81,6 +96,8 @@ from core.rental_wrappers import _is_product_available, _parse_iso_date
 
 app = Flask(__name__)
 app.secret_key = 'protocol-archive-2024'
+
+ensure_postgres_schema()
 
 _brand_coture_typo_fixed = False
 
@@ -103,7 +120,6 @@ register_auth_routes(
         '_fetch_user_rental_history': _fetch_user_rental_history,
         'ensure_app_users_table': ensure_app_users_table,
         'ensure_rental_orders_tables': ensure_rental_orders_tables,
-        'get_db_connection': get_db_connection,
         '_user_fetch_by_email': _user_fetch_by_email,
         '_user_insert': _user_insert,
         '_set_user_verification_code': _set_user_verification_code,
@@ -119,6 +135,11 @@ register_auth_routes(
         'couture_min_level': couture_minimum_level(),
         'get_order_review': get_order_review,
         'upsert_order_review': upsert_order_review,
+        'try_cancel_user_order': try_cancel_user_order,
+        'fetch_account_order_detail': fetch_account_order_detail,
+        'fetch_order_status_for_user': fetch_order_status_for_user,
+        'fetch_user_loyalty_counters': fetch_user_loyalty_counters,
+        'upsert_demo_user': upsert_demo_user,
     },
 )
 
@@ -138,6 +159,7 @@ register_public_routes(
         'get_wishlist_ids': get_wishlist_ids,
         'filter_products': filter_products,
         'find_product': find_product,
+        'find_products_by_ids': find_products_by_ids,
         'get_related_products': get_related_products,
         '_parse_iso_date': _parse_iso_date,
         '_is_product_available': _is_product_available,

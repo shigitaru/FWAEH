@@ -1,7 +1,15 @@
-import psycopg2
+import logging
+import threading
+
+from psycopg2 import pool
 from psycopg2.extras import NamedTupleCursor
 
 from .config import settings
+
+logger = logging.getLogger(__name__)
+
+_pool_lock = threading.Lock()
+_connection_pool = None
 
 
 def _convert_placeholders(sql):
@@ -81,7 +89,48 @@ class PostgresConnection:
         return getattr(self._connection, name)
 
 
-def get_db_connection():
+class PooledPostgresConnection(PostgresConnection):
+    """Returns the underlying connection to the pool on close()."""
+
+    def __init__(self, raw_connection, pool_instance):
+        super().__init__(raw_connection)
+        self._pool = pool_instance
+        self._returned = False
+
+    def close(self):
+        if self._returned:
+            return
+        self._returned = True
+        conn = self._connection
+        self._connection = None
+        if conn is not None and self._pool is not None:
+            try:
+                self._pool.putconn(conn)
+            except Exception:
+                logger.exception('Failed to return connection to pool; closing underlying connection')
+                try:
+                    conn.close()
+                except Exception:
+                    logger.exception('Failed to close stray pooled connection')
+
+
+def _get_or_create_pool():
+    global _connection_pool
     if not settings.postgres_connection_string:
         raise RuntimeError('POSTGRES_CONNECTION_STRING or SUPABASE_DB_URL is required')
-    return PostgresConnection(psycopg2.connect(settings.postgres_connection_string))
+    if _connection_pool is not None:
+        return _connection_pool
+    with _pool_lock:
+        if _connection_pool is None:
+            _connection_pool = pool.ThreadedConnectionPool(
+                minconn=1,
+                maxconn=15,
+                dsn=settings.postgres_connection_string,
+            )
+    return _connection_pool
+
+
+def get_db_connection():
+    pl = _get_or_create_pool()
+    raw = pl.getconn()
+    return PooledPostgresConnection(raw, pl)

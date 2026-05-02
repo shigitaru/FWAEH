@@ -16,7 +16,6 @@ def register_auth_routes(app, deps):
     fetch_user_rental_history = deps['_fetch_user_rental_history']
     ensure_app_users_table = deps['ensure_app_users_table']
     ensure_rental_orders_tables = deps['ensure_rental_orders_tables']
-    get_db_connection = deps['get_db_connection']
     user_fetch_by_email = deps['_user_fetch_by_email']
     user_insert = deps['_user_insert']
     set_user_verification_code = deps['_set_user_verification_code']
@@ -32,6 +31,11 @@ def register_auth_routes(app, deps):
     couture_min_level = deps['couture_min_level']
     get_order_review = deps['get_order_review']
     upsert_order_review = deps['upsert_order_review']
+    try_cancel_user_order = deps['try_cancel_user_order']
+    fetch_account_order_detail = deps['fetch_account_order_detail']
+    fetch_order_status_for_user = deps['fetch_order_status_for_user']
+    fetch_user_loyalty_counters = deps['fetch_user_loyalty_counters']
+    upsert_demo_user = deps['upsert_demo_user']
 
     def _code_hash(email, code):
         return hashlib.sha256(f'{email.lower()}::{code}'.encode('utf-8')).hexdigest()
@@ -67,36 +71,7 @@ def register_auth_routes(app, deps):
         email, display_name, level_code, is_admin, orders_count, spend_amount = spec
         password_hash = generate_password_hash('demo-password')
         ensure_app_users_table()
-        row = user_fetch_by_email(email)
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            if row:
-                cur.execute(
-                    """
-                    UPDATE AppUsers
-                    SET password_hash = ?,
-                        display_name = ?,
-                        is_admin = ?,
-                        is_email_verified = 1,
-                        level_code = ?,
-                        lifetime_orders_count = ?,
-                        lifetime_spend_amount = ?
-                    WHERE email = ?
-                    """,
-                    (password_hash, display_name, int(is_admin), level_code, int(orders_count), int(spend_amount), email),
-                )
-            else:
-                cur.execute(
-                    """
-                    INSERT INTO AppUsers (
-                        email, password_hash, display_name, is_admin, is_email_verified,
-                        level_code, lifetime_orders_count, lifetime_spend_amount
-                    )
-                    VALUES (?, ?, ?, ?, 1, ?, ?, ?)
-                    """,
-                    (email, password_hash, display_name, int(is_admin), level_code, int(orders_count), int(spend_amount)),
-                )
-            conn.commit()
+        upsert_demo_user(email, password_hash, display_name, is_admin, level_code, orders_count, spend_amount)
         return user_fetch_by_email(email)
 
     @app.route('/account', methods=['GET'])
@@ -326,27 +301,13 @@ def register_auth_routes(app, deps):
             return redirect(url_for('account'))
         try:
             ensure_rental_orders_tables()
-            with get_db_connection() as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    SELECT id, status
-                    FROM RentalOrders
-                    WHERE id = ? AND user_id = ?
-                    """,
-                    (int(order_id), int(user_id)),
-                )
-                row = cur.fetchone()
-                if not row:
-                    flash(t('account_cancel_not_found'), 'error')
-                    return redirect(url_for('account'))
-                status = (row[1] or 'created').strip().lower()
-                if status != 'created':
-                    flash(t('account_cancel_not_allowed'), 'error')
-                    return redirect(url_for('account'))
-                cur.execute("UPDATE RentalOrders SET status = 'cancelled' WHERE id = ?", (int(order_id),))
-                conn.commit()
-            flash(t('account_cancel_success'), 'success')
+            outcome = try_cancel_user_order(int(order_id), int(user_id))
+            if outcome == 'not_found':
+                flash(t('account_cancel_not_found'), 'error')
+            elif outcome == 'not_allowed':
+                flash(t('account_cancel_not_allowed'), 'error')
+            else:
+                flash(t('account_cancel_success'), 'success')
         except Exception:
             logger.exception('Failed to cancel order %s for user %s', order_id, user_id)
             flash(t('acc_db_unavailable'), 'error')
@@ -360,52 +321,10 @@ def register_auth_routes(app, deps):
             return redirect(url_for('account'))
         try:
             ensure_rental_orders_tables()
-            with get_db_connection() as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    SELECT id, status, total_items, total_price, rental_start_date, rental_end_date, created_at, pickup_code
-                    FROM RentalOrders
-                    WHERE id = ? AND user_id = ?
-                    """,
-                    (int(order_id), int(user_id)),
-                )
-                row = cur.fetchone()
-                if not row:
-                    flash(t('account_order_not_found'), 'error')
-                    return redirect(url_for('account'))
-                cur.execute(
-                    """
-                    SELECT serial, brand_name, product_name, size_label, rental_days, line_total, image_url
-                    FROM RentalOrderItems
-                    WHERE order_id = ?
-                    ORDER BY id ASC
-                    """,
-                    (int(order_id),),
-                )
-                items = [
-                    {
-                        'serial': x[0] or '',
-                        'brand_name': x[1] or '',
-                        'product_name': x[2] or '',
-                        'size_label': x[3] or '',
-                        'rental_days': int(x[4] or 0),
-                        'line_total': int(x[5] or 0),
-                        'image_url': x[6] or '',
-                    }
-                    for x in cur.fetchall()
-                ]
-            order = {
-                'id': int(row[0]),
-                'status': (row[1] or 'created').strip().lower(),
-                'total_items': int(row[2] or 0),
-                'total_price': int(row[3] or 0),
-                'rental_start_date': row[4],
-                'rental_end_date': row[5],
-                'created_at': row[6],
-                'pickup_code': row[7] or '',
-                'items': items,
-            }
+            order = fetch_account_order_detail(order_id, user_id)
+            if not order:
+                flash(t('account_order_not_found'), 'error')
+                return redirect(url_for('account'))
             order_review = get_order_review(order['id'], user_id)
             order_status_flow = ('created', 'confirmed', 'in_rent', 'returned')
             order_timeline_index = order_status_flow.index(order['status']) if order['status'] in order_status_flow else -1
@@ -440,21 +359,10 @@ def register_auth_routes(app, deps):
             return redirect(url_for('account_order_detail', order_id=order_id) + '#order-review')
         try:
             ensure_rental_orders_tables()
-            with get_db_connection() as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    SELECT status
-                    FROM RentalOrders
-                    WHERE id = ? AND user_id = ?
-                    """,
-                    (int(order_id), int(user_id)),
-                )
-                row = cur.fetchone()
-            if not row:
+            status = fetch_order_status_for_user(order_id, user_id)
+            if status is None:
                 flash(t('account_order_not_found'), 'error')
                 return redirect(url_for('account'))
-            status = (row[0] or 'created').strip().lower()
             if status != 'returned':
                 flash(t('review_returned_only'), 'error')
                 return redirect(url_for('account_order_detail', order_id=order_id) + '#order-review')
@@ -477,23 +385,10 @@ def register_auth_routes(app, deps):
         orders_count = 0
         spend_amount = 0
         try:
-            with get_db_connection() as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    SELECT lifetime_orders_count, lifetime_spend_amount
-                    FROM AppUsers
-                    WHERE id = ?
-                    """,
-                    (int(user['id']),),
-                )
-                row = cur.fetchone()
-            if row:
-                orders_count = int(row[0] or 0)
-                spend_amount = int(row[1] or 0)
+            orders_count, spend_amount = fetch_user_loyalty_counters(user['id'])
         except Exception:
             logger.exception('Failed to load loyalty counters for user %s', user.get('id'))
-            pass
+            orders_count, spend_amount = 0, 0
         loyalty_progress = next_loyalty_progress(level_code, orders_count, spend_amount)
         return render_template(
             'members.html',
