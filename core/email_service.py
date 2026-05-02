@@ -8,21 +8,40 @@ from .config import settings
 
 class IPv4SMTP(smtplib.SMTP):
     def _get_socket(self, host, port, timeout):
+        last_error = None
         for family, socktype, proto, _, sockaddr in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
             sock = socket.socket(family, socktype, proto)
             sock.settimeout(timeout)
             try:
                 sock.connect(sockaddr)
                 return sock
-            except OSError:
+            except OSError as exc:
+                last_error = exc
                 sock.close()
-        raise OSError(f'Could not connect to SMTP host {host}:{port} over IPv4')
+        detail = f': {last_error}' if last_error else ''
+        raise OSError(f'Could not connect to SMTP host {host}:{port} over IPv4{detail}')
+
+
+class IPv4SMTP_SSL(smtplib.SMTP_SSL):
+    def _get_socket(self, host, port, timeout):
+        last_error = None
+        for family, socktype, proto, _, sockaddr in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
+            sock = socket.socket(family, socktype, proto)
+            sock.settimeout(timeout)
+            try:
+                sock.connect(sockaddr)
+                return self.context.wrap_socket(sock, server_hostname=host)
+            except OSError as exc:
+                last_error = exc
+                sock.close()
+        detail = f': {last_error}' if last_error else ''
+        raise OSError(f'Could not connect to SMTP SSL host {host}:{port} over IPv4{detail}')
 
 
 def _send_smtp_message(msg):
-    smtp_cls = IPv4SMTP if settings.smtp_host else smtplib.SMTP
+    smtp_cls = IPv4SMTP_SSL if int(settings.smtp_port or 0) == 465 else IPv4SMTP
     with smtp_cls(settings.smtp_host, settings.smtp_port, timeout=20) as smtp:
-        if settings.smtp_use_tls:
+        if settings.smtp_use_tls and int(settings.smtp_port or 0) != 465:
             smtp.starttls()
         if settings.smtp_user and settings.smtp_pass:
             smtp.login(settings.smtp_user, settings.smtp_pass)
