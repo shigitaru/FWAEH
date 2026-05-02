@@ -216,6 +216,7 @@ def register_auth_routes(app, deps):
                 or 'getaddrinfo' in msg
                 or 'name or service not known' in msg
                 or 'connection' in msg
+                or 'network is unreachable' in msg
             ):
                 flash(f'{t("acc_mail_send_failed_prefix")}: {e}', 'error')
                 return redirect(url_for('account'))

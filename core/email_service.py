@@ -1,8 +1,32 @@
 """SMTP helpers for account verification emails."""
 import smtplib
+import socket
 from email.message import EmailMessage
 
 from .config import settings
+
+
+class IPv4SMTP(smtplib.SMTP):
+    def _get_socket(self, host, port, timeout):
+        for family, socktype, proto, _, sockaddr in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
+            sock = socket.socket(family, socktype, proto)
+            sock.settimeout(timeout)
+            try:
+                sock.connect(sockaddr)
+                return sock
+            except OSError:
+                sock.close()
+        raise OSError(f'Could not connect to SMTP host {host}:{port} over IPv4')
+
+
+def _send_smtp_message(msg):
+    smtp_cls = IPv4SMTP if settings.smtp_host else smtplib.SMTP
+    with smtp_cls(settings.smtp_host, settings.smtp_port, timeout=20) as smtp:
+        if settings.smtp_use_tls:
+            smtp.starttls()
+        if settings.smtp_user and settings.smtp_pass:
+            smtp.login(settings.smtp_user, settings.smtp_pass)
+        smtp.send_message(msg)
 
 
 def send_verification_email(email_to, display_name, code):
@@ -20,12 +44,7 @@ def send_verification_email(email_to, display_name, code):
             'If you did not request registration, ignore this email.'
         )
     )
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as smtp:
-        if settings.smtp_use_tls:
-            smtp.starttls()
-        if settings.smtp_user and settings.smtp_pass:
-            smtp.login(settings.smtp_user, settings.smtp_pass)
-        smtp.send_message(msg)
+    _send_smtp_message(msg)
 
 
 def send_rental_approved_email(email_to, display_name, product_names, pickup_code):
@@ -54,11 +73,6 @@ def send_rental_approved_email(email_to, display_name, product_names, pickup_cod
             'Покажите этот код сотруднику пункта выдачи.'
         )
     )
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as smtp:
-        if settings.smtp_use_tls:
-            smtp.starttls()
-        if settings.smtp_user and settings.smtp_pass:
-            smtp.login(settings.smtp_user, settings.smtp_pass)
-        smtp.send_message(msg)
+    _send_smtp_message(msg)
 
 
