@@ -73,6 +73,8 @@ def _send_resend_message(msg):
 
 
 def _send_message(msg):
+    if settings.email_delivery_disabled:
+        return
     if settings.resend_api_key:
         _send_resend_message(msg)
         return
@@ -80,6 +82,8 @@ def _send_message(msg):
 
 
 def send_verification_email(email_to, display_name, code):
+    if settings.email_delivery_disabled:
+        return
     if not settings.resend_api_key and (not settings.smtp_host or not settings.smtp_from):
         raise RuntimeError('Email delivery is not configured')
     msg = EmailMessage()
@@ -98,6 +102,8 @@ def send_verification_email(email_to, display_name, code):
 
 
 def send_rental_approved_email(email_to, display_name, product_names, pickup_code):
+    if settings.email_delivery_disabled:
+        return
     if not settings.resend_api_key and (not settings.smtp_host or not settings.smtp_from):
         raise RuntimeError('Email delivery is not configured')
     if isinstance(product_names, (list, tuple)):

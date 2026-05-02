@@ -24,6 +24,7 @@ class Settings:
     smtp_pass: str
     smtp_from: str
     smtp_use_tls: bool
+    email_delivery_disabled: bool
     resend_api_key: str
     resend_from: str
     pickup_address: str
@@ -70,6 +71,10 @@ def load_settings() -> Settings:
         smtp_pass=os.getenv('SMTP_PASS', '').strip(),
         smtp_from=os.getenv('SMTP_FROM', '').strip(),
         smtp_use_tls=os.getenv('SMTP_USE_TLS', '1').strip().lower() not in ('0', 'false', 'no'),
+        email_delivery_disabled=(
+            os.getenv('EMAIL_DELIVERY_DISABLED', '')
+            or os.getenv('DISABLE_EMAIL_DELIVERY', '')
+        ).strip().lower() in ('1', 'true', 'yes', 'on'),
         resend_api_key=os.getenv('RESEND_API_KEY', '').strip(),
         resend_from=os.getenv('RESEND_FROM', '').strip(),
         pickup_address=os.getenv('PICKUP_ADDRESS', 'Москва, пункт выдачи Protocol Archive').strip(),

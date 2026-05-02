@@ -110,6 +110,7 @@ register_auth_routes(
         '_increment_verification_attempt': _increment_verification_attempt,
         '_mark_email_verified': _mark_email_verified,
         '_send_verification_email': send_verification_email,
+        'email_delivery_disabled': settings.email_delivery_disabled,
         '_clear_user_session': _clear_user_session,
         'ACC_EMAIL_RE': ACC_EMAIL_RE,
         'demo_mode': settings.demo_mode,

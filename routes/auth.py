@@ -20,6 +20,7 @@ def register_auth_routes(app, deps):
     increment_verification_attempt = deps['_increment_verification_attempt']
     mark_email_verified = deps['_mark_email_verified']
     send_verification_email = deps['_send_verification_email']
+    email_delivery_disabled = deps.get('email_delivery_disabled', False)
     clear_user_session = deps['_clear_user_session']
     acc_email_re = deps['ACC_EMAIL_RE']
     demo_mode = deps['demo_mode']
@@ -192,12 +193,26 @@ def register_auth_routes(app, deps):
                 # If email exists but is not verified yet, allow resending code
                 # instead of blocking user with "email already used".
                 if len(existing) > 5 and not bool(existing[5]):
+                    if email_delivery_disabled:
+                        mark_email_verified(int(existing[0]))
+                        row = user_fetch_by_email(email)
+                        if row:
+                            _apply_user_session_from_row(row)
+                        flash(t('acc_ok_email_verified'), 'success')
+                        return redirect(url_for('account'))
                     _issue_verification_code(email, existing[3] or display_name, int(existing[0]))
                     flash(t('acc_register_pending_exists_resent'), 'success')
                     return redirect(url_for('account_verify_page'))
                 flash(t('acc_err_email_used'), 'error')
                 return redirect(url_for('account'))
             new_id = user_insert(email, password, display_name)
+            if email_delivery_disabled:
+                mark_email_verified(new_id)
+                row = user_fetch_by_email(email)
+                if row:
+                    _apply_user_session_from_row(row)
+                flash(t('acc_ok_email_verified'), 'success')
+                return redirect(url_for('account'))
             _issue_verification_code(email, display_name, new_id)
         except Exception as e:
             err = str(e).upper()
