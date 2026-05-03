@@ -109,9 +109,7 @@
                     <a href="{{ url_for('couture') }}" class="{% if active_page == 'couture' %}is-active{% endif %}">{{ t('couture') }}</a>
                     <a href="{{ url_for('campaign') }}" class="{% if active_page == 'campaign' %}is-active{% endif %}">{{ t('campaign') }}</a>
                     <a href="{{ url_for('about') }}" class="{% if active_page == 'about' %}is-active{% endif %}">{{ t('about') }}</a>
-                    {% if current_user %}
                     <a href="{{ url_for('members') }}" class="{% if active_page == 'members' %}is-active{% endif %}">{{ t('members_open') }}</a>
-                    {% endif %}
                     {% if current_user and current_user.is_admin %}
                     <a href="{{ url_for('admin_panel') }}" class="pa-drawer-nav-secondary">{{ t('admin') }}</a>
                     {% endif %}
