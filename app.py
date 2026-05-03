@@ -41,6 +41,7 @@ from core.couture_access import (
     couture_gate_message_key,
     couture_minimum_level,
     format_couture_message,
+    is_couture_product,
 )
 from core.db import get_db_connection
 from core.config import settings
@@ -185,6 +186,8 @@ register_api_routes(
         'get_brands': get_brands,
         '_is_product_available': _is_product_available,
         'get_product_occupied_periods': get_product_occupied_periods,
+        'get_current_user': get_current_user,
+        'is_couture_product': is_couture_product,
     },
 )
 

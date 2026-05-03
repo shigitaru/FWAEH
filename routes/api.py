@@ -10,6 +10,8 @@ def register_api_routes(app, deps):
     get_brands = deps['get_brands']
     is_product_available = deps['_is_product_available']
     get_product_occupied_periods = deps['get_product_occupied_periods']
+    get_current_user = deps['get_current_user']
+    is_couture_product = deps['is_couture_product']
 
     def _next_available_period(product_id, requested_start, days, *, search_days=60):
         for offset in range(1, search_days + 1):
@@ -36,6 +38,8 @@ def register_api_routes(app, deps):
         product = find_product(product_id)
         if not product:
             return jsonify({'ok': False, 'error': 'not_found'}), 404
+        if is_couture_product(product) and not get_current_user():
+            return jsonify({'ok': False, 'error': 'login_required'}), 403
         days = min(max(days, 1), int(product.get('max_days', 1) or 1))
         requested_end = requested_start + timedelta(days=days)
         available = is_product_available(product_id, requested_start, requested_end)
@@ -64,6 +68,8 @@ def register_api_routes(app, deps):
         product = find_product(product_id)
         if not product:
             return jsonify({'ok': False, 'error': 'not_found'}), 404
+        if is_couture_product(product) and not get_current_user():
+            return jsonify({'ok': False, 'error': 'login_required'}), 403
         return jsonify(
             {
                 'ok': True,
@@ -92,6 +98,8 @@ def register_api_routes(app, deps):
             products = filter_products(query=q, sort='id')[:5]
         except Exception:
             products = []
+        if not get_current_user():
+            products = [p for p in products if not is_couture_product(p)]
         for product in products:
             key = ('product', int(product.get('id') or 0))
             if key in seen:

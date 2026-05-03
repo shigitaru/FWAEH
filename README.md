@@ -1,267 +1,172 @@
 ﻿# Аренда вещей (Flask)
 
-Веб-приложение: каталог, корзина, админка для товаров. Бэкенд: **Microsoft SQL Server** и **Flask**.
+Веб-приложение: каталог, корзина, профиль пользователя, аренды, админка. Бэкенд: **Python / Flask**, база данных: **PostgreSQL** (обычно **Supabase**). Медиа по желанию — **Supabase Storage** или статика.
 
-## Команды подряд (PowerShell)
+## Быстрый старт (PowerShell)
 
-Из папки, в которой лежит каталог `rental_app`:
+Из папки `rental_app`:
 
 ```powershell
-cd rental_app
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-$env:DB_NAME = "ProtocolArchive"
-$env:DB_SERVER = "localhost\SQLEXPRESS"
-python scripts/init_db.py
-# опционально: только вшитые 5 товаров + кампания из seed_defaults.py и папок static/*
-# python scripts/seed_demo_content.py
+copy .env.example .env
+# Заполните в .env POSTGRES_CONNECTION_STRING (строка из Supabase: Settings → Database)
+python scripts/init_postgres_db.py
 python app.py
 ```
 
-Подставьте свой экземпляр SQL Server вместо `localhost\SQLEXPRESS`. Сайт: http://127.0.0.1:5000. Перед первым запуском положите фото в `static/products/` и `static/campaign/` (см. раздел 5), если нужны локальные кадры.
+Сайт: **http://127.0.0.1:5000**
+
+При первом клонировании без `.env` приложение при импорте попытается подключиться к БД для применения схемы — задайте строку подключения до запуска или сразу после копирования `.env.example`.
 
 ---
 
-## Что нужно установить
+## Что установить
 
-- **Python 3.10+** (лучше 3.11+)
-- **Microsoft SQL Server** (Express или полная версия), локально или в сети
-- **ODBC Driver 17 for SQL Server** (или новее) — [скачать у Microsoft](https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server)
-- По умолчанию используется **вход Windows** (`Trusted_Connection=yes`). Для логина SQL-сервера нужна своя строка подключения в `DB_CONNECTION_STRING` (см. ниже).
+- **Python 3.10+** (рекомендуется 3.11+)
+- Проект **PostgreSQL**: бесплатно удобно через **[Supabase](https://supabase.com)** (создайте проект, возьмите строку подключения `postgres://...` или `postgresql://...` для **соединений с приложения**, не pooling-only URI, если драйвер ругается — используйте вариант с **Session mode / direct** из документации Supabase)
 
-## 1. Скопировать проект
+Для **локальной** PostgreSQL достаточно собрать обычный URL подключения для `psycopg2`.
 
-```bash
-cd rental_app
-```
+**Не нужно:** SQL Server, pyodbc, ODBC Driver — в текущей версии не используются.
 
-## 2. Виртуальное окружение (рекомендуется)
+---
 
-**Windows (PowerShell)**
+## Конфигурация (`.env`)
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+Скопируйте **`.env.example`** → **`.env`** и заполните. Секреты в репозиторий не коммитьте.
 
-**macOS / Linux**
+| Переменная | Назначение |
+|------------|------------|
+| `POSTGRES_CONNECTION_STRING` или `DATABASE_URL` / `SUPABASE_DB_URL` | Подключение к PostgreSQL (обязательно для работы приложения). |
+| `SMTP_*`, `PICKUP_ADDRESS` | Локально: отправка писем (верификация, оповещения о заказе). См. `.env.example`. |
+| `EMAIL_DELIVERY_DISABLED=1` | На хостинге (например Render): не слать почту; регистрация без письма (автоверификация в коде). |
+| `RESEND_API_KEY`, `RESEND_FROM` | Опционально: альтернатива SMTP через HTTP API. |
+| `DEMO_MODE=1` | Включает демо-вход по ролям (если поддерживается в приложении). |
+| `SUPABASE_*` | Опционально: загрузка медиа в Storage и публичные URL для слайдов/видео. |
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
+---
 
-## 3. Зависимости Python
+## Зависимости Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Пакеты: Flask, pyodbc, deep-translator (опционально, для переводов в интерфейсе), requests/python-dotenv (для внешнего media storage и env).
+Состав: Flask, psycopg2-binary, python-dotenv, requests, deep-translator, gunicorn (для продакшена).
 
-### Новые env для SMTP (email-верификация регистрации)
+---
 
-```powershell
-$env:SMTP_HOST = "smtp.example.com"
-$env:SMTP_PORT = "587"
-$env:SMTP_USER = "no-reply@example.com"
-$env:SMTP_PASS = "app-password"
-$env:SMTP_FROM = "no-reply@example.com"
-$env:SMTP_USE_TLS = "1"
-$env:PICKUP_ADDRESS = "Москва, ул. Пример, 1 (пункт выдачи Protocol Archive)"
-```
+## Инициализация схемы и демо-данных
 
-При переводе заказа в статус `confirmed` админкой клиенту отправляется email: что заявка одобрена, с упоминанием предмета, адресом пункта выдачи и кодом получения.
-
-### Новые env для Supabase Storage (внешнее хранение фото/видео)
-
-```powershell
-$env:SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co"
-$env:SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
-$env:SUPABASE_BUCKET = "media"
-$env:SUPABASE_PUBLIC_BASE_URL = ""
-```
-
-## 4. Подключение к SQL Server
-
-И приложение, и скрипт `init_db.py` должны смотреть на **один и тот же** сервер, имя базы и способ входа.
-
-### Вариант А — переменные окружения (удобно передавать проект другому человеку)
-
-Задайте их **до** `python scripts/init_db.py` и **до** `python app.py`:
-
-| Переменная | Пример | Назначение |
-|------------|--------|------------|
-| `DB_NAME` | `ProtocolArchive` | Имя базы данных |
-| `DB_SERVER` | `localhost\SQLEXPRESS` | Экземпляр SQL Server (имя ПК и экземпляр) |
-| `SEED_FULL_DEMO` | `1` | (Только при **первом** `init_db`.) Залить **весь** список `DEMO_PRODUCTS` из `seed_defaults.py`. Без неё в БД попадают только **5 вшитых** артикулов (`DEMO_WIRED_PRODUCT_SERIALS`). |
-
-**Пример в PowerShell:**
-
-```powershell
-$env:DB_NAME = "ProtocolArchive"
-$env:DB_SERVER = "localhost\SQLEXPRESS"
-```
-
-### Вариант Б — править значения по умолчанию в коде
-
-Если переменные не заданы, в `scripts/init_db.py` используются значения по умолчанию (`DB_SERVER`, `DB_NAME`). Приложение читает `DB_NAME`, `DB_SERVER` и при необходимости полную строку `DB_CONNECTION_STRING` — см. `app.py`.
-
-Чтобы задать всё одной строкой ODBC:
-
-```powershell
-$env:DB_CONNECTION_STRING = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost\SQLEXPRESS;DATABASE=ProtocolArchive;Trusted_Connection=yes;Encrypt=yes;TrustServerCertificate=yes;MARS_Connection=no;"
-```
-
-## 5. Создать базу и таблицы
-
-Скрипт создаёт базу (если её ещё нет), таблицы, начальный набор брендов и **демо-данные из `seed_defaults.py`**:
-
-- `Brands`
-- `Products`, `ProductImages`, `ProductSizes`
-- `CampaignSettings` — тексты страницы «Кампания» (EN/RU)
-- `CampaignStories` — истории кампании (заголовок, описание, коллаборация EN/RU)
-- `CampaignStoryImages` — фото внутри каждой истории
-- `CampaignLooks` — кадры для обложек; при сиде заполняется вместе с историями
-
-Из папки **`rental_app`**:
+Скрипт создаёт/проверяет таблицы (через `core/pg_schema.py`) и при **пустом** каталоге заливает стартовый набор из `seed_defaults.py` (бренды, товары, кампания и т.д.).
 
 ```bash
-python scripts/init_db.py
+python scripts/init_postgres_db.py
 ```
 
-В консоли появятся сообщения вроде `Created database` / `Database already exists` и `Tables are ready.`
+**Полный пересбор демо-каталога** (очистить товары/зависимые строки и залить снова):
 
-При первом создании таблиц вызывается **`apply_demo_seed`**: в каталог попадает **полный** список `DEMO_PRODUCTS` из `seed_defaults.py`, затем синхронизируются галереи товаров с локальными файлами в `static/products/` (см. ниже), кампания — из `static/campaign/` или запасной набор URL.
-
-Переменная окружения **`SEED_RESET_DEMO=1`** (перед `init_db`) заставит при создании таблиц **сначала очистить** товары и кампанию и залить их заново из `seed_defaults.py` (редко нужно при первом запуске).
-
-### Демо-каталог и кампания без полного `init_db`
-
-Чтобы **сбросить** текущие товары и истории кампании и залить **только вшитые** позиции (дипломный набор) + кампанию по правилам из `seed_defaults.py`:
-
-```bash
-python scripts/seed_demo_content.py
+```powershell
+$env:SEED_RESET_DEMO = "1"
+python scripts/init_postgres_db.py
 ```
 
-- **Товары:** пять артикулов — `RO-0001` (Kiss Heels), `RS-0001` (Raf bomber), `YZY-9999` (grillz), `BAL-0001` (джинсы), `BC-0001` (сумка Getaria, кутюр). Список задаётся в `seed_defaults.py` (`DEMO_WIRED_PRODUCT_SERIALS`, функция `wired_demo_products()`).
-- **Кампания:** если в папке `static/campaign/` есть файлы `campaign-1.jpg`, `campaign-02.png` и т.п. (сортировка по номеру), создаётся **одна** история со **всеми** этими кадрами в галерее; иначе подставляется запасной набор внешних URL из того же файла.
+Локальные фото можно по-прежнему класть в `static/products/` и `static/campaign/` согласно правилам в `seed_defaults.py` (раздел ниже сохранён по смыслу).
 
-Пользователей (`AppUsers`) скрипт не трогает.
+---
 
-### Локальные фото товаров (`static/products/`)
+## Локальные фото (`static/products/`, `static/campaign/`)
 
-Имена файлов (расширения: `png`, `jpg`, `jpeg`, `webp`):
+Имена для демо-артикулов (расширения `png`, `jpg`, …):
 
-| Артикул / товар | Шаблон имён |
-|-----------------|-------------|
+| Артикул | Шаблон имён файлов |
+|---------|---------------------|
 | `RO-0001` | `kiss-heels-1`, `kiss-heels-2`, … |
 | `RS-0001` | `raf-bomber-1`, … |
 | `YZY-9999` | `yzy-1`, … |
 | `BAL-0001` | `balenciaga-1`, … |
 | `BC-0001` | `couturebag.jpg` или `couturebag-1.png`, … |
 
-Если локальных файлов нет, для части позиций используются URL из `seed_defaults.py` (fallback).
+**Кампания:** файлы вида **`campaign-<номер>.<расширение>`** в `static/campaign/`.
 
-### Локальные фото кампании (`static/campaign/`)
+На главной и `/collection` для RTW есть фильтры: поиск, бренд, состояние, цена и т.д. Страница **Поиск** ищет по каталогу.
 
-Шаблон: **`campaign-<номер>.<расширение>`** (например `campaign-01.jpg`). Все найденные кадры объединяются в **одну** историю на странице кампании.
+---
 
-На **главной** и странице **`/collection`** для витрины **ready-to-wear** доступна панель **фильтров**: текстовый поиск (название, артикул, бренд, материал), бренд, минимальное состояние, сортировка по цене, максимальная цена за день. Страница **Поиск** в шапке ищет по всему каталогу простым совпадению в названии, артикуле и бренде.
-
-## 6. Запуск приложения
-
-Из **`rental_app`** с активированным venv:
+## Запуск
 
 ```bash
 python app.py
 ```
 
-Откройте в браузере **http://127.0.0.1:5000**
-
-Альтернатива (из **`rental_app`**, venv активен):
-
-**PowerShell**
+Альтернатива:
 
 ```powershell
 $env:FLASK_APP = "app.py"
 flask run --port 5000
 ```
 
-**CMD**
-
-```bat
-set FLASK_APP=app.py
-flask run --port 5000
-```
-
-При `python app.py` режим отладки и порт задаются в `app.py`.
-
-## Новая логика доступа и админки
-
-- Регистрация теперь двухэтапная: после формы создаётся пользователь и отправляется 6-значный код на email; вход доступен только после подтверждения.
-- Для админки используется отдельная страница входа: `/admin/login`.
-- Доступ к `/admin*` только у пользователей с `is_admin=1`.
-- В админке добавлено меню разделов: товары, заказы, пользователи, кампания.
-- В разделе пользователей можно назначать/снимать права администратора.
-
-## Уровни и member area
-
-- Уровень пользователя считается по гибридной модели (количество завершённых аренд + суммарный spend).
-- Уровни и пороги заданы в `core/constants.py` (`LOYALTY_LEVELS`).
-- В member area показываются персональные привилегии: приоритет, скидка, доступ к закрытым оффлайн-мероприятиям.
-
-## Media storage
-
-- Загрузки из админки могут идти в Supabase Storage (изображения и видео); в БД хранится URL ассета.
-- Локальные `static/*/uploads` используются как fallback, если Supabase не настроен.
-- Локальные медиа были перенесены в Supabase; проект ориентирован на внешнее хранение ассетов.
-
-## Чеклист для того, кто разворачивает проект у себя
-
-1. Установить Python, SQL Server, ODBC Driver 17.
-2. `python -m venv .venv` и активировать окружение.
-3. `pip install -r requirements.txt`
-4. Задать `DB_SERVER` / `DB_NAME` (или `DB_CONNECTION_STRING`) под свой SQL Server.
-5. Положить свои фото в `static/products/` и `static/campaign/` (по шаблонам выше), если нужны локальные кадры.
-6. `python scripts/init_db.py` — в каталог по умолчанию попадают **только 5 вшитых** товаров; расширенный демо-набор (Margiela, Vetements, …) — задайте **`SEED_FULL_DEMO=1`** **до** этого шага или выполните позже `python scripts/seed_demo_content.py` после сброса (скрипт с `reset=True` снова оставляет только вшитые пять).
-7. Если база уже создана со «старым» полным сидом и на главной лишние позиции: `python scripts/seed_demo_content.py` — витрина станет как в `seed_defaults` для вшитых артикулов.
-8. `python app.py` → http://127.0.0.1:5000
-
-## Структура проекта (кратко)
-
-- `app.py` — точка входа Flask: создание `app`, `before_request`, регистрация роутов и `context_processor`
-- `core/` — общие модули приложения (импорт: `from core.<модуль> import ...`):
-  - `core/i18n.py` — словари переводов и функции `t` / `tc` / `tv`
-  - `core/constants.py` — статусы заказов, fallback-каталог, бренды, категории вещей, `normalize_item_category_slug`
-  - `core/session_cart.py` — корзина, wishlist, текущий пользователь из сессии
-  - `core/rental_wrappers.py` — обёртки над `rental_service` для проверки доступности
-  - `core/rental_orders.py` — схема заказов, чекаут, история и админ-список заказов
-  - `core/account_service.py` — вставка/поиск пользователя для auth
-  - `core/catalog.py` — выборка товаров из БД с fallback на `PRODUCTS`
-  - `core/listing.py` — контекст листинга коллекции (фильтры, `url_for`)
-  - `core/media_uploads.py` — загрузка изображений товаров и кампании, правки галереи в админке
-  - `core/campaign_service.py` — публичные данные кампании и админские запросы к stories/settings
-  - `core/config.py` — конфигурация (DB, пути загрузок, разрешённые расширения)
-  - `core/db.py` — подключение к SQL Server (`get_db_connection`)
-- `routes/` — маршруты приложения:
-  - `routes/public.py` — публичные страницы, корзина, wishlist, checkout, campaign/about
-  - `routes/api.py` — API-эндпоинты (`/api/*`)
-  - `routes/auth.py` — аккаунт, login/register/logout, members
-  - `routes/admin.py` — операции админки (товары, бренды, заказы, campaign stories)
-- `services/` — бизнес-логика:
-  - `services/rental_service.py` — период аренды, парсинг дат, проверка доступности
-- `repositories/` — слой доступа к данным:
-  - `repositories/user_repository.py` — операции с пользователями
-- `seed_defaults.py` — единый источник демо-товаров, текстов кампании, правил локальных галерей и fallback-URL
-- `scripts/init_db.py` — создание БД, таблиц, первичный сид через `apply_demo_seed`
-- `scripts/seed_demo_content.py` — сброс товаров и кампании + заливка вшитого набора товаров и кампании
-- `templates/` — HTML-шаблоны
-- `static/` — `style.css`, сплэш `splash.jpg`, знак в шапке `header-logo-mark.png`, шрифт бренда `fonts/SignThat-Regular.ttf`
-- `static/products/` — демо-фото товаров по шаблонам имён; загрузки из админки — `static/products/uploads/`
-- `static/campaign/` — кадры кампании (`campaign-N.*`); загрузки из админки — `static/campaign/uploads/`
+**Продакшен (например Render):** `gunicorn` и переменные окружения там же; пример см. у провайдера (команда вроде `gunicorn app:app --bind 0.0.0.0:$PORT`).
 
 ---
 
-**Напоминание:** бинарные файлы (jpg/png) в репозиторий часто не коммитят — их нужно скопировать на свой ПК в `static/products/` и `static/campaign/`, затем при необходимости выполнить `seed_demo_content.py` или править каталог в админке. Полный снимок данных можно восстановить из бэкапа SQL (`.bak`).
+## Регистрация, почта и админка
+
+- Регистрация с подтверждением по email при работающем SMTP (или через Resend, если настроено).
+- С `EMAIL_DELIVERY_DISABLED=1` письма не уходят, верификация для новых пользователей обходится программно — удобно на бесплатном хостинге без исходящего SMTP.
+- Админка: `/admin/login`; доступ только у пользователей с `is_admin=1`.
+- В админке: товары, бренды, заказы, пользователи, кампания. При подтверждении заказа может уходить письмо клиенту (если почта включена).
+
+## Уровни и member area
+
+- Уровень по гибридной модели: число возвращённых аренд + суммарные траты.
+- Пороги в `core/constants.py` (`LOYALTY_LEVELS`).
+
+## Media storage
+
+- Загрузки из админки могут сохраняться в **Supabase Storage** (в БД хранятся URL).
+- Если Supabase не задан — используются локальные пути/`static`.
+
+---
+
+## Один аккаунт: локально и на хосте
+
+Если у **локального** `POSTGRES_CONNECTION_STRING` и у **деплоя** одна и та же база Supabase, заказы и статусы видны всем клиентам сразу после обновления страницы. Разные базы — разные данные.
+
+---
+
+## Чеклист «развернуть у себя»
+
+1. Python 3.10+, клонировать репозиторий.
+2. `python -m venv .venv` → активировать.
+3. `pip install -r requirements.txt`
+4. `copy .env.example .env`, заполнить **`POSTGRES_CONNECTION_STRING`** (и при необходимости SMTP / Supabase Storage).
+5. `python scripts/init_postgres_db.py`
+6. (Опционально) положить свои файлы в `static/products/` и `static/campaign/`, при необходимости перезапустить сид с `SEED_RESET_DEMO=1`.
+7. `python app.py`
+
+---
+
+## Структура проекта (кратко)
+
+| Путь | Назначение |
+|------|------------|
+| `app.py` | Точка входа Flask, регистрация роутов, контекст шаблонов |
+| `core/config.py` | Настройки из переменных окружения и `.env` |
+| `core/db.py` | Пул подключений PostgreSQL (`psycopg2`), `get_db_connection` |
+| `core/pg_schema.py` | DDL таблиц для PostgreSQL |
+| `core/catalog.py` | Каталог, связанные товары |
+| `core/rental_orders.py` | Заказы, чекаут, админские выборки, статистика дашборда |
+| `core/account_service.py`, `session_cart.py`, `auth`-логика в `routes/` | Пользователь, сессия, корзина |
+| `routes/public.py`, `auth.py`, `admin.py`, `api.py` | Маршруты |
+| `services/rental_service.py` | Даты аренды, проверки доступности батчем |
+| `repositories/` | `user_repository`, `order_repository` — точечный доступ к БД |
+| `scripts/init_postgres_db.py` | Схема + первичное наполнение |
+| `seed_defaults.py` | Демо-товары, кампания, fallback URL |
+| `templates/`, `static/` | Шаблоны и статика |
+
+---
+
+**Напоминание:** большие бинарники в Git часто не кладут — скопируйте нужные медиа в `static/` или загрузите через админку в Supabase; `.env` с паролями не коммитьте (добавьте в `.gitignore`, если ещё нет).

@@ -69,6 +69,9 @@ def register_public_routes(app, deps):
 
     @app.route('/couture')
     def couture():
+        if not get_current_user():
+            flash(t('acc_couture_members_only'), 'error')
+            return redirect(url_for('account'))
         products = filter_products(category='couture')
         return render_template('couture.html', products=products, active_page='couture', cart_count=get_cart_count(), t=t, tv=tv)
 
@@ -77,6 +80,9 @@ def register_public_routes(app, deps):
         product = find_product(product_id)
         if not product:
             return 'Not found', 404
+        if str(product.get('category') or '').strip().lower() == 'couture' and not get_current_user():
+            flash(t('acc_couture_members_only'), 'error')
+            return redirect(url_for('account'))
         user = get_current_user()
         can_rent = can_rent_product(user, product)
         couture_rent_notice = ''
@@ -276,6 +282,10 @@ def register_public_routes(app, deps):
         if max_price_raw.isdigit():
             max_price = int(max_price_raw)
         search_started = bool(q or category or brand or item_category or max_price is not None or sort != 'id')
+        user = get_current_user()
+        if category == 'couture' and not user:
+            flash(t('acc_couture_members_only'), 'error')
+            return redirect(url_for('account'))
         if not search_started:
             results = []
         else:
@@ -288,6 +298,8 @@ def register_public_routes(app, deps):
                 max_price=max_price,
                 sort=sort,
             )
+        if not user:
+            results = [p for p in results if str(p.get('category') or '').strip().lower() != 'couture']
         return render_template(
             'search.html',
             brands=get_brands(),
