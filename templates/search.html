@@ -57,10 +57,10 @@
     <div class="search-brands">
         <div class="section-title">{{ t('shop_by_brand') }}</div>
         <div class="brands-grid">
+            <a href="{{ url_for('collection') }}#collection-catalog" class="brand-card brand-card--all"><span class="all-brands-link">{{ t('all_brands') }}</span></a>
             {% for brand in brands %}
             <a href="{{ url_for('collection', brand=brand.slug) }}#collection-catalog" class="brand-card"><span class="{{ brand.css_class }}">{{ brand.name }}</span></a>
             {% endfor %}
-            <a href="{{ url_for('collection') }}#collection-catalog" class="brand-card"><span class="all-brands-link">{{ t('all_brands') }}</span></a>
         </div>
     </div>
 </div>

@@ -94,9 +94,9 @@
         </div>
         </div>
         {% else %}
-        <div class="account-dual-grid">
+        <div class="account-guest-narrow">
             <section class="account-card" aria-labelledby="acc-login-heading">
-                <h2 id="acc-login-heading" class="account-card-title">{{ t('account_login_title') }}</h2>
+                <h1 id="acc-login-heading" class="account-card-title">{{ t('account_login_title') }}</h1>
                 <p class="account-card-lead">{{ t('acc_email') }} · {{ t('acc_password') }}</p>
                 <form method="post" action="{{ url_for('account_login') }}" class="account-form" autocomplete="on">
                     <div class="account-field">
@@ -107,7 +107,7 @@
                         <label class="account-label" for="acc-login-password">{{ t('acc_password') }}</label>
                         <input id="acc-login-password" type="password" name="password" required autocomplete="current-password" class="account-input">
                     </div>
-                    <button type="submit" class="account-btn-primary">{{ t('acc_submit_login') }}</button>
+                    <button type="submit" class="account-btn-primary account-btn-primary--full">{{ t('acc_submit_login') }}</button>
                 </form>
                 {% if demo_mode %}
                 <div class="demo-login-panel">
@@ -129,55 +129,11 @@
                 </div>
                 {% endif %}
             </section>
-            <section class="account-card account-card--register" aria-labelledby="acc-reg-heading">
-                <h2 id="acc-reg-heading" class="account-card-title">{{ t('account_register_title') }}</h2>
-                <p class="account-card-lead">{{ t('acc_display_name') }}, {{ t('acc_email') }}, {{ t('acc_password') }}</p>
-                <form method="post" action="{{ url_for('account_register') }}" class="account-form" autocomplete="on">
-                    <div class="account-field">
-                        <label class="account-label" for="acc-reg-name">{{ t('acc_display_name') }}</label>
-                        <input id="acc-reg-name" type="text" name="display_name" required maxlength="120" autocomplete="name" class="account-input">
-                    </div>
-                    <div class="account-field">
-                        <label class="account-label" for="acc-reg-email">{{ t('acc_email') }}</label>
-                        <input id="acc-reg-email" type="email" name="email" required autocomplete="email" class="account-input" placeholder="name@example.com">
-                    </div>
-                    <div class="account-field">
-                        <label class="account-label" for="acc-reg-password">{{ t('acc_password') }}</label>
-                        <input id="acc-reg-password" type="password" name="password" required minlength="8" autocomplete="new-password" class="account-input">
-                    </div>
-                    <div class="account-field">
-                        <label class="account-label" for="acc-reg-password2">{{ t('acc_password_confirm') }}</label>
-                        <input id="acc-reg-password2" type="password" name="password_confirm" required minlength="8" autocomplete="new-password" class="account-input">
-                    </div>
-                    <button type="submit" class="account-btn-primary account-btn-primary--outline">{{ t('acc_submit_register') }}</button>
-                </form>
-                <div class="account-register-benefits">
-                    <p class="account-register-benefits-title">{{ t('account_register_benefits_title') }}</p>
-                    <ul class="account-register-benefits-list">
-                        <li>{{ t('account_register_benefit_1') }}</li>
-                        <li>{{ t('account_register_benefit_2') }}</li>
-                        <li>{{ t('account_register_benefit_3') }}</li>
-                        <li>{{ t('account_register_benefit_4') }}</li>
-                    </ul>
-                </div>
-            </section>
+            <div class="account-guest-register-cta">
+                <p class="account-guest-register-lead">{{ t('acc_guest_register_prompt') }}</p>
+                <a href="{{ url_for('account_register') }}" class="account-btn-primary account-btn-primary--full">{{ t('acc_submit_register') }}</a>
+            </div>
         </div>
-        {% if session.get('pending_verify_user_id') %}
-        <section class="account-card" style="margin-top:16px;" aria-labelledby="acc-verify-heading">
-            <h2 id="acc-verify-heading" class="account-card-title">{{ t('acc_verify_title') }}</h2>
-            <p class="account-card-lead">{{ t('acc_verify_lead').format(email=session.get('pending_verify_email')) }}</p>
-            <form method="post" action="{{ url_for('account_verify_email') }}" class="account-form" autocomplete="one-time-code">
-                <div class="account-field">
-                    <label class="account-label" for="acc-verify-code">{{ t('acc_verify_code_label') }}</label>
-                    <input id="acc-verify-code" type="text" name="code" required minlength="6" maxlength="6" class="account-input" placeholder="000000">
-                </div>
-                <button type="submit" class="account-btn-primary">{{ t('acc_verify_submit') }}</button>
-            </form>
-            <form method="post" action="{{ url_for('account_resend_verification') }}" class="account-form" style="margin-top:8px;">
-                <button type="submit" class="account-btn-secondary">{{ t('acc_verify_resend') }}</button>
-            </form>
-        </section>
-        {% endif %}
         {% endif %}
     </div>
 </div>

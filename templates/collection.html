@@ -157,15 +157,20 @@
 </div>
 {% endif %}
 
+{% macro refine_sort_summary() %}{% if active_sort == 'price_asc' %}{{ t('sort_price_low') }}{% elif active_sort == 'price_desc' %}{{ t('sort_price_high') }}{% else %}{{ t('sort_catalog') }}{% endif %}{% endmacro %}
+{% macro refine_brands_summary() %}{% if active_brands %}{% set j = joiner(', ') %}{% for b in brands if b.slug in active_brands %}{{ j() }}{{ b.name }}{% endfor %}{% else %}{{ t('filters_brand_all') }}{% endif %}{% endmacro %}
+{% macro refine_item_categories_summary() %}{% if active_item_categories %}{% set j = joiner(', ') %}{% for ic in item_categories if ic.slug in active_item_categories %}{{ j() }}{{ ic[current_lang] }}{% endfor %}{% else %}{{ t('filters_item_category_all') }}{% endif %}{% endmacro %}
+{% macro refine_condition_summary() %}{% for cl in condition_labels if cl.score == min_condition %}{{ cl[current_lang] }}{% endfor %}{% endmacro %}
+{% macro refine_price_summary() %}{% if max_price_value %}≤ ${{ max_price_value }}{% else %}{{ t('refine_summary_price_any') }}{% endif %}{% endmacro %}
+{% macro refine_availability_summary() %}{% if available_start_value and available_days_value %}{{ available_start_value }} · {{ available_days_value }} {{ t('days_label') }}{% elif available_start_value or available_days_value %}{{ t('refine_summary_dates_incomplete') }}{% else %}{{ t('refine_summary_dates_empty') }}{% endif %}{% endmacro %}
+
 <div class="refine-overlay" id="refine-overlay" hidden aria-hidden="true"></div>
 <aside class="refine-panel" id="refine-panel" aria-hidden="true" aria-labelledby="refine-drawer-title">
     <div class="refine-panel-inner">
         <header class="refine-panel-header">
             <h2 class="refine-panel-title" id="refine-drawer-title">
                 {{ t('refine_drawer_title') }}
-                {% if active_filter_count > 0 %}
-                <span class="refine-panel-badge" aria-label="{{ active_filter_count }}">{{ active_filter_count }}</span>
-                {% endif %}
+                <span id="refine-panel-badge" class="refine-panel-badge" {% if active_filter_count == 0 %}hidden aria-hidden="true"{% endif %} aria-label="{{ active_filter_count }}"><span class="refine-badge-count">{{ active_filter_count }}</span></span>
             </h2>
             <button type="button" class="refine-panel-close" id="refine-close" aria-label="{{ t('refine_drawer_close_aria') }}">
                 <span class="refine-panel-close-x" aria-hidden="true"></span>
@@ -174,10 +179,13 @@
         <p class="refine-panel-results">{{ products|length }} {{ tc('result', products|length) }}</p>
 
         <form class="refine-form" method="get" action="{{ request.path }}#collection-catalog" id="refine-form">
-            <div class="refine-acc is-open">
+            <div class="refine-acc is-open" data-refine-section="sort">
                 <button type="button" class="refine-acc-btn is-open" aria-expanded="true" data-refine-acc>
-                    <span class="refine-acc-dot" aria-hidden="true"></span>
-                    <span class="refine-acc-label">{{ t('refine_acc_sort') }}</span>
+                    <span class="refine-acc-dot{% if active_sort == 'id' %} refine-acc-dot--empty{% endif %}" aria-hidden="true"></span>
+                    <span class="refine-acc-text">
+                        <span class="refine-acc-label">{{ t('refine_acc_sort') }}</span>
+                        <span class="refine-acc-value" data-refine-for="sort">{{ refine_sort_summary() }}</span>
+                    </span>
                     <span class="refine-acc-icon" aria-hidden="true"></span>
                 </button>
                 <div class="refine-acc-panel">
@@ -198,21 +206,21 @@
                 </div>
             </div>
 
-            <div class="refine-acc">
+            <div class="refine-acc" data-refine-section="brand">
                 <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
-                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
-                    <span class="refine-acc-label">{{ t('refine_acc_brand') }}</span>
+                    <span class="refine-acc-dot{% if not active_brands %} refine-acc-dot--empty{% endif %}" aria-hidden="true"></span>
+                    <span class="refine-acc-text">
+                        <span class="refine-acc-label">{{ t('refine_acc_brand') }}</span>
+                        <span class="refine-acc-value" data-refine-for="brand">{{ refine_brands_summary() }}</span>
+                    </span>
                     <span class="refine-acc-icon" aria-hidden="true"></span>
                 </button>
                 <div class="refine-acc-panel refine-acc-panel--scroll" hidden>
-                    <div class="refine-choice-list" role="radiogroup" aria-label="{{ t('refine_acc_brand') }}">
-                        <label class="refine-choice">
-                            <input type="radio" name="brand" value="" {% if not active_brand %}checked{% endif %}>
-                            <span>{{ t('filters_brand_all') }}</span>
-                        </label>
+                    <div class="refine-choice-list" role="group" aria-label="{{ t('refine_acc_brand') }}">
+                        <button type="button" class="refine-choice-row refine-choice-row--muted" data-refine-clear-brands>{{ t('filters_brand_all') }}</button>
                         {% for b in brands %}
                         <label class="refine-choice">
-                            <input type="radio" name="brand" value="{{ b.slug }}" {% if active_brand == b.slug %}checked{% endif %}>
+                            <input type="checkbox" name="brand" value="{{ b.slug }}" {% if b.slug in active_brands %}checked{% endif %}>
                             <span>{{ b.name }}</span>
                         </label>
                         {% endfor %}
@@ -220,21 +228,21 @@
                 </div>
             </div>
 
-            <div class="refine-acc">
+            <div class="refine-acc" data-refine-section="item_category">
                 <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
-                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
-                    <span class="refine-acc-label">{{ t('refine_acc_item_category') }}</span>
+                    <span class="refine-acc-dot{% if not active_item_categories %} refine-acc-dot--empty{% endif %}" aria-hidden="true"></span>
+                    <span class="refine-acc-text">
+                        <span class="refine-acc-label">{{ t('refine_acc_item_category') }}</span>
+                        <span class="refine-acc-value" data-refine-for="item_category">{{ refine_item_categories_summary() }}</span>
+                    </span>
                     <span class="refine-acc-icon" aria-hidden="true"></span>
                 </button>
                 <div class="refine-acc-panel refine-acc-panel--scroll" hidden>
-                    <div class="refine-choice-list" role="radiogroup" aria-label="{{ t('refine_acc_item_category') }}">
-                        <label class="refine-choice">
-                            <input type="radio" name="item_category" value="" {% if not active_item_category %}checked{% endif %}>
-                            <span>{{ t('filters_item_category_all') }}</span>
-                        </label>
+                    <div class="refine-choice-list" role="group" aria-label="{{ t('refine_acc_item_category') }}">
+                        <button type="button" class="refine-choice-row refine-choice-row--muted" data-refine-clear-item-categories>{{ t('filters_item_category_all') }}</button>
                         {% for ic in item_categories %}
                         <label class="refine-choice">
-                            <input type="radio" name="item_category" value="{{ ic.slug }}" {% if active_item_category == ic.slug %}checked{% endif %}>
+                            <input type="checkbox" name="item_category" value="{{ ic.slug }}" {% if ic.slug in active_item_categories %}checked{% endif %}>
                             <span>{{ ic[current_lang] }}</span>
                         </label>
                         {% endfor %}
@@ -242,10 +250,13 @@
                 </div>
             </div>
 
-            <div class="refine-acc">
+            <div class="refine-acc" data-refine-section="condition">
                 <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
-                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
-                    <span class="refine-acc-label">{{ t('refine_acc_condition') }}</span>
+                    <span class="refine-acc-dot{% if min_condition == 0 %} refine-acc-dot--empty{% endif %}" aria-hidden="true"></span>
+                    <span class="refine-acc-text">
+                        <span class="refine-acc-label">{{ t('refine_acc_condition') }}</span>
+                        <span class="refine-acc-value" data-refine-for="condition">{{ refine_condition_summary() }}</span>
+                    </span>
                     <span class="refine-acc-icon" aria-hidden="true"></span>
                 </button>
                 <div class="refine-acc-panel" hidden>
@@ -261,10 +272,13 @@
                 </div>
             </div>
 
-            <div class="refine-acc">
+            <div class="refine-acc" data-refine-section="price">
                 <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
-                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
-                    <span class="refine-acc-label">{{ t('refine_acc_price') }}</span>
+                    <span class="refine-acc-dot{% if not max_price_value %} refine-acc-dot--empty{% endif %}" aria-hidden="true"></span>
+                    <span class="refine-acc-text">
+                        <span class="refine-acc-label">{{ t('refine_acc_price') }}</span>
+                        <span class="refine-acc-value" data-refine-for="price">{{ refine_price_summary() }}</span>
+                    </span>
                     <span class="refine-acc-icon" aria-hidden="true"></span>
                 </button>
                 <div class="refine-acc-panel" hidden>
@@ -273,10 +287,13 @@
                 </div>
             </div>
 
-            <div class="refine-acc">
+            <div class="refine-acc" data-refine-section="availability">
                 <button type="button" class="refine-acc-btn" aria-expanded="false" data-refine-acc>
-                    <span class="refine-acc-dot refine-acc-dot--empty" aria-hidden="true"></span>
-                    <span class="refine-acc-label">{{ t('refine_acc_availability') }}</span>
+                    <span class="refine-acc-dot{% if not (available_start_value and available_days_value) %} refine-acc-dot--empty{% endif %}" aria-hidden="true"></span>
+                    <span class="refine-acc-text">
+                        <span class="refine-acc-label">{{ t('refine_acc_availability') }}</span>
+                        <span class="refine-acc-value" data-refine-for="availability">{{ refine_availability_summary() }}</span>
+                    </span>
                     <span class="refine-acc-icon" aria-hidden="true"></span>
                 </button>
                 <div class="refine-acc-panel" hidden>
@@ -296,11 +313,22 @@
 
 <button type="button" class="refine-fab" id="refine-fab" aria-expanded="false" aria-controls="refine-panel"
     aria-label="{{ t('refine_fab_aria') }}">
-    <span class="refine-fab-text">{{ t('refine_label') }}</span>
-    {% if active_filter_count > 0 %}
-    <span class="refine-fab-badge">{{ active_filter_count }}</span>
-    {% endif %}
+    <span class="refine-fab-inner">
+        <span class="refine-fab-text">{{ t('refine_label') }}</span>
+        <span class="refine-fab-badge-shift" aria-hidden="true">
+            <span id="refine-fab-badge" class="refine-fab-badge{% if active_filter_count > 9 %} refine-fab-badge--wide{% endif %}" {% if active_filter_count == 0 %}hidden aria-hidden="true"{% endif %}><span class="refine-badge-count">{{ active_filter_count }}</span></span>
+        </span>
+    </span>
 </button>
+
+<script type="application/json" id="refine-live-i18n">{{ {
+    'allBrands': t('filters_brand_all'),
+    'allCategories': t('filters_item_category_all'),
+    'priceAny': t('refine_summary_price_any'),
+    'datesEmpty': t('refine_summary_dates_empty'),
+    'datesIncomplete': t('refine_summary_dates_incomplete'),
+    'daysWord': t('days_label')
+}|tojson }}</script>
 
 <div id="collection-catalog" class="collection-main">
 <div class="listing-page-lead">
@@ -335,91 +363,263 @@
     var panel = document.getElementById('refine-panel');
     var overlay = document.getElementById('refine-overlay');
     var closeBtn = document.getElementById('refine-close');
-    if (!fab || !panel || !overlay) return;
+    var refineShellReady = !!(fab && panel && overlay && closeBtn);
 
-    var reduceMotion = false;
-    try {
-        reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    } catch (e) {}
+    if (refineShellReady) {
+        var reduceMotion = false;
+        try {
+            reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        } catch (e) {}
 
-    function setOpen(on) {
-        panel.classList.toggle('is-open', on);
-        overlay.classList.toggle('is-open', on);
-        overlay.hidden = !on;
-        panel.setAttribute('aria-hidden', on ? 'false' : 'true');
-        fab.setAttribute('aria-expanded', on ? 'true' : 'false');
-        document.documentElement.classList.toggle('refine-open', on);
-        document.body.style.overflow = on ? 'hidden' : '';
-        if (on) {
-            try { closeBtn.focus(); } catch (e) {}
-        } else {
-            try { fab.focus(); } catch (e) {}
+        function setOpen(on) {
+            panel.classList.toggle('is-open', on);
+            overlay.classList.toggle('is-open', on);
+            overlay.hidden = !on;
+            panel.setAttribute('aria-hidden', on ? 'false' : 'true');
+            fab.setAttribute('aria-expanded', on ? 'true' : 'false');
+            document.documentElement.classList.toggle('refine-open', on);
+            document.body.style.overflow = on ? 'hidden' : '';
+            if (on) {
+                try { closeBtn.focus(); } catch (e2) {}
+            } else {
+                try { fab.focus(); } catch (e3) {}
+            }
         }
-    }
 
-    fab.addEventListener('click', function () { setOpen(true); });
-    closeBtn.addEventListener('click', function () { setOpen(false); });
-    overlay.addEventListener('click', function () { setOpen(false); });
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && panel.classList.contains('is-open')) {
-            e.stopPropagation();
-            setOpen(false);
+        fab.addEventListener('click', function () { setOpen(true); });
+        closeBtn.addEventListener('click', function () { setOpen(false); });
+        overlay.addEventListener('click', function () { setOpen(false); });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && panel.classList.contains('is-open')) {
+                e.stopPropagation();
+                setOpen(false);
+            }
+        }, true);
+
+        /*
+         * FAB после выхода из hero: низ hero выше края экрана.
+         * Плюс: якорь #collection-catalog / #collection-grid не всегда даёт событие scroll —
+         * дублируем проверкой hash, load, таймерами и IntersectionObserver.
+         */
+        var hero = document.querySelector('.pa-landing') || document.querySelector('.collection-hero');
+        function syncRefineFab() {
+            if (!hero) {
+                fab.classList.add('refine-fab--visible');
+                return;
+            }
+            var hb = hero.getBoundingClientRect().bottom;
+            var pastHero = hb < 96;
+            var sy = window.scrollY || window.pageYOffset || 0;
+            var hash = (location.hash || '').toLowerCase();
+            var jumpedToCatalog = hash === '#collection-catalog' || hash === '#collection-grid';
+            var catalog = document.getElementById('collection-catalog');
+            var catVisible = false;
+            var catInUpperView = false;
+            if (catalog) {
+                var r = catalog.getBoundingClientRect();
+                var vh = window.innerHeight || 0;
+                if (jumpedToCatalog) {
+                    catVisible = r.top < vh * 0.98 && r.bottom > 0;
+                }
+                /* Скролл колесом без смены hash: «вещи» уже у верхней части экрана */
+                if (sy > 64) {
+                    catInUpperView = r.top < vh * 0.38;
+                }
+            }
+            fab.classList.toggle('refine-fab--visible', pastHero || catVisible || catInUpperView);
         }
-    }, true);
-
-    /*
-     * FAB после выхода из hero: низ hero выше края экрана.
-     * Плюс: якорь #collection-catalog / #collection-grid не всегда даёт событие scroll —
-     * дублируем проверкой hash, load, таймерами и IntersectionObserver.
-     */
-    var hero = document.querySelector('.pa-landing') || document.querySelector('.collection-hero');
-    function syncRefineFab() {
+        function scheduleSync() {
+            syncRefineFab();
+            setTimeout(syncRefineFab, 0);
+            setTimeout(syncRefineFab, 80);
+            setTimeout(syncRefineFab, 320);
+        }
         if (!hero) {
-            fab.classList.add('refine-fab--visible');
-            return;
-        }
-        var hb = hero.getBoundingClientRect().bottom;
-        var pastHero = hb < 96;
-        var sy = window.scrollY || window.pageYOffset || 0;
-        var hash = (location.hash || '').toLowerCase();
-        var jumpedToCatalog = hash === '#collection-catalog' || hash === '#collection-grid';
-        var catalog = document.getElementById('collection-catalog');
-        var catVisible = false;
-        var catInUpperView = false;
-        if (catalog) {
-            var r = catalog.getBoundingClientRect();
-            var vh = window.innerHeight || 0;
-            if (jumpedToCatalog) {
-                catVisible = r.top < vh * 0.98 && r.bottom > 0;
+            if (!reduceMotion) {
+                requestAnimationFrame(function () { setTimeout(function () { fab.classList.add('refine-fab--visible'); }, 280); });
+            } else {
+                fab.classList.add('refine-fab--visible');
             }
-            /* Скролл колесом без смены hash: «вещи» уже у верхней части экрана */
-            if (sy > 64) {
-                catInUpperView = r.top < vh * 0.38;
-            }
-        }
-        fab.classList.toggle('refine-fab--visible', pastHero || catVisible || catInUpperView);
-    }
-    function scheduleSync() {
-        syncRefineFab();
-        setTimeout(syncRefineFab, 0);
-        setTimeout(syncRefineFab, 80);
-        setTimeout(syncRefineFab, 320);
-    }
-    if (!hero) {
-        if (!reduceMotion) {
-            requestAnimationFrame(function () { setTimeout(function () { fab.classList.add('refine-fab--visible'); }, 280); });
         } else {
-            fab.classList.add('refine-fab--visible');
+            scheduleSync();
+            window.addEventListener('scroll', syncRefineFab, { passive: true });
+            window.addEventListener('resize', syncRefineFab);
+            window.addEventListener('load', scheduleSync);
+            window.addEventListener('hashchange', scheduleSync);
         }
-    } else {
-        scheduleSync();
-        window.addEventListener('scroll', syncRefineFab, { passive: true });
-        window.addEventListener('resize', syncRefineFab);
-        window.addEventListener('load', scheduleSync);
-        window.addEventListener('hashchange', scheduleSync);
     }
 
-    /* Аккордеон: один открытый блок — закрываем только текущую открытую (без цикла по всем секциям) */
+    /* Аккордеон + живое обновление подписей выбранных фильтров (работает без FAB, если есть форма) */
+    var refineFormMult = document.getElementById('refine-form');
+    if (refineFormMult) {
+        var refineI18nEl = document.getElementById('refine-live-i18n');
+        var refineI18n = {};
+        try {
+            if (refineI18nEl && refineI18nEl.textContent) refineI18n = JSON.parse(refineI18nEl.textContent);
+        } catch (eR18) {}
+
+        function refineChoiceSpanText(input) {
+            if (!input) return '';
+            var lab = input.closest('.refine-choice');
+            if (!lab) return '';
+            var sp = lab.querySelector('span');
+            return sp ? sp.textContent.trim() : '';
+        }
+
+        function toggleRefineDot(section, filled) {
+            var acc = refineFormMult.querySelector('.refine-acc[data-refine-section="' + section + '"]');
+            if (!acc) return;
+            var dot = acc.querySelector(':scope > .refine-acc-btn > .refine-acc-dot');
+            if (!dot) return;
+            dot.classList.toggle('refine-acc-dot--empty', !filled);
+        }
+
+        function refineActiveFilterCount() {
+            var n = 0;
+            var sortIn = refineFormMult.querySelector('input[name="sort"]:checked');
+            if (sortIn && sortIn.value !== 'id') n += 1;
+            if (refineFormMult.querySelectorAll('input[name="brand"]:checked').length) n += 1;
+            if (refineFormMult.querySelectorAll('input[name="item_category"]:checked').length) n += 1;
+            var condIn = refineFormMult.querySelector('input[name="min_condition"]:checked');
+            var condScore = parseInt(condIn ? condIn.value : '0', 10);
+            if (condScore > 0) n += 1;
+            var maxP = refineFormMult.querySelector('#refine-max-price');
+            var maxVal = maxP ? String(maxP.value).trim() : '';
+            var maxNum = parseInt(maxVal, 10);
+            if (maxVal && !isNaN(maxNum) && maxNum > 0) n += 1;
+            var d0 = refineFormMult.querySelector('input[name="available_start"]');
+            var d1 = refineFormMult.querySelector('input[name="available_days"]');
+            var sv = (d0 && d0.value) ? d0.value.trim() : '';
+            var dv = (d1 && d1.value) ? d1.value.trim() : '';
+            if (sv && dv) n += 1;
+            return n;
+        }
+
+        function syncRefineBadgesCount(n) {
+            var pb = document.getElementById('refine-panel-badge');
+            var fb = document.getElementById('refine-fab-badge');
+            [pb, fb].forEach(function (el) {
+                if (!el) return;
+                var num = el.querySelector('.refine-badge-count');
+                if (num) num.textContent = String(n);
+                else el.textContent = String(n);
+                el.setAttribute('aria-label', String(n));
+                if (fb && el.id === 'refine-fab-badge') {
+                    el.classList.toggle('refine-fab-badge--wide', String(n).length >= 2);
+                }
+                if (n > 0) {
+                    el.hidden = false;
+                    el.removeAttribute('aria-hidden');
+                } else {
+                    el.hidden = true;
+                    el.setAttribute('aria-hidden', 'true');
+                }
+            });
+        }
+
+        function syncRefineLiveSummary() {
+            var sortIn = refineFormMult.querySelector('input[name="sort"]:checked');
+            var sortEl = refineFormMult.querySelector('.refine-acc-value[data-refine-for="sort"]');
+            if (sortEl && sortIn) {
+                sortEl.textContent = refineChoiceSpanText(sortIn);
+                toggleRefineDot('sort', sortIn.value !== 'id');
+            }
+
+            var brandBoxes = refineFormMult.querySelectorAll('input[name="brand"]:checked');
+            var brandEl = refineFormMult.querySelector('.refine-acc-value[data-refine-for="brand"]');
+            if (brandEl) {
+                if (!brandBoxes.length) {
+                    brandEl.textContent = refineI18n.allBrands || '';
+                } else {
+                    var parts = [];
+                    brandBoxes.forEach(function (cb) {
+                        var ttxt = refineChoiceSpanText(cb);
+                        if (ttxt) parts.push(ttxt);
+                    });
+                    brandEl.textContent = parts.join(', ');
+                }
+                toggleRefineDot('brand', brandBoxes.length > 0);
+            }
+
+            var catBoxes = refineFormMult.querySelectorAll('input[name="item_category"]:checked');
+            var catEl = refineFormMult.querySelector('.refine-acc-value[data-refine-for="item_category"]');
+            if (catEl) {
+                if (!catBoxes.length) {
+                    catEl.textContent = refineI18n.allCategories || '';
+                } else {
+                    var pts = [];
+                    catBoxes.forEach(function (cb) {
+                        var x = refineChoiceSpanText(cb);
+                        if (x) pts.push(x);
+                    });
+                    catEl.textContent = pts.join(', ');
+                }
+                toggleRefineDot('item_category', catBoxes.length > 0);
+            }
+
+            var condIn = refineFormMult.querySelector('input[name="min_condition"]:checked');
+            var condEl = refineFormMult.querySelector('.refine-acc-value[data-refine-for="condition"]');
+            if (condEl && condIn) {
+                condEl.textContent = refineChoiceSpanText(condIn);
+                toggleRefineDot('condition', parseInt(condIn.value, 10) > 0);
+            }
+
+            var maxIn = refineFormMult.querySelector('#refine-max-price');
+            var priceEl = refineFormMult.querySelector('.refine-acc-value[data-refine-for="price"]');
+            if (priceEl && maxIn) {
+                var raw = String(maxIn.value).trim();
+                var num = parseInt(raw, 10);
+                if (raw && !isNaN(num) && num > 0) {
+                    priceEl.textContent = '≤ $' + num;
+                    toggleRefineDot('price', true);
+                } else {
+                    priceEl.textContent = refineI18n.priceAny || '';
+                    toggleRefineDot('price', false);
+                }
+            }
+
+            var as = refineFormMult.querySelector('input[name="available_start"]');
+            var ad = refineFormMult.querySelector('input[name="available_days"]');
+            var avEl = refineFormMult.querySelector('.refine-acc-value[data-refine-for="availability"]');
+            if (avEl && as && ad) {
+                var s = as.value.trim();
+                var dn = String(ad.value).trim();
+                if (s && dn) {
+                    avEl.textContent = s + ' · ' + dn + ' ' + (refineI18n.daysWord || '');
+                    toggleRefineDot('availability', true);
+                } else if (s || dn) {
+                    avEl.textContent = refineI18n.datesIncomplete || '';
+                    toggleRefineDot('availability', false);
+                } else {
+                    avEl.textContent = refineI18n.datesEmpty || '';
+                    toggleRefineDot('availability', false);
+                }
+            }
+
+            syncRefineBadgesCount(refineActiveFilterCount());
+        }
+
+        refineFormMult.addEventListener('change', syncRefineLiveSummary);
+        refineFormMult.addEventListener('input', syncRefineLiveSummary);
+
+        refineFormMult.querySelectorAll('[data-refine-clear-brands]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                refineFormMult.querySelectorAll('input[type="checkbox"][name="brand"]').forEach(function (cb) {
+                    cb.checked = false;
+                });
+                syncRefineLiveSummary();
+            });
+        });
+        refineFormMult.querySelectorAll('[data-refine-clear-item-categories]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                refineFormMult.querySelectorAll('input[type="checkbox"][name="item_category"]').forEach(function (cb) {
+                    cb.checked = false;
+                });
+                syncRefineLiveSummary();
+            });
+        });
+        syncRefineLiveSummary();
+    }
     document.querySelectorAll('[data-refine-acc]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var acc = btn.closest('.refine-acc');

@@ -252,6 +252,26 @@ def find_product(product_id):
         return found[pid]
     return next((p for p in PRODUCTS if p['id'] == pid), None)
 
+def _normalized_filter_list(val):
+    """Приводим brand/item_category к списку непустых строк (порядок сохраняем)."""
+    if val is None:
+        return []
+    if isinstance(val, (list, tuple, set)):
+        out = []
+        seen = set()
+        for x in val:
+            if x is None:
+                continue
+            s = str(x).strip()
+            if not s or s in seen:
+                continue
+            seen.add(s)
+            out.append(s)
+        return out
+    s = str(val).strip()
+    return [s] if s else []
+
+
 def filter_products(
     category=None,
     query=None,
@@ -266,6 +286,8 @@ def filter_products(
     sort = (sort or 'id').lower()
     if sort not in ('id', 'price_asc', 'price_desc'):
         sort = 'id'
+    brand_list = _normalized_filter_list(brand)
+    item_cat_list = _normalized_filter_list(item_category)
     try:
         sql = '''
             SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
@@ -280,14 +302,20 @@ def filter_products(
         if category:
             sql += ' AND p.category = ?'
             params.append(category)
-        if item_category:
-            sql += ' AND p.item_category = ?'
-            params.append(item_category)
-        if brand:
-            sql += ' AND (LOWER(LTRIM(RTRIM(b.slug))) = LOWER(?) OR b.name LIKE ?)'
-            btrim = brand.strip()
-            params.append(btrim)
-            params.append(f'%{btrim}%')
+        if item_cat_list:
+            ph = ','.join('?' for _ in item_cat_list)
+            sql += f' AND p.item_category IN ({ph})'
+            params.extend(item_cat_list)
+        if brand_list:
+            clauses = []
+            for bslug in brand_list:
+                clauses.append(
+                    '(LOWER(LTRIM(RTRIM(b.slug))) = LOWER(?) OR LOWER(b.name) LIKE LOWER(?))'
+                )
+                trimmed = bslug.strip()
+                params.append(trimmed)
+                params.append(f'%{trimmed}%')
+            sql += ' AND (' + ' OR '.join(clauses) + ')'
         if query:
             sql += ' AND (p.name LIKE ? OR p.serial LIKE ? OR b.name LIKE ? OR p.material LIKE ? OR p.origin LIKE ? OR p.condition LIKE ? OR p.item_category LIKE ?)'
             q = f'%{query}%'
@@ -366,14 +394,21 @@ def filter_products(
         results = PRODUCTS.copy()
         if category:
             results = [p for p in results if p['category'] == category]
-        if item_category:
-            results = [p for p in results if (p.get('item_category') or '') == item_category]
-        if brand:
-            bl = brand.strip().lower()
-            results = [
-                p for p in results
-                if bl == p['brand'].lower() or bl in p['brand'].lower()
-            ]
+        if item_cat_list:
+            allow = set(item_cat_list)
+            results = [p for p in results if (p.get('item_category') or '') in allow]
+        if brand_list:
+            def matches_brand(product):
+                pb = (product.get('brand') or '').lower()
+                for bslug in brand_list:
+                    bl = bslug.strip().lower()
+                    if not bl:
+                        continue
+                    if bl == pb or bl in pb:
+                        return True
+                return False
+
+            results = [p for p in results if matches_brand(p)]
         if query:
             q = query.lower()
             text = (

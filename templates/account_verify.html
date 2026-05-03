@@ -2,8 +2,8 @@
 {% block title %}{{ t('acc_verify_title') }}{% endblock %}
 {% block content %}
 <div class="account-page">
-    <div class="account-page-inner">
-        <section class="account-card" aria-labelledby="acc-verify-heading" style="max-width:560px; margin:0 auto;">
+    <div class="account-page-inner account-guest-narrow">
+        <section class="account-card" aria-labelledby="acc-verify-heading">
             <h2 id="acc-verify-heading" class="account-card-title">{{ t('acc_verify_title') }}</h2>
             <p class="account-card-lead">{{ t('acc_verify_lead').format(email=pending_email) }}</p>
             <form method="post" action="{{ url_for('account_verify_email') }}" class="account-form" autocomplete="one-time-code">
@@ -11,13 +11,13 @@
                     <label class="account-label" for="acc-verify-code">{{ t('acc_verify_code_label') }}</label>
                     <input id="acc-verify-code" type="text" name="code" required minlength="6" maxlength="6" class="account-input" placeholder="000000">
                 </div>
-                <button type="submit" class="account-btn-primary">{{ t('acc_verify_submit') }}</button>
+                <button type="submit" class="account-btn-primary account-btn-primary--full">{{ t('acc_verify_submit') }}</button>
             </form>
-            <form method="post" action="{{ url_for('account_resend_verification') }}" class="account-form" style="margin-top:8px;">
-                <button type="submit" class="account-btn-secondary">{{ t('acc_verify_resend') }}</button>
+            <form method="post" action="{{ url_for('account_resend_verification') }}" class="account-form account-form--tight-top">
+                <button type="submit" class="account-btn-secondary account-btn-secondary--full">{{ t('acc_verify_resend') }}</button>
             </form>
-            <p style="margin-top:10px;">
-                <a href="{{ url_for('account') }}" class="members-foot-link">{{ t('account_order_back') }}</a>
+            <p class="account-verify-footer-link">
+                <a href="{{ url_for('account_verify_cancel') }}" class="account-text-link">{{ t('acc_verify_back_sign_in') }}</a>
             </p>
         </section>
     </div>

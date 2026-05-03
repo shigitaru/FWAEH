@@ -427,8 +427,70 @@
         var openBtn = document.getElementById("pa-menu-open");
         var closeBtn = document.getElementById("pa-menu-close");
         var backdrop = document.getElementById("pa-drawer-backdrop");
+        var split = document.getElementById("pa-drawer-split");
+        var flyout = document.getElementById("pa-drawer-flyout");
+        var drawerPanel = document.getElementById("pa-nav-drawer");
         if (!root || !openBtn) return;
         var nav = root.querySelector(".pa-drawer-nav");
+        var fineHover = window.matchMedia("(hover: hover) and (pointer: fine)");
+        var peekTeaseId = null;
+        var peekLeaveTimer = null;
+
+        function cancelPeekLeave() {
+            if (peekLeaveTimer != null) {
+                clearTimeout(peekLeaveTimer);
+                peekLeaveTimer = null;
+            }
+        }
+
+        function peekLeaveShouldHold() {
+            if (flyout && flyout.matches(":hover")) return true;
+            if (root.querySelector(".pa-nav-tease:hover")) return true;
+            var ax = document.activeElement;
+            if (ax && flyout && flyout.contains(ax)) return true;
+            if (ax && typeof ax.closest === "function" && ax.closest(".pa-nav-tease")) return true;
+            return false;
+        }
+
+        function schedulePeekClear() {
+            if (!fineHover.matches) return;
+            cancelPeekLeave();
+            peekLeaveTimer = window.setTimeout(function () {
+                peekLeaveTimer = null;
+                if (peekLeaveShouldHold()) return;
+                peekTeaseId = null;
+                syncFlyoutState();
+            }, 220);
+        }
+
+        /** Активная карточка: тач — только по стрелке (.is-expanded); десктоп — наведение на строку (peek) или тот же .is-expanded */
+        function syncFlyoutState() {
+            if (!split) return;
+            var expanded = root.querySelector(".pa-nav-tease.is-expanded");
+            var idExpanded = expanded && expanded.getAttribute("data-tease-id");
+            var id = fineHover.matches ? peekTeaseId || idExpanded : idExpanded;
+            if (id) {
+                split.setAttribute("data-active-tease", id);
+                if (flyout) flyout.setAttribute("aria-hidden", "false");
+                if (drawerPanel) drawerPanel.classList.add("pa-drawer-panel--tease-open");
+            } else {
+                split.removeAttribute("data-active-tease");
+                if (flyout) flyout.setAttribute("aria-hidden", "true");
+                if (drawerPanel) drawerPanel.classList.remove("pa-drawer-panel--tease-open");
+            }
+        }
+
+        function collapseAllTeases() {
+            peekTeaseId = null;
+            cancelPeekLeave();
+            document.querySelectorAll(".pa-nav-tease.is-expanded").forEach(function (tease) {
+                tease.classList.remove("is-expanded");
+                var tb = tease.querySelector(".pa-nav-tease-toggle");
+                if (tb) tb.setAttribute("aria-expanded", "false");
+            });
+            syncFlyoutState();
+        }
+
         function setOpen(on) {
             root.classList.toggle("is-open", on);
             root.setAttribute("aria-hidden", on ? "false" : "true");
@@ -436,11 +498,7 @@
             document.documentElement.classList.toggle("pa-drawer-open", on);
             document.body.style.overflow = on ? "hidden" : "";
             if (!on) {
-                document.querySelectorAll(".pa-nav-tease.is-expanded").forEach(function (tease) {
-                    tease.classList.remove("is-expanded");
-                    var tb = tease.querySelector(".pa-nav-tease-toggle");
-                    if (tb) tb.setAttribute("aria-expanded", "false");
-                });
+                collapseAllTeases();
             }
             if (on) {
                 try {
@@ -464,13 +522,15 @@
             });
         }
         document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && root.classList.contains("is-open")) {
-                setOpen(false);
+            if (e.key !== "Escape" || !root.classList.contains("is-open")) return;
+            if (split && split.getAttribute("data-active-tease")) {
+                collapseAllTeases();
+                e.preventDefault();
+                return;
             }
+            setOpen(false);
         });
-    })();
 
-    (function () {
         document.querySelectorAll(".pa-nav-tease-toggle").forEach(function (btn) {
             btn.addEventListener("click", function (e) {
                 e.preventDefault();
@@ -487,8 +547,63 @@
                 });
                 wrap.classList.toggle("is-expanded", next);
                 btn.setAttribute("aria-expanded", next ? "true" : "false");
+                syncFlyoutState();
             });
         });
+
+        root.querySelectorAll(".pa-nav-tease").forEach(function (tease) {
+            tease.addEventListener("mouseenter", function () {
+                if (!fineHover.matches) return;
+                peekTeaseId = tease.getAttribute("data-tease-id");
+                cancelPeekLeave();
+                syncFlyoutState();
+            });
+            tease.addEventListener("mouseleave", function () {
+                if (!fineHover.matches) return;
+                schedulePeekClear();
+            });
+            tease.addEventListener("focusin", function () {
+                if (!fineHover.matches) return;
+                peekTeaseId = tease.getAttribute("data-tease-id");
+                cancelPeekLeave();
+                syncFlyoutState();
+            });
+            tease.addEventListener("focusout", function (e) {
+                if (!fineHover.matches) return;
+                var r = e.relatedTarget;
+                if (r && (tease.contains(r) || (flyout && flyout.contains(r)))) return;
+                schedulePeekClear();
+            });
+        });
+        if (flyout) {
+            flyout.addEventListener("click", function (e) {
+                var al = e.target.closest("a");
+                if (al) setOpen(false);
+            });
+            flyout.addEventListener("mouseenter", function () {
+                cancelPeekLeave();
+            });
+            flyout.addEventListener("mouseleave", function () {
+                if (!fineHover.matches) return;
+                schedulePeekClear();
+            });
+            flyout.addEventListener("focusout", function (e) {
+                if (!fineHover.matches) return;
+                var r = e.relatedTarget;
+                if (r && flyout.contains(r)) return;
+                if (r && typeof r.closest === "function" && r.closest(".pa-nav-tease")) return;
+                schedulePeekClear();
+            });
+        }
+        try {
+            if (typeof fineHover.addEventListener === "function") {
+                fineHover.addEventListener("change", function () {
+                    peekTeaseId = null;
+                    cancelPeekLeave();
+                    syncFlyoutState();
+                });
+            }
+        } catch (eM) {}
     })();
 
     (function () {

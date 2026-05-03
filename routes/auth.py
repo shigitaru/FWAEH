@@ -37,6 +37,13 @@ def register_auth_routes(app, deps):
     fetch_user_loyalty_counters = deps['fetch_user_loyalty_counters']
     upsert_demo_user = deps['upsert_demo_user']
 
+    _PENDING_VERIFY_KEYS = (
+        'pending_verify_user_id',
+        'pending_verify_email',
+        'pending_verify_display_name',
+        'pending_verify_next_resend_at',
+    )
+
     def _code_hash(email, code):
         return hashlib.sha256(f'{email.lower()}::{code}'.encode('utf-8')).hexdigest()
 
@@ -79,6 +86,12 @@ def register_auth_routes(app, deps):
         history_orders = []
         history_stats = None
         user = get_current_user()
+        if (
+            not user
+            and session.get('pending_verify_user_id')
+            and session.get('pending_verify_email')
+        ):
+            return redirect(url_for('account_verify_page'))
         if user:
             try:
                 history_orders, history_stats = fetch_user_rental_history(user['id'])
@@ -107,6 +120,15 @@ def register_auth_routes(app, deps):
             pending_email=session.get('pending_verify_email'),
             t=t,
         )
+
+    @app.route('/account/verify/cancel', methods=['GET'])
+    def account_verify_cancel():
+        """Выход из шага кода без подтверждения почты — иначе /account снова редиректит сюда."""
+        for k in _PENDING_VERIFY_KEYS:
+            session.pop(k, None)
+        session.modified = True
+        flash(t('acc_verify_abandoned'), 'success')
+        return redirect(url_for('account'))
 
     @app.route('/account/login', methods=['POST'])
     def account_login():
@@ -146,26 +168,37 @@ def register_auth_routes(app, deps):
         flash(t('demo_login_success'), 'success')
         return redirect(url_for('account'))
 
-    @app.route('/account/register', methods=['POST'])
+    @app.route('/account/register', methods=['GET', 'POST'])
     def account_register():
+        if request.method == 'GET':
+            if get_current_user():
+                return redirect(url_for('account'))
+            if session.get('pending_verify_user_id') and session.get('pending_verify_email'):
+                return redirect(url_for('account_verify_page'))
+            return render_template(
+                'account_register.html',
+                active_page='account',
+                cart_count=get_cart_count(),
+                t=t,
+            )
         email = (request.form.get('email') or '').strip().lower()
         password = request.form.get('password') or ''
         password2 = request.form.get('password_confirm') or ''
         display_name = (request.form.get('display_name') or '').strip()
         if not display_name:
             flash(t('acc_err_name'), 'error')
-            return redirect(url_for('account'))
+            return redirect(url_for('account_register'))
         if len(display_name) > 120:
             display_name = display_name[:120]
         if not acc_email_re.match(email):
             flash(t('acc_err_email_invalid'), 'error')
-            return redirect(url_for('account'))
+            return redirect(url_for('account_register'))
         if len(password) < 8:
             flash(t('acc_err_password_short'), 'error')
-            return redirect(url_for('account'))
+            return redirect(url_for('account_register'))
         if password != password2:
             flash(t('acc_err_password_mismatch'), 'error')
-            return redirect(url_for('account'))
+            return redirect(url_for('account_register'))
         try:
             ensure_app_users_table()
             existing = user_fetch_by_email(email)
@@ -214,9 +247,9 @@ def register_auth_routes(app, deps):
                 or 'network is unreachable' in msg
             ):
                 flash(f'{t("acc_mail_send_failed_prefix")}: {e}', 'error')
-                return redirect(url_for('account'))
+                return redirect(url_for('account_register'))
             flash(f'{t("acc_db_unavailable")}: {e}', 'error')
-            return redirect(url_for('account'))
+            return redirect(url_for('account_register'))
         flash(t('acc_code_sent_next_step'), 'success')
         return redirect(url_for('account_verify_page'))
 
@@ -230,10 +263,13 @@ def register_auth_routes(app, deps):
         code = (request.form.get('code') or '').strip()
         if len(code) != 6 or not code.isdigit():
             flash(t('acc_verify_code_format'), 'error')
-            return redirect(url_for('account'))
+            return redirect(url_for('account_verify_page'))
         try:
             row = user_fetch_by_email(pending_email)
             if not row:
+                for k in _PENDING_VERIFY_KEYS:
+                    session.pop(k, None)
+                session.modified = True
                 flash(t('acc_verify_user_not_found'), 'error')
                 return redirect(url_for('account'))
             expires_at = row[7] if len(row) > 7 else None
@@ -241,18 +277,21 @@ def register_auth_routes(app, deps):
             expected_hash = row[6] if len(row) > 6 else None
             if attempts >= 5:
                 flash(t('acc_verify_attempts_exceeded'), 'error')
+                for k in _PENDING_VERIFY_KEYS:
+                    session.pop(k, None)
+                session.modified = True
                 return redirect(url_for('account'))
             if not expires_at or expires_at < datetime.utcnow():
                 flash(t('acc_verify_code_expired'), 'error')
-                return redirect(url_for('account'))
+                return redirect(url_for('account_verify_page'))
             actual_hash = _code_hash(pending_email, code)
             if not expected_hash or expected_hash != actual_hash:
                 increment_verification_attempt(pending_user_id)
                 flash(t('acc_verify_code_invalid'), 'error')
-                return redirect(url_for('account'))
+                return redirect(url_for('account_verify_page'))
             mark_email_verified(pending_user_id)
             _apply_user_session_from_row(row)
-            for k in ('pending_verify_user_id', 'pending_verify_email', 'pending_verify_display_name', 'pending_verify_next_resend_at'):
+            for k in _PENDING_VERIFY_KEYS:
                 session.pop(k, None)
             session.modified = True
             flash(t('acc_ok_email_verified'), 'success')
@@ -260,7 +299,7 @@ def register_auth_routes(app, deps):
         except Exception:
             logger.exception('Failed to verify email for pending user %s', pending_user_id)
             flash(t('acc_db_unavailable'), 'error')
-            return redirect(url_for('account'))
+            return redirect(url_for('account_verify_page'))
 
     @app.route('/account/resend-verification', methods=['POST'])
     def account_resend_verification():
@@ -275,7 +314,7 @@ def register_auth_routes(app, deps):
             try:
                 if datetime.now(timezone.utc) < datetime.fromisoformat(next_resend_at):
                     flash(t('acc_resend_wait'), 'error')
-                    return redirect(url_for('account'))
+                    return redirect(url_for('account_verify_page'))
             except ValueError:
                 logger.warning('Ignoring malformed pending_verify_next_resend_at: %s', next_resend_at)
         try:

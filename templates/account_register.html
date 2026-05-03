@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ t('account_register_title') }} · {{ t('account_title') }}{% endblock %}
+{% block content %}
+<div class="account-page">
+    <div class="account-page-inner account-guest-narrow">
+        <p class="account-register-back">{{ t('acc_have_account_prompt') }}
+            <a href="{{ url_for('account') }}" class="account-text-link">{{ t('acc_go_to_sign_in') }}</a>
+        </p>
+        <section class="account-card" aria-labelledby="acc-reg-heading">
+            <h1 id="acc-reg-heading" class="account-card-title">{{ t('account_register_title') }}</h1>
+            <p class="account-card-lead">{{ t('acc_display_name') }}, {{ t('acc_email') }}, {{ t('acc_password') }}</p>
+            <form method="post" action="{{ url_for('account_register') }}" class="account-form" autocomplete="on">
+                <div class="account-field">
+                    <label class="account-label" for="acc-reg-name">{{ t('acc_display_name') }}</label>
+                    <input id="acc-reg-name" type="text" name="display_name" required maxlength="120" autocomplete="name" class="account-input">
+                </div>
+                <div class="account-field">
+                    <label class="account-label" for="acc-reg-email">{{ t('acc_email') }}</label>
+                    <input id="acc-reg-email" type="email" name="email" required autocomplete="email" class="account-input" placeholder="name@example.com">
+                </div>
+                <div class="account-field">
+                    <label class="account-label" for="acc-reg-password">{{ t('acc_password') }}</label>
+                    <input id="acc-reg-password" type="password" name="password" required minlength="8" autocomplete="new-password" class="account-input">
+                </div>
+                <div class="account-field">
+                    <label class="account-label" for="acc-reg-password2">{{ t('acc_password_confirm') }}</label>
+                    <input id="acc-reg-password2" type="password" name="password_confirm" required minlength="8" autocomplete="new-password" class="account-input">
+                </div>
+                <button type="submit" class="account-btn-primary account-btn-primary--full">{{ t('acc_submit_register') }}</button>
+            </form>
+            <div class="account-register-benefits">
+                <p class="account-register-benefits-title">{{ t('account_register_benefits_title') }}</p>
+                <ul class="account-register-benefits-list">
+                    <li>{{ t('account_register_benefit_1') }}</li>
+                    <li>{{ t('account_register_benefit_2') }}</li>
+                    <li>{{ t('account_register_benefit_3') }}</li>
+                    <li>{{ t('account_register_benefit_4') }}</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
