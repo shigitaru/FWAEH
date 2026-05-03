@@ -78,7 +78,7 @@
             if (w <= 0) return;
             root.classList.add("pa-js-layout");
             root.classList.toggle("pa-wide-store", w >= 1024);
-            root.classList.toggle("pa-store-1col", w <= 768);
+            root.classList.toggle("pa-store-1col", w <= 820);
             root.classList.toggle("pa-compact-header", w <= 1100);
             root.classList.toggle("pa-tiny-header", w <= 420);
             if (w <= 420) root.style.setProperty("--site-header-offset", "138px");
