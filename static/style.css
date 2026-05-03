@@ -1,7 +1,5 @@
-/* Google Fonts подключаются в base.html / splash.html (до style.css), иначе @import здесь
-   блокировал бы парсинг и откладывал @font-face Sign That → мигание запасного скрипта у лого */
 
-/* Sign That — локальные файлы в static/fonts/ (скопированы из твоего набора) */
+
 @font-face {
     font-family: 'Sign That';
     src: url('fonts/SignThat-Regular.ttf') format('truetype');
@@ -52,7 +50,6 @@ body {
 a { color: inherit; text-decoration: none; }
 button, input { font-family: inherit; }
 
-/* --- HEADER --- */
 .site-header { 
     position: fixed; top: 0; left: 0; right: 0;
     width: 100%;
@@ -64,7 +61,7 @@ button, input { font-family: inherit; }
     box-sizing: border-box;
     transition: background 0.4s ease;
 }
-/* Главная с hero (классический LV-режим): шапка поверх фото, пока не прокрутили — только если НЕ премиальная тема pa-lux-site */
+
 html.pa-hero-home:not(.pa-lux-site):not(.pa-header-solid) .site-header {
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.12) 55%, transparent 100%);
 }
@@ -155,7 +152,7 @@ html.pa-hero-home:not(.pa-lux-site):not(.pa-header-solid)[data-theme="dark"] .he
 
 .collection-hero {
     position: relative;
-    /* На весь экран — чтобы снизу не подглядывала сетка товаров */
+    
     min-height: 100vh;
     min-height: 100svh;
     width: 100vw;
@@ -259,7 +256,7 @@ html.pa-hero-home:not(.pa-lux-site):not(.pa-header-solid)[data-theme="dark"] .he
     align-items: stretch;
     background: #ddd3bf;
 }
-/* Подпись: не привязывать к vh — высота hero задаётся aspect-ratio от ширины; % от высоты блока держит баланс на ноутбуке */
+
 .couture-hero-signature {
     position: absolute;
     left: 50%;
@@ -320,7 +317,7 @@ html.pa-hero-home:not(.pa-lux-site):not(.pa-header-solid)[data-theme="dark"] .he
     overflow-wrap: break-word;
     line-height: 1.15;
 }
-/* Ролл бренда при скролле: Protocol-Archive → растр из logo123.psd (header-logo-mark.png) */
+
 .logo.logo-roll {
     line-height: 1;
     max-width: min(100%, 92vw);
@@ -351,10 +348,7 @@ html.pa-brand-scroll .logo-roll-track {
     font-weight: 400;
     line-height: 1;
 }
-/*
- * Админка (/admin): надпись Protocol-Archive — как на витрине в lux (Instrument Serif italic),
- * не Sign That. MENU / SEARCH остаются Inter.
- */
+
 body.admin-site .site-header .logo,
 body.admin-site .site-header .logo.logo-roll {
     font-family: 'Instrument Serif', 'Cormorant Garamond', serif;
@@ -417,7 +411,6 @@ body.admin-site .site-header .theme-toggle {
     }
 }
 
-/* Уведомление «добавлено в корзину» */
 .cart-added-toast {
     position: fixed;
     top: calc(var(--site-header-offset) + 10px + env(safe-area-inset-top, 0px));
@@ -668,7 +661,6 @@ body.admin-site .site-header .theme-toggle {
     line-height: 1;
 }
 
-/* Выезжающее меню (LV-style) */
 .pa-drawer-root {
     position: fixed;
     inset: 0;
@@ -824,7 +816,6 @@ body.admin-site .site-header .theme-toggle {
     font-weight: 500;
 }
 
-/* Превью Кутюр / зона участника: колонка справа; десктоп — по наведению на строку, тач — по стрелке */
 .pa-nav-tease {
     width: 100%;
     border-bottom: 1px solid var(--border);
@@ -898,7 +889,10 @@ body.admin-site .site-header .theme-toggle {
     transform: translateX(10px);
     transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.33, 1, 0.68, 1);
 }
+.pa-drawer-split[data-active-tease="collection"] .pa-nav-tease-panel[data-tease-id="collection"],
 .pa-drawer-split[data-active-tease="couture"] .pa-nav-tease-panel[data-tease-id="couture"],
+.pa-drawer-split[data-active-tease="campaign"] .pa-nav-tease-panel[data-tease-id="campaign"],
+.pa-drawer-split[data-active-tease="about"] .pa-nav-tease-panel[data-tease-id="about"],
 .pa-drawer-split[data-active-tease="members"] .pa-nav-tease-panel[data-tease-id="members"] {
     display: block;
     opacity: 1;
@@ -1005,7 +999,6 @@ html.pa-lux-site:not([data-theme="dark"]) .pa-nav-tease-card {
     background: #f6f4f1;
 }
 
-/* Замеры вещи: ссылка на карточке + правый drawer */
 .product-card-measure-btn {
     display: inline-flex;
     align-items: center;
@@ -1047,6 +1040,91 @@ html.pa-lux-site:not([data-theme="dark"]) .pa-nav-tease-card {
     font-family: ui-monospace, Consolas, monospace;
     font-size: 12px;
     line-height: 1.45;
+}
+.admin-measurements-editor {
+    grid-column: 1 / -1;
+    margin: 8px 0 4px;
+    padding: 12px 0 4px;
+    border: none;
+    border-top: 1px solid var(--border);
+}
+.admin-measurements-legend {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 0 0 8px;
+    font-weight: 600;
+}
+.admin-measurements-kind-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 20px;
+    margin-bottom: 12px;
+    align-items: center;
+}
+.admin-measurements-radio {
+    font-size: 13px;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    cursor: pointer;
+}
+.admin-measurements-radio input {
+    margin: 0;
+}
+.admin-measurements-panel.is-hidden {
+    display: none;
+}
+.admin-measurements-panel {
+    margin-bottom: 8px;
+}
+.admin-measurements-table-scroll {
+    overflow-x: auto;
+    margin-bottom: 10px;
+    max-width: 100%;
+}
+.admin-measurements-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.admin-measurements-table th,
+.admin-measurements-table td {
+    border: 1px solid var(--border);
+    padding: 8px;
+    vertical-align: middle;
+    text-align: left;
+}
+.admin-measurements-table th {
+    font-weight: 600;
+    background: var(--bg-alt);
+    white-space: nowrap;
+}
+.admin-measurements-table .search-input {
+    width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+}
+.admin-measurements-remove-col {
+    width: 1%;
+    white-space: nowrap;
+}
+.admin-measurements-rm-row {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 6px;
+}
+.admin-measurements-rm-row:hover {
+    color: var(--text);
+}
+.admin-measurements-add-btn {
+    margin-top: 4px !important;
+    max-width: 280px !important;
 }
 .admin-measurements-hint {
     font-size: 11px;
@@ -1275,7 +1353,6 @@ html.pa-measure-open body {
     color: var(--text);
 }
 .header-icon-wrap {
-    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1285,8 +1362,9 @@ html.pa-measure-open body {
 }
 .header-icon-badge {
     position: absolute;
-    top: -5px;
-    inset-inline-end: -2px;
+    top: -3px;
+    inset-inline-end: 4px;
+    box-sizing: border-box;
     min-width: 17px;
     height: 17px;
     padding: 0 4px;
@@ -1297,10 +1375,23 @@ html.pa-measure-open body {
     font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
+    display: grid;
+    grid-template: 1fr / 1fr;
+    place-items: stretch;
+}
+.header-icon-badge-n {
+    grid-area: 1 / 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    font: inherit;
     line-height: 1;
+    letter-spacing: 0;
+    text-align: center;
 }
 [data-theme="dark"] .header-icon-badge {
     background: #e8e8e8;
@@ -1381,11 +1472,6 @@ html.pa-measure-open body {
     }
 }
 
-/*
- * Классы pa-* на <html> выставляет layout-sync.js (base.html) по clientWidth.
- * Во встроенных превью/iframe @media иногда считаются по «внешней» ширине до resize —
- * дубликаты ниже совпадают с брейкпоинтами и перекрывают витрину при pa-js-layout.
- */
 html.pa-compact-header .header-inner {
     grid-template-columns: 1fr;
     row-gap: 12px;
@@ -1469,7 +1555,6 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     justify-self: center;
 }
 
-/* --- SPLASH SCREEN (КАК В ОРИГИНАЛЕ) --- */
 .splash-screen { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     z-index: 2000; background: #000; display: flex; align-items: center; justify-content: center;
@@ -1521,7 +1606,7 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     box-sizing: border-box;
     text-align: center;
 }
-/* Скрипт даёт «тяжесть» слева (завиток у p): сдвиг вправо совмещает оптический центр с мета-строкой и ENTER */
+
 .splash-logo { 
     font-family: var(--font-brand);
     font-size: clamp(28px, 8vw, 44px);
@@ -1532,7 +1617,7 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     font-weight: 400;
     text-shadow: 0 10px 45px rgba(0,0,0,0.45);
     opacity: 0;
-    /* выше 1.05 — иначе у скрипта хвосты (p, y…) упираются в строку ниже */
+    
     line-height: 1.22;
     box-sizing: border-box;
     animation:
@@ -1563,7 +1648,7 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     background: rgba(255,255,255,0.22);
     display:inline-block;
 }
-/* Убрал рамку, сделал шрифт тоньше и прозрачнее */
+
 .splash-enter { 
     font-size: 10px;
     letter-spacing: 0.15em;
@@ -1638,7 +1723,6 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     }
 }
 
-/* --- PRODUCT DETAIL (КАК НА СКРИНШОТЕ decabf) --- */
 .product-detail { 
     display: flex;
     flex-direction: column;
@@ -1702,7 +1786,7 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     min-width: 0;
     width: 100%;
 }
-/* Область 3:4 фиксирована; cover заполняет её без полос (лишнее по краям обрезается) */
+
 .product-gallery-frame {
     box-sizing: border-box;
     position: relative;
@@ -1724,7 +1808,7 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     display: block;
     transition: opacity 0.22s ease;
 }
-/* Полосы прокрутки скрыты — прокрутка миниатюр колёсиком/тачпадом/свайпом */
+
 .product-thumbs-rail {
     align-self: start;
     width: 98px;
@@ -1806,7 +1890,6 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     max-width: 560px;
 }
 
-/* Тексты сверху (артикул, бренд, название, цена) */
 .product-detail-info .detail-serial,
 .product-detail-info p:nth-child(1) { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
 .product-detail-info .detail-brand,
@@ -1837,7 +1920,6 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     margin-bottom: 30px;
 }
 
-/* Характеристики (Material, Made in, Condition) */
 .spec-table {
     margin-bottom: 30px;
     padding: 16px 0;
@@ -1864,7 +1946,6 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     text-align: right;
 }
 
-/* Форма справа */
 .product-detail-info form {
     margin-top: 0;
 }
@@ -1912,13 +1993,13 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     pointer-events: none;
 }
 .size-options input[type="radio"]:checked + span {
-    background: var(--text);
-    color: var(--bg);
-    border-color: var(--text);
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+    background: var(--bg-alt);
+    color: var(--text);
+    border-color: var(--border-strong);
+    font-weight: 600;
+    box-shadow: none;
 }
 
-/* Выбор дней (Rental Period) */
 .rental-date-wrap {
     margin-bottom: 10px;
 }
@@ -2023,7 +2104,6 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     color: var(--text-secondary);
 }
 
-/* Тотал */
 .total-display {
     display: flex;
     justify-content: space-between;
@@ -2035,7 +2115,6 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     border-top: 1px solid var(--border);
 }
 
-/* --- CART / BAG --- */
 .cart-page {
     max-width: 1180px;
     margin: 0 auto;
@@ -2268,10 +2347,9 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     }
 }
 
-/* Кнопка "ADD TO BAG" - светлая с темным текстом в темной теме */
 .product-detail-info .btn-primary { 
     width: 100%; max-width: 100%; padding: 16px 20px; 
-    background-color: var(--text); color: var(--bg); /* В темной теме это даст светлый фон и темный текст */
+    background-color: var(--text); color: var(--bg); 
     border: 1px solid var(--text); font-size: 10px; letter-spacing: 0.16em; 
     text-transform: uppercase; cursor: pointer; font-weight: 500;
     transition: opacity 0.2s, transform 0.2s;
@@ -2488,7 +2566,6 @@ html[data-theme="dark"] .occupancy-day.is-booked {
     }
 }
 
-/* --- ACCOUNT (личный кабинет) --- */
 .account-page {
     min-height: calc(100vh - var(--site-header-offset) - env(safe-area-inset-top, 0px) - 80px);
     padding: clamp(28px, 5vw, 56px) clamp(18px, 4vw, 32px) 64px;
@@ -3138,7 +3215,6 @@ a.account-btn-primary {
     border-radius: 50%;
 }
 
-/* --- MEMBERS (зона участника) --- */
 .members-page {
     min-height: calc(100vh - var(--site-header-offset) - env(safe-area-inset-top, 0px) - 80px);
     padding: clamp(28px, 5vw, 48px) clamp(18px, 4vw, 32px) 64px;
@@ -3398,7 +3474,6 @@ a.account-btn-primary {
     }
 }
 
-/* --- ABOUT PAGE --- */
 .about-page-container { 
     display: flex;
     align-items: flex-start;
@@ -3518,7 +3593,6 @@ a.account-btn-primary {
     }
 }
 
-/* --- GRID --- */
 #collection-grid {
     scroll-margin-top: calc(var(--site-header-offset) + env(safe-area-inset-top, 0px) + 10px);
 }
@@ -3539,7 +3613,7 @@ a.account-btn-primary {
         gap: clamp(28px, 3.2vw, 44px);
         padding: 0 clamp(28px, 5vw, 56px) 40px;
     }
-    /* Узкая колонка карточки только на широкой сетке — иначе на 800–1000px остаются «рельсы» по бокам */
+    
     .product-grid:not(.admin-product-grid) > .product-card-outer {
         max-width: 260px;
         justify-self: center;
@@ -3567,7 +3641,7 @@ a.account-btn-primary {
     position: relative;
     padding: 0;
 }
-/* Витрина (Collection / Couture / Search): без «подъёма» и zoom — спокойный hover. */
+
 .product-card-image-wrap {
     position: relative;
     width: 100%;
@@ -3588,7 +3662,7 @@ a.account-btn-primary {
 .product-card-image.secondary {
     opacity: 0;
 }
-/* Второй кадр только если реально есть secondary; иначе primary не гасим — иначе при hover «чернота». */
+
 .product-card:hover .product-card-image-wrap:has(.secondary) .product-card-image.secondary {
     opacity: 1;
 }
@@ -3724,7 +3798,6 @@ a.account-btn-primary {
     background: rgba(45, 45, 45, 1);
 }
 
-/* Админка: заметный hover (подъём, тень, лёгкий zoom). */
 .admin-product-grid .product-card {
     transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -3783,7 +3856,6 @@ a.account-btn-primary {
 }
 .product-card-price { font-size: 12px; color: var(--text-secondary); }
 
-/* --- SEARCH PAGE --- */
 .search-page {
     max-width: 1060px;
     margin: 0 auto;
@@ -4117,7 +4189,7 @@ a.account-btn-primary {
     font-size: 10px;
     font-weight: 500;
 }
-/* Нейтральный вид для брендов без отдельного слоя; при желании задайте css_class в БД или добавьте .brand-<slug> в CSS. */
+
 .brand-font-fallback {
     font-family: 'Inter', sans-serif;
     letter-spacing: 0.1em;
@@ -4365,7 +4437,6 @@ a.account-btn-primary {
     margin-top: 14px;
 }
 
-/* Заголовок витрины (главная / collection): крупнее, заметная линия */
 .collection-main .page-header {
     max-width: none;
     width: 100%;
@@ -4515,7 +4586,6 @@ a.account-btn-primary {
     border-color: var(--text);
 }
 
-/* --- CAMPAIGN (editorial) --- */
 .campaign-page {
     padding: 20px 30px 80px;
     max-width: 1320px;
@@ -4802,7 +4872,7 @@ a.campaign-look-link:hover .campaign-caption-ref {
     color: var(--text-secondary);
     line-height: 1.5;
 }
-/* Сетка лукбука: несколько рядов по 4 кадра, без промежутков — как Balenciaga lookbook */
+
 .campaign-story-filmstrip {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5122,8 +5192,6 @@ button.campaign-story-film-btn:focus-visible {
     }
 }
 
-
-/* --- ADMIN CAMPAIGN --- */
 .admin-panel-head {
     display: flex;
     justify-content: space-between;
@@ -5516,7 +5584,6 @@ button.campaign-story-film-btn:focus-visible {
     }
 }
 
-/* --- FOOTER --- */
 .site-footer {
     padding: 30px max(30px, env(safe-area-inset-left, 0)) 30px max(30px, env(safe-area-inset-right, 0));
     padding-bottom: max(30px, env(safe-area-inset-bottom, 0));
@@ -5564,12 +5631,11 @@ button.campaign-story-film-btn:focus-visible {
     }
 }
 
-/* --- Collection: якорь, MM-style Refine FAB + drawer --- */
 #collection-catalog,
 #collection-grid {
     scroll-margin-top: calc(var(--site-header-offset) + 16px);
 }
-/* Без max-width: сетка тянется на ширину окна (как до обёртки), иначе 4 колонки сжимаются в «коробку» 1200px */
+
 .collection-main {
     width: 100%;
     max-width: 100%;
@@ -5580,7 +5646,6 @@ button.campaign-story-film-btn:focus-visible {
     letter-spacing: 0.12em;
 }
 
-/* Плавающая кнопка: квадрат срезов, надпись + диск-суперскрипт справа с зазором от текста */
 .refine-fab {
     position: fixed;
     z-index: 2500;
@@ -5590,7 +5655,7 @@ button.campaign-story-film-btn:focus-visible {
     align-items: center;
     justify-content: center;
     gap: 0;
-    padding: 12px 20px;
+    padding: 0;
     overflow: visible;
     margin: 0;
     background: var(--text);
@@ -5625,38 +5690,45 @@ button.campaign-story-film-btn:focus-visible {
 }
 .refine-fab-inner {
     position: relative;
-    display: inline-block;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    
+    padding: 14px 32px;
+    min-height: 44px;
     overflow: visible;
-    padding-inline-end: 0;
-    line-height: 1.05;
-    vertical-align: middle;
+    line-height: 1.15;
 }
 .refine-fab-text {
-    display: inline-block;
+    margin: 0;
     font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
+    line-height: 1.15;
+    text-align: center;
 }
 .refine-fab-badge-shift {
     position: absolute;
     z-index: 1;
-    inset-inline-start: 100%;
-    inset-inline-end: auto;
-    margin-inline-start: 6px;
-    top: -0.1em;
-    transform: translate3d(0, -26%, 0);
+    top: 7px;
+    right: 8px;
+    left: auto;
+    inset-block-start: 7px;
+    inset-inline-end: 8px;
+    inset-inline-start: auto;
+    margin: 0;
     pointer-events: none;
     line-height: 0;
 }
 .refine-fab-badge {
     box-sizing: border-box;
     position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    min-width: 16px;
-    height: 16px;
+    display: inline-grid;
+    grid-template: 1fr / 1fr;
+    place-items: stretch;
+    width: 17px;
+    min-width: 17px;
+    height: 17px;
     padding: 0;
     border-radius: 9999px;
     background: var(--bg);
@@ -5672,18 +5744,23 @@ button.campaign-story-film-btn:focus-visible {
 .refine-fab-badge.refine-fab-badge--wide {
     width: auto;
     min-width: 22px;
-    height: 16px;
+    height: 17px;
     padding: 0 4px;
+    font-size: 10px;
 }
 .refine-fab-badge .refine-badge-count {
+    grid-area: 1 / 1;
     margin: 0;
     padding: 0;
-    display: inline-block;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font: inherit;
     line-height: 1;
     letter-spacing: 0;
     text-align: center;
-    vertical-align: middle;
 }
 
 html.refine-open .refine-fab {
@@ -5703,7 +5780,6 @@ html.refine-open .refine-fab {
     }
 }
 
-/* Затемнение */
 .refine-overlay {
     position: fixed;
     inset: 0;
@@ -5720,7 +5796,6 @@ html.refine-open .refine-fab {
     background: rgba(0, 0, 0, 0.55);
 }
 
-/* Панель слева */
 .refine-panel {
     position: fixed;
     left: 0;
@@ -5730,7 +5805,7 @@ html.refine-open .refine-fab {
     max-width: 100%;
     z-index: 2530;
     background: var(--bg);
-    /* Smaller blur than before — large shadows repaint a wide area each frame with the drawer transform */
+    
     box-shadow: 8px 0 32px rgba(0, 0, 0, 0.14);
     transform: translate3d(-105%, 0, 0);
     transition: transform 0.32s cubic-bezier(0.33, 1, 0.55, 1);
@@ -5776,9 +5851,9 @@ html.refine-open .refine-fab {
 .refine-panel-badge {
     box-sizing: border-box;
     flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: inline-grid;
+    grid-template: 1fr / 1fr;
+    place-items: stretch;
     min-width: 22px;
     height: 22px;
     padding: 0 6px;
@@ -5794,11 +5869,18 @@ html.refine-open .refine-fab {
     font-variant-numeric: tabular-nums;
 }
 .refine-panel-badge .refine-badge-count {
-    display: inline-flex;
+    grid-area: 1 / 1;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
     align-items: center;
     justify-content: center;
     letter-spacing: 0;
     line-height: 1;
+    font: inherit;
+    text-align: center;
 }
 .refine-panel-close {
     flex-shrink: 0;
@@ -5856,12 +5938,11 @@ html.refine-open .refine-fab {
     flex-direction: column;
     gap: 10px;
     padding-bottom: 8px;
-    /* Меньше сдвигов вёрстки, когда появляется/пропадает вертикальный скролл */
+    
     scrollbar-gutter: stable;
     transform: translateZ(0);
 }
 
-/* Аккордеон */
 .refine-acc {
     border: 1px solid var(--border-strong);
     background: var(--bg);
@@ -5958,7 +6039,7 @@ html.refine-open .refine-fab {
 .refine-acc-panel[hidden] {
     display: none !important;
 }
-/* Вместо <select>: список «кнопок» без системного синего highlight */
+
 .refine-choice-list {
     display: flex;
     flex-direction: column;
@@ -6007,7 +6088,6 @@ html.refine-open .refine-fab {
     outline-offset: -2px;
 }
 
-/* Снять все значения списком (мульти-выбор brand / категории) — как строка фильтра, не отправляется */
 .refine-choice-row {
     display: block;
     width: 100%;
@@ -6151,7 +6231,6 @@ html.refine-open .refine-fab {
     }
 }
 
-/* --- Premium liquid-glass theme (все публичные страницы; админка без pa-lux-site) --- */
 html.pa-lux-site[data-theme="dark"] {
     --background: 213 45% 67%;
     --foreground: 0 0% 100%;
@@ -6327,7 +6406,7 @@ html.pa-lux-site[data-theme="dark"] .header-logo-mark-img {
     pointer-events: none;
 }
 .pa-lux-hero-video {
-    /* Keep the same footage but improve perceived detail/clarity. */
+    
     filter: brightness(1.04) contrast(1.08) saturate(1.06);
 }
 .pa-lux-hero-fallback {
@@ -6813,7 +6892,7 @@ html.pa-lux-site[data-theme="dark"] .refine-fab {
     font-family: 'Barlow', sans-serif;
 }
 html.pa-lux-site[data-theme="dark"] .refine-fab-badge {
-    /* как в референсе: тёмный круг и светлая цифра — обводка, чтобы отделить от полупрозрачной подложки */
+    
     background: #0a0a0c;
     color: #fff;
     border: 1px solid rgba(255, 255, 255, 0.18);
@@ -6885,7 +6964,6 @@ html.pa-lux-site[data-theme="dark"] .refine-btn--ghost {
     opacity: 1;
 }
 
-/* --- Lux theme: внутренние страницы (аккаунт, корзина, товар, кампания, о нас, поиск) --- */
 html.pa-lux-site[data-theme="dark"] .pa-drawer-panel {
     background: rgba(12, 12, 16, 0.97);
     color: var(--text);
@@ -7115,7 +7193,7 @@ html.pa-lux-site[data-theme="dark"] .campaign-tagline {
     font-family: 'Instrument Serif', serif;
     font-style: italic;
 }
-/* Имя в кабинете: тот же брендовый шрифт, что и в светлой теме (var(--font-brand)), только цвет под тёмный фон */
+
 html.pa-lux-site[data-theme="dark"] .account-hero-name {
     color: #fff;
     font-family: var(--font-brand);
@@ -7252,7 +7330,6 @@ html.pa-lux-site[data-theme="dark"] .campaign-caption {
     }
 }
 
-/* --- Lux site: светлая тема (переключатель снимает data-theme="dark") --- */
 html.pa-lux-site:not([data-theme="dark"]) {
     --bg: #fafafa;
     --bg-alt: #ffffff;
@@ -7781,7 +7858,6 @@ html.pa-lux-site:not([data-theme="dark"]) .pa-video-section {
     background: #e4e9f2;
 }
 
-/* Светлая тема: первый экран — тёмное фото/видео, контраст через scrim + светлый текст */
 html.pa-lux-site:not([data-theme="dark"]) .pa-lux-hero .pa-video-shade {
     background: radial-gradient(ellipse 90% 75% at 50% 38%, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.22) 52%, rgba(0, 0, 0, 0.38) 100%);
 }
@@ -7812,7 +7888,7 @@ html.pa-lux-site:not([data-theme="dark"]) .pa-lux-hero .pa-glass-btn {
     border: 1px solid rgba(255, 255, 255, 0.55);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
 }
-/* Light theme: darken liquid-glass outlines so they are visible on pale backgrounds */
+
 html.pa-lux-site:not([data-theme="dark"]) .liquid-glass::before {
     background: linear-gradient(
         180deg,
@@ -7850,7 +7926,6 @@ html.pa-lux-site:not([data-theme="dark"]) .pa-lux-hero .pa-partner-row a:hover {
     color: rgba(255, 255, 255, 0.88);
 }
 
-/* Светлая тема: блоки с полноэкранным тёмным видео (How it works, stats, CTA) */
 html.pa-lux-site:not([data-theme="dark"]) .pa-start-section::before,
 html.pa-lux-site:not([data-theme="dark"]) .pa-stats-section::before,
 html.pa-lux-site:not([data-theme="dark"]) .pa-cta-section::before {
@@ -7902,7 +7977,6 @@ html.pa-lux-site:not([data-theme="dark"]) .pa-cta-section .pa-glass-btn {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
 }
 
-/* Больше воздуха между абзацем и CTA («Discover items»): margin-top надёжнее margin-bottom в flex-колонке */
 html.pa-lux-site .pa-start-section .pa-section-center > .pa-glass-btn {
     margin-top: clamp(18px, 4.5vw, 40px);
 }

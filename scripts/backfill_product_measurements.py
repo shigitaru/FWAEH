@@ -11,10 +11,10 @@ _APP_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 if _APP_ROOT not in sys.path:
     sys.path.insert(0, _APP_ROOT)
 
-from core.config import settings  # noqa: E402
-from core.db import get_db_connection  # noqa: E402
-from core.pg_schema import ensure_postgres_schema  # noqa: E402
-from core.product_measurements import migrate_legacy_measurements_to_table, sync_missing_product_measurements  # noqa: E402
+from core.config import settings              
+from core.db import get_db_connection              
+from core.pg_schema import ensure_postgres_schema              
+from core.product_measurements import migrate_legacy_measurements_to_table, sync_missing_product_measurements              
 
 
 def main():

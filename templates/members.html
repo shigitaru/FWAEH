@@ -9,12 +9,6 @@
             <p class="members-intro">{{ t('members_privileges_intro') }}</p>
         </header>
 
-        {% if members_area_hero_url %}
-        <figure class="members-hero-photo" aria-hidden="true">
-            <img src="{{ members_area_hero_url }}" alt="" width="640" height="360" loading="lazy" decoding="async">
-        </figure>
-        {% endif %}
-
         <section class="members-couture-note" aria-labelledby="members-couture-h">
             <h2 id="members-couture-h" class="members-perks-title">{{ t('members_couture_section_title') }}</h2>
             <p class="members-intro">{{ t('members_couture_section_lead').format(

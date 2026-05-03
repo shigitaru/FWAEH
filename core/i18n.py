@@ -189,6 +189,12 @@ TRANSLATIONS = {
         'nav_tease_cta_sign_in': 'Log in or register',
         'nav_tease_cta_open_couture': 'Open couture',
         'nav_tease_cta_open_members': 'Open member area',
+        'nav_tease_collection_desc': 'Browse the archive: brands, filters and rental dates.',
+        'nav_tease_campaign_desc': 'Stories, lookbooks and seasonal drops.',
+        'nav_tease_about_desc': 'Our mission, contact details and the project.',
+        'nav_tease_cta_open_collection': 'Open catalog',
+        'nav_tease_cta_open_campaign': 'Open campaign',
+        'nav_tease_cta_open_about': 'Open about',
         'bag': 'Bag',
         'search_placeholder': 'Search by name, brand or code...',
         'search_filters_title': 'Search filters',
@@ -346,9 +352,26 @@ TRANSLATIONS = {
         'origin_placeholder': 'Origin (Italy, etc.)',
         'condition_label_placeholder': 'Condition label',
         'sizes_placeholder': 'Sizes (comma separated): EU 40, EU 41',
-        'admin_measurements_json_label': 'Measurements JSON (optional)',
+        'admin_measurements_json_label': 'Measurements JSON',
         'admin_measurements_invalid': 'Measurements JSON is invalid or does not match the expected schema.',
-        'admin_measurements_json_hint': 'Garment: {"kind":"garment","columns":["S","M"],"rows":[{"en":"Length (cm)","ru":"Длина (см)","values":[62,64]}]}. Footwear: {"kind":"footwear","rows":[{"eu":"40","insole_cm":"26.2"}]}.',
+        'admin_measurements_json_hint': 'Garment: {"kind":"garment","columns":["S","M"],"rows":[{"label":"Length (cm)","values":[62,64]}]} (legacy en/ru still read). Footwear: {"kind":"footwear","rows":[{"eu":"40","insole_cm":"26.2"}]}.',
+        'admin_measurements_section_title': 'Item measurements',
+        'admin_measurements_kind_none': 'No measurement table',
+        'admin_measurements_kind_garment': 'Garment grid (sizes = columns)',
+        'admin_measurements_kind_footwear': 'Footwear (EU + insole cm)',
+        'admin_measurements_garment_hint': 'Column labels come from Sizes above. For each measurement row, enter the parameter name in Russian; the storefront translates it automatically for English.',
+        'admin_measurements_add_garment_row': 'Add measurement row',
+        'admin_measurements_add_footwear_row': 'Add size row',
+        'admin_measurements_remove_row': 'Remove',
+        'admin_measurements_th_param': 'Parameter',
+        'admin_measurements_th_en': 'Name (EN)',
+        'admin_measurements_th_ru': 'Name (RU)',
+        'admin_measurements_footwear_hint': 'One row per size you rent out (EU and insole length in cm).',
+        'admin_measurements_placeholder_eu': 'EU',
+        'admin_measurements_placeholder_insole': 'cm',
+        'admin_measurements_need_sizes': 'Measurements: garment grid needs at least one size in the Sizes field.',
+        'admin_measurements_garment_incomplete': 'Measurements: garment grid — add rows with labels and at least some values.',
+        'admin_measurements_footwear_empty': 'Measurements: footwear — fill at least one EU or insole column.',
         'admin_required_fields': 'Admin: serial, brand, name and main image are required',
         'admin_product_created': 'Admin: product created',
         'admin_error_prefix': 'Admin error',
@@ -493,7 +516,7 @@ TRANSLATIONS = {
         'admin_campaign_settings_saved': 'Campaign header saved',
         'admin_campaign_header_section': 'Page header (intro & tagline)',
         'admin_members_area_hero_label': 'Member area image (URL or upload)',
-        'admin_members_area_hero_hint': 'Full public HTTPS URL (e.g. Supabase Storage). Shown in the menu preview and Member area page. Leave empty to hide. Optional file upload replaces the URL.',
+        'admin_members_area_hero_hint': 'Full public HTTPS URL (e.g. Supabase Storage). Shown in the menu preview when you open Members in the drawer — not as a banner on /members itself. Leave empty to hide preview. Upload replaces URL.',
         'hero_title': 'Protocol Archive',
         'hero_cta': 'Discover items',
         'hero_service_line': 'Authenticated designer clothing rental',
@@ -724,6 +747,12 @@ TRANSLATIONS = {
         'nav_tease_cta_sign_in': 'Войти или зарегистрироваться',
         'nav_tease_cta_open_couture': 'Открыть кутюр',
         'nav_tease_cta_open_members': 'Открыть зону участника',
+        'nav_tease_collection_desc': 'Каталог: бренды, фильтры и даты аренды.',
+        'nav_tease_campaign_desc': 'Истории, лукбуки и сезонные материалы.',
+        'nav_tease_about_desc': 'О проекте, контакты и информация.',
+        'nav_tease_cta_open_collection': 'К каталогу',
+        'nav_tease_cta_open_campaign': 'К кампании',
+        'nav_tease_cta_open_about': 'О нас',
         'bag': 'Корзина',
         'search_placeholder': 'Название, бренд или артикул...',
         'search_filters_title': 'Фильтры поиска',
@@ -882,9 +911,26 @@ TRANSLATIONS = {
         'origin_placeholder': 'Страна происхождения (Italy и т.д.)',
         'condition_label_placeholder': 'Описание состояния',
         'sizes_placeholder': 'Размеры через запятую: EU 40, EU 41',
-        'admin_measurements_json_label': 'JSON замеров (необязательно)',
+        'admin_measurements_json_label': 'JSON замеров',
         'admin_measurements_invalid': 'JSON замеров невалиден или не соответствует ожидаемой схеме.',
-        'admin_measurements_json_hint': 'Одежда: {"kind":"garment","columns":["S","M"],"rows":[{"en":"Length (cm)","ru":"Длина (см)","values":[62,64]}]}. Обувь: {"kind":"footwear","rows":[{"eu":"40","insole_cm":"26.2"}]}.',
+        'admin_measurements_json_hint': 'Одежда: {"kind":"garment","columns":["S","M"],"rows":[{"label":"Длина (см)","values":[62,64]}]} (старые en/ru тоже читаются). Обувь: {"kind":"footwear","rows":[{"eu":"40","insole_cm":"26.2"}]}.',
+        'admin_measurements_section_title': 'Замеры на карточке',
+        'admin_measurements_kind_none': 'Без таблицы замеров',
+        'admin_measurements_kind_garment': 'Одежда / сетка по размерам',
+        'admin_measurements_kind_footwear': 'Обувь (EU + см по стельке)',
+        'admin_measurements_garment_hint': 'Подписи колонок берутся из поля «Размеры». В каждой строке напиши название параметра по-русски; для английской версии сайта оно переведётся автоматически.',
+        'admin_measurements_add_garment_row': 'Добавить строку замера',
+        'admin_measurements_add_footwear_row': 'Добавить размер',
+        'admin_measurements_remove_row': 'Удалить',
+        'admin_measurements_th_param': 'Параметр',
+        'admin_measurements_th_en': 'Параметр (EN)',
+        'admin_measurements_th_ru': 'Параметр (RU)',
+        'admin_measurements_footwear_hint': 'По строке на каждый размер аренды: EU и длина стельки (см).',
+        'admin_measurements_placeholder_eu': 'EU',
+        'admin_measurements_placeholder_insole': 'см',
+        'admin_measurements_need_sizes': 'Замеры: для сетки одежды заполни хотя бы один размер в поле «Размеры».',
+        'admin_measurements_garment_incomplete': 'Замеры: добавь строки с подписями и хотя бы одним числом в сетке.',
+        'admin_measurements_footwear_empty': 'Замеры: для обуви заполните хотя бы EU или стельку в одной строке.',
         'admin_required_fields': 'Админ: serial, brand, name и main image обязательны',
         'admin_product_created': 'Админ: товар добавлен',
         'admin_error_prefix': 'Ошибка админки',
@@ -1029,7 +1075,7 @@ TRANSLATIONS = {
         'admin_campaign_settings_saved': 'Шапка кампании сохранена',
         'admin_campaign_header_section': 'Шапка страницы (интро и подзаголовок)',
         'admin_members_area_hero_label': 'Фото зоны участника (URL или файл)',
-        'admin_members_area_hero_hint': 'Полный публичный HTTPS-URL (например Supabase Storage): в превью меню и на странице зоны участника. Пусто — картинку не показываем. Загрузка файла подменяет поле URL.',
+        'admin_members_area_hero_hint': 'Полный публичный HTTPS-URL (например Supabase Storage): превью в меню при открытой вкладке «Зона участника», не блок на странице /members. Пусто — превью не показываем. Загрузка подменяет URL.',
         'hero_title': 'Protocol Archive',
         'hero_cta': 'Смотреть вещи',
         'hero_service_line': 'Сервис аренды аутентичной дизайнерской одежды',
@@ -1086,10 +1132,10 @@ TRANSLATIONS = {
     }
 }
 
-# Словарь для перевода отдельных значений
+                                         
 VALUE_TRANSLATIONS = {
     'ru': {
-        # Состояние
+                   
         'Excellent': 'Отличное',
         'Very good': 'Очень хорошее',
         'Good': 'Хорошее',
@@ -1099,7 +1145,7 @@ VALUE_TRANSLATIONS = {
         'Museum grade': 'Музейный экземпляр',
         'Exhibition piece': 'Выставочный экземпляр',
         'Fragile': 'Хрупкое',
-        # Материалы
+                   
         '100% Virgin Wool': '100% шерсть',
         'Wool Gabardine': 'Шерстяной габардин',
         'Calfskin Leather': 'Телячья кожа',
@@ -1108,7 +1154,7 @@ VALUE_TRANSLATIONS = {
         'Cotton / Polyester': 'Хлопок / полиэстер',
         'Reclaimed vintage textiles': 'Винтажный текстиль',
         'Silk & Brass': 'Шёлк и латунь',
-        # Страны
+                
         'Italy': 'Италия',
         'italy': 'Италия',
         'Itally': 'Италия',
@@ -1125,7 +1171,7 @@ VALUE_TRANSLATIONS = {
         'Germany': 'Германия',
         'Spain': 'Испания',
         'Portugal': 'Португалия',
-        # Материалы (частые варианты из админки; регистр не важен — см. tv())
+                                                                             
         'True Leather': 'Натуральная кожа',
         'Leather': 'Кожа',
         'Steel': 'Сталь',
@@ -1270,7 +1316,7 @@ def tv(value):
         for key, translated in ru_map.items():
             if key.lower() == s_norm.lower():
                 return translated
-    # Fallback: automatic translation for unknown values.
+                                                         
     if lang == 'ru' and GoogleTranslator:
         cache_key = f'ru::{s}'
         if cache_key in AUTO_TRANSLATE_CACHE:

@@ -11,7 +11,7 @@ import re
 
 from core.product_measurements import enrich_product_dict
 
-# Демо-замеры для карточек / JSON в БД (garment = сетка по размерам; footwear = EU + см по стельке)
+                                                                                                   
 _MEAS_DEMO_COAT = {
     "kind": "garment",
     "columns": ["S", "M", "L", "XL"],
@@ -112,7 +112,7 @@ _ROOT = os.path.dirname(os.path.abspath(__file__))
 STATIC_PRODUCTS_DIR = os.path.join(_ROOT, "static", "products")
 STATIC_CAMPAIGN_DIR = os.path.join(_ROOT, "static", "campaign")
 
-# Rick Owens Kiss Heels: все файлы kiss-heels-1.png, kiss-heels-2.png, … в static/products (по номеру). Иначе — демо URL.
+                                                                                                                         
 KISS_HEELS_SERIAL = "RO-0001"
 KISS_HEELS_LEGACY_SERIAL = "PA-1206"
 _KISS_HEELS_NAME = re.compile(r"^kiss-heels-(\d+)\.(png|jpg|jpeg|webp)$", re.I)
@@ -163,7 +163,7 @@ def sync_kiss_heels_product_images(cur) -> None:
             )
 
 
-# Raf Simons AW01 bomber — файлы raf-bomber-1.png, raf-bomber-2.png, … в static/products
+                                                                                        
 RAF_BOMBER_SERIAL = "RS-0001"
 _RAF_BOMBER_NAME = re.compile(r"^raf-bomber-(\d+)\.(png|jpg|jpeg|webp)$", re.I)
 RAF_BOMBER_REMOTE = (
@@ -212,7 +212,7 @@ def sync_raf_bomber_product_images(cur) -> None:
         )
 
 
-# Yeezy Grillz — yzy-1.jpg, yzy-2.png, … в static/products
+                                                          
 YZY_GRILLZ_SERIAL = "YZY-9999"
 _YZY_NAME = re.compile(r"^yzy-(\d+)\.(png|jpg|jpeg|webp)$", re.I)
 YZY_GRILLZ_REMOTE = (
@@ -260,7 +260,7 @@ def sync_yzy_grillz_product_images(cur) -> None:
         )
 
 
-# Balenciaga SS23 jeans — balenciaga-1.jpg … balenciaga-3.jpg (любое количество по номеру) в static/products
+                                                                                                            
 BAL_GRAFFITI_JEANS_SERIAL = "BAL-0001"
 _BALENCIAGA_PRODUCT_NAME = re.compile(r"^balenciaga-(\d+)\.(png|jpg|jpeg|webp)$", re.I)
 BAL_GRAFFITI_JEANS_REMOTE = (
@@ -309,7 +309,7 @@ def sync_balenciaga_graffiti_jeans_product_images(cur) -> None:
         )
 
 
-# Balenciaga Couture Getaria bag — couturebag.jpg или couturebag-1.png … в static/products
+                                                                                          
 BC_COUTURE_BAG_SERIAL = "BC-0001"
 _COUTUREBAG_NAME = re.compile(r"^couturebag(?:-(\d+))?\.(png|jpg|jpeg|webp)$", re.I)
 BC_COUTURE_BAG_REMOTE = (
@@ -579,7 +579,7 @@ DEMO_PRODUCTS: list[dict] = [
     },
 ]
 
-# «Вшитые» товары — порядок витрины при scripts/init_postgres_db.py
+                                                                   
 DEMO_WIRED_PRODUCT_SERIALS = ("RO-0001", "RS-0001", "YZY-9999", "BAL-0001", "BC-0001")
 
 
@@ -621,7 +621,7 @@ def campaign_local_image_urls() -> list[str]:
     return [f"/static/campaign/{name}" for _, name in found]
 
 
-# Несколько URL на историю — обложка + галерея на странице истории (если в папке campaign пусто).
+                                                                                                 
 CAMPAIGN_STORIES_REMOTE_FALLBACK: list[dict] = [
     {
         "sort_order": 0,

@@ -55,7 +55,7 @@ def _parse_item_category_slugs():
 
 
 def _collection_listing_data(for_home=False):
-    # Текстовый поиск только на /search; в «Подборе» каталога поля q нет
+                                                                        
     active_brands = _parse_brand_slugs()
     active_item_categories = _parse_item_category_slugs()
     min_cond = int(request.args.get('min_condition', 0))

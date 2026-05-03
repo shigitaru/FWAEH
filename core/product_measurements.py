@@ -2,32 +2,86 @@
 import json
 import logging
 import re
-import threading
-import time
+
+from flask import has_request_context
 
 logger = logging.getLogger(__name__)
 
-_measurement_idle_lock = threading.Lock()
-_measurement_idle_last_ts = 0.0
-_MEASUREMENT_IDLE_MIN_SEC = 75.0
 
-FOOTWEAR_ITEM_SLUGS = frozenset({'boots', 'flats', 'footwear', 'heels', 'pumps'})
+def _coerce_measurement_cell(raw):
+    s = str(raw or '').strip()
+    if not s:
+        return ''
+    try:
+        if re.match(r'^-?\d+$', s):
+            return int(s)
+        if re.match(r'^-?\d+\.\d+$', s):
+            return float(s)
+    except ValueError:
+        pass
+    return s
 
-# Примерные см по стельке для EU (для автозаполнения в бэкфилле)
-_EU_INSOLE_CM = {
-    35: '22.5', 36: '23.0', 37: '23.5', 38: '24.0', 39: '25.0', 40: '26.2',
-    41: '26.9', 42: '27.5', 43: '28.2', 44: '28.9', 45: '29.6',
-}
+
+def _garment_meas_row_indices(form):
+    if not hasattr(form, 'keys'):
+        return []
+    ix = set()
+    for k in form.keys():
+        ks = str(k)
+        m = re.match(r'^garment_meas_(\d+)_(?:label|en|ru)$', ks)
+        if m:
+            ix.add(int(m.group(1)))
+    return sorted(ix)
 
 
-def is_footwear_item_category(slug):
-    return str(slug or '').strip().lower() in FOOTWEAR_ITEM_SLUGS
+def parse_measurements_from_admin_form(form, size_columns):
+    kind = (form.get('measurements_kind') or 'none').strip().lower()
+    if kind == 'none' or kind not in ('garment', 'footwear'):
+        return None
+    if kind == 'footwear':
+        eus = form.getlist('footwear_meas_eu')
+        tins = form.getlist('footwear_meas_insole')
+        rows_out = []
+        for eu, inch in zip(eus, tins):
+            eu_s = str(eu or '').strip()
+            inch_s = str(inch or '').strip()
+            if eu_s or inch_s:
+                rows_out.append({'eu': eu_s, 'insole_cm': inch_s})
+        parsed = {'kind': 'footwear', 'rows': rows_out}
+        out = parse_measurements_payload(parsed)
+        return out
+    cols = [str(x).strip() for x in (size_columns or []) if str(x).strip()]
+    indices = _garment_meas_row_indices(form)
+    rows_out = []
+    ncols = len(cols)
+    for i in indices:
+        lab = str(form.get(f'garment_meas_{i}_label') or '').strip()
+        if not lab:
+            lab = str(form.get(f'garment_meas_{i}_ru') or '').strip() or str(
+                form.get(f'garment_meas_{i}_en') or ''
+            ).strip()
+        vals = []
+        nonempty = False
+        for j in range(ncols):
+            cell_raw = form.get(f'garment_meas_{i}_v_{j}')
+            coerced = _coerce_measurement_cell(cell_raw)
+            if coerced != '':
+                nonempty = True
+            vals.append(coerced if coerced != '' else '')
+        while len(vals) < ncols:
+            vals.append('')
+        if len(vals) > ncols:
+            vals = vals[:ncols]
+        if lab or nonempty:
+            rows_out.append({'label': lab, 'values': vals})
+    parsed = {'kind': 'garment', 'columns': cols, 'rows': rows_out}
+    return parse_measurements_payload(parsed)
 
 
 def parse_measurements_payload(raw):
     """
     Accepts JSON string or dict.
-    Garment: {"kind":"garment","columns":["S","M"],"rows":[{"en":"…","ru":"…","values":[1,2]}]}
+    Garment: {"kind":"garment","columns":["S","M"],"rows":[{"label":"Длина (см)","values":[1,2]}]} (legacy: en/ru).
     Footwear: {"kind":"footwear","rows":[{"eu":"40","insole_cm":"26.2"}]}
     """
     if raw is None:
@@ -74,11 +128,14 @@ def parse_measurements_payload(raw):
             vals = r.get('values')
             if not isinstance(vals, list):
                 continue
-            out_rows.append({
-                'en': str(r.get('en') or '').strip(),
-                'ru': str(r.get('ru') or '').strip(),
-                'values': vals,
-            })
+            lab = str(r.get('label') or '').strip()
+            ru = str(r.get('ru') or '').strip()
+            en = str(r.get('en') or '').strip()
+            canonical = lab or ru or en
+            has_val = any(str(v).strip() != '' for v in vals)
+            if not canonical and not has_val:
+                continue
+            out_rows.append({'label': canonical, 'values': vals})
         if not cols or not out_rows:
             return None
         return {'kind': 'garment', 'columns': cols, 'rows': out_rows}
@@ -86,10 +143,31 @@ def parse_measurements_payload(raw):
 
 
 def row_label(row, lang):
-    lang = (lang or 'en').lower()
-    if lang == 'ru':
-        return row.get('ru') or row.get('en') or ''
-    return row.get('en') or row.get('ru') or ''
+    _ = lang
+    return (
+        row.get('parameter_display')
+        or row.get('label')
+        or row.get('ru')
+        or row.get('en')
+        or ''
+    )
+
+
+def _inject_garment_row_display(parsed):
+    if not parsed or parsed.get('kind') != 'garment':
+        return
+    rows = parsed.get('rows')
+    if not isinstance(rows, list):
+        return
+    if not has_request_context():
+        return
+    from .i18n import tv
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        lab = row.get('label') or ''
+        row['parameter_display'] = tv(lab)
 
 
 def enrich_product_dict(d, measurements_json):
@@ -102,66 +180,7 @@ def enrich_product_dict(d, measurements_json):
             mj = None
     d['measurements_json'] = mj
     d['measurements'] = parse_measurements_payload(mj)
-
-
-def _garment_demo(columns, seed=0):
-    """Таблица замеров одежды/аксессуаров: columns — подписи размеров из БД."""
-    cols = [str(c).strip() for c in (columns or []) if str(c).strip()]
-    if not cols:
-        cols = ['OS']
-    n = len(cols)
-    base = 100 + (seed % 7) * 2
-
-    def spread(start, step):
-        out = []
-        for i in range(n):
-            out.append(start + i * step)
-        return out
-
-    return {
-        'kind': 'garment',
-        'columns': cols,
-        'rows': [
-            {'en': 'Length (cm)', 'ru': 'Длина (см)', 'values': spread(base, 2)},
-            {'en': 'Chest / width (cm)', 'ru': 'Грудь / ширина (см)', 'values': spread(48 + (seed % 5), 2)},
-            {'en': 'Sleeve / rise (cm)', 'ru': 'Рукав / шаговый шов (см)', 'values': spread(58 + (seed % 4), 1)},
-        ],
-    }
-
-
-def _footwear_demo_from_sizes(size_labels):
-    rows = []
-    for raw in size_labels or []:
-        s = str(raw).strip()
-        m = re.search(r'(\d{2})', s)
-        if not m:
-            continue
-        eu = int(m.group(1))
-        if eu < 34 or eu > 46:
-            continue
-        ins = _EU_INSOLE_CM.get(eu, '')
-        rows.append({'eu': str(eu), 'insole_cm': ins or '—'})
-    if not rows:
-        rows = [
-            {'eu': '39', 'insole_cm': _EU_INSOLE_CM.get(39, '25.0')},
-            {'eu': '40', 'insole_cm': _EU_INSOLE_CM.get(40, '26.2')},
-            {'eu': '41', 'insole_cm': _EU_INSOLE_CM.get(41, '26.9')},
-        ]
-    return {'kind': 'footwear', 'rows': rows}
-
-
-def default_measurements_payload(item_category, size_labels, *, product_id=0):
-    """
-    Демо-замеры для бэкфилла: по категории вещи и списку размеров из ProductSizes.
-    Возвращает dict для JSON или None если нечего записать.
-    """
-    slug = str(item_category or '').strip().lower()
-    sizes = [str(x).strip() for x in (size_labels or []) if str(x).strip()]
-    if is_footwear_item_category(slug):
-        data = _footwear_demo_from_sizes(sizes)
-    else:
-        data = _garment_demo(sizes, seed=int(product_id or 0))
-    return data if parse_measurements_payload(data) else None
+    _inject_garment_row_display(d['measurements'])
 
 
 def upsert_product_measurement(cur, product_id, payload):
@@ -224,73 +243,5 @@ def migrate_legacy_measurements_to_table(cur):
 
 
 def sync_missing_product_measurements(cur):
-    """
-    Для товаров без строки в ProductMeasurements подставляет демо-замеры по размерам.
-    Возвращает число вставленных/обновлённых строк.
-    """
-    cur.execute(
-        """
-        SELECT p.id, p.item_category
-        FROM Products p
-        WHERE NOT EXISTS (SELECT 1 FROM ProductMeasurements m WHERE m.product_id = p.id)
-        ORDER BY p.id
-        """
-    )
-    rows = cur.fetchall()
-    updated = 0
-    for row in rows:
-        pid = int(row.id)
-        ic = getattr(row, 'item_category', None)
-        cur.execute(
-            'SELECT size_label FROM ProductSizes WHERE product_id = ? ORDER BY id',
-            (pid,),
-        )
-        sz_rows = cur.fetchall()
-        sizes = []
-        for sr in sz_rows:
-            lbl = getattr(sr, 'size_label', None)
-            if lbl is None and isinstance(sr, (list, tuple)) and sr:
-                lbl = sr[0]
-            if lbl:
-                sizes.append(str(lbl).strip())
-        payload = default_measurements_payload(ic, sizes, product_id=pid)
-        if not payload:
-            continue
-        upsert_product_measurement(cur, pid, payload)
-        updated += 1
-    if updated:
-        logger.info('Filled ProductMeasurements for %s products', updated)
-    return updated
-
-
-def idle_backfill_missing_measurements():
-    """
-    Дешёвая проверка + бэкапл: вызывается из Flask before_request (не каждый запрос).
-    Нужна, когда после старта воркера в админке добавили товар без замеров.
-    """
-    global _measurement_idle_last_ts
-    now = time.monotonic()
-    with _measurement_idle_lock:
-        if now - _measurement_idle_last_ts < _MEASUREMENT_IDLE_MIN_SEC:
-            return 0
-        _measurement_idle_last_ts = now
-    try:
-        from .db import get_db_connection
-
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute(
-                """
-                SELECT 1 FROM Products p
-                WHERE NOT EXISTS (SELECT 1 FROM ProductMeasurements m WHERE m.product_id = p.id)
-                LIMIT 1
-                """
-            )
-            if cur.fetchone() is None:
-                return 0
-            n = sync_missing_product_measurements(cur)
-            conn.commit()
-            return n
-    except Exception:
-        logger.exception('idle_backfill_missing_measurements failed')
-        return 0
+    """Раньше заполнял демо-замеры; отключено — таблицы только из админки или legacy JSON."""
+    return 0

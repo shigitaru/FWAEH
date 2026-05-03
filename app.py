@@ -1,4 +1,5 @@
 from datetime import datetime
+from urllib.parse import quote
 
 from flask import Flask, request
 
@@ -85,7 +86,6 @@ from routes.api import register_api_routes
 from routes.auth import register_auth_routes
 from routes.public import register_public_routes
 from services.rental_service import RentalAvailabilityError, CoutureAccessError
-from core.product_measurements import idle_backfill_missing_measurements
 from core.session_cart import (
     ACC_EMAIL_RE,
     _clear_user_session,
@@ -112,13 +112,6 @@ def _run_brand_coture_typo_fix_once():
         return
     _brand_coture_typo_fixed = True
     ensure_legacy_balenciaga_coture_brand_rename()
-
-
-@app.before_request
-def _lazy_measurements_backfill():
-    if getattr(request, 'path', '').startswith('/static'):
-        return
-    idle_backfill_missing_measurements()
 
 
 register_auth_routes(
@@ -266,6 +259,32 @@ def inject_globals():
     couture_hero_url = f'{site_media_base}/couture-hero.jpg'
     members_area_hero_url = get_members_area_hero_url_from_db() or ''
 
+    def _site_nav_tease_file_url(rel: str) -> str:
+        name = rel.lstrip('/')
+        if site_media_base.startswith(('http://', 'https://')):
+            return f'{site_media_base}/{quote(name, safe="().-_~")}'
+        return f'{site_media_base}/{name}'
+
+                                                                                                
+    _col_file = getattr(
+        settings,
+        'collection_nav_tease_site_file',
+        'de1b395fd683996f64d13c9caf59e53a.jpg',
+    ).lstrip('/')
+    _campaign_file = getattr(
+        settings,
+        'campaign_nav_tease_site_file',
+        'ef88a65170b81f7b6782159f2d40ad9c.jpg',
+    ).lstrip('/')
+    _about_file = getattr(
+        settings,
+        'about_nav_tease_site_file',
+        'image (1).jpeg',
+    ).lstrip('/')
+    collection_nav_tease_img_url = _site_nav_tease_file_url(_col_file)
+    campaign_nav_tease_img_url = _site_nav_tease_file_url(_campaign_file)
+    about_nav_tease_img_url = _site_nav_tease_file_url(_about_file)
+
     return {
         'current_year': datetime.now().year,
         'current_lang': lang,
@@ -283,6 +302,9 @@ def inject_globals():
         'showcase_image_2_url': showcase_image_2_url,
         'couture_hero_url': couture_hero_url,
         'members_area_hero_url': members_area_hero_url,
+        'collection_nav_tease_img_url': collection_nav_tease_img_url,
+        'campaign_nav_tease_img_url': campaign_nav_tease_img_url,
+        'about_nav_tease_img_url': about_nav_tease_img_url,
         'demo_mode': settings.demo_mode,
     }
 

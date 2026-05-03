@@ -1,8 +1,35 @@
+from __future__ import annotations
+
 from flask import request, session, redirect, url_for, render_template, flash
 from werkzeug.security import check_password_hash
 import secrets
 
-from core.product_measurements import default_measurements_payload, parse_measurements_payload, upsert_product_measurement
+from core.product_measurements import parse_measurements_from_admin_form, upsert_product_measurement
+
+
+def _measurements_form_error_key(form, size_values: list) -> str | None:
+    kind_raw = (form.get('measurements_kind') or 'none').strip().lower()
+    if kind_raw == 'none' or kind_raw not in ('garment', 'footwear'):
+        return None
+    if kind_raw == 'garment' and not size_values:
+        return 'admin_measurements_need_sizes'
+    meas = parse_measurements_from_admin_form(form, size_values)
+    if meas is None:
+        if kind_raw == 'footwear':
+            return 'admin_measurements_footwear_empty'
+        return 'admin_measurements_garment_incomplete'
+    return None
+
+
+def _persist_measurements_from_admin_form(form, cur, product_id: int, size_values: list) -> None:
+    kind_raw = (form.get('measurements_kind') or 'none').strip().lower()
+    if kind_raw == 'none' or kind_raw not in ('garment', 'footwear'):
+        upsert_product_measurement(cur, product_id, None)
+        return
+    meas = parse_measurements_from_admin_form(form, size_values)
+    if meas is None:
+        raise ValueError('measurements validation drift')
+    upsert_product_measurement(cur, product_id, meas)
 
 
 def register_admin_routes(app, deps):
@@ -115,6 +142,14 @@ def register_admin_routes(app, deps):
                 if not main_image:
                     session['admin_status'] = {'type': 'error', 'message': t('admin_required_main_image')}
                     return redirect(url_for('admin_panel', section='products'))
+                mk_create = (request.form.get('measurements_kind') or 'none').strip().lower()
+                if mk_create not in ('none', 'garment', 'footwear'):
+                    mk_create = 'none'
+                if mk_create in ('garment', 'footwear'):
+                    mc_err = _measurements_form_error_key(request.form, size_values)
+                    if mc_err:
+                        session['admin_status'] = {'type': 'error', 'message': t(mc_err)}
+                        return redirect(url_for('admin_panel', section='products'))
                 with get_db_connection() as conn:
                     cur = conn.cursor()
                     cur.execute('SELECT id FROM Brands WHERE name = ?', (brand_name,))
@@ -171,9 +206,7 @@ def register_admin_routes(app, deps):
                         )
                     for size_label in size_values:
                         cur.execute('INSERT INTO ProductSizes (product_id, size_label) VALUES (?, ?)', (product_id, size_label))
-                    payload = default_measurements_payload(item_category, size_values, product_id=product_id)
-                    if payload:
-                        upsert_product_measurement(cur, product_id, payload)
+                    _persist_measurements_from_admin_form(request.form, cur, product_id, size_values)
                     conn.commit()
                 session['admin_status'] = {'type': 'success', 'message': t('admin_product_created')}
             except Exception as exc:
@@ -347,19 +380,16 @@ def register_admin_routes(app, deps):
                 origin = nullable_str(request.form.get('origin'))
                 condition = nullable_str(request.form.get('condition'))
                 sizes_raw = request.form.get('sizes', '').strip()
-                measurements_json_raw = (request.form.get('measurements_json') or '').strip()
-                meas_parsed = None
-                if measurements_json_raw:
-                    meas_parsed = parse_measurements_payload(measurements_json_raw)
-                    if meas_parsed is None:
-                        session['admin_status'] = {'type': 'error', 'message': t('admin_measurements_invalid')}
-                        return redirect(url_for('admin_edit_product', product_id=product_id))
                 if not all([serial, brand_name, name, max_days_raw, condition_score_raw]):
                     session['admin_status'] = {'type': 'error', 'message': t('admin_required_fields')}
                     return redirect(url_for('admin_edit_product', product_id=product_id))
                 max_days = int(max_days_raw)
                 condition_score = int(condition_score_raw)
                 size_values = [s.strip() for s in sizes_raw.split(',') if s.strip()]
+                meas_err = _measurements_form_error_key(request.form, size_values)
+                if meas_err:
+                    session['admin_status'] = {'type': 'error', 'message': t(meas_err)}
+                    return redirect(url_for('admin_edit_product', product_id=product_id))
                 remove_ids = []
                 for x in request.form.getlist('remove_image_id'):
                     try:
@@ -445,7 +475,7 @@ def register_admin_routes(app, deps):
                             'INSERT INTO ProductSizes (product_id, size_label) VALUES (?, ?)',
                             (product_id, size_label),
                         )
-                    upsert_product_measurement(cur, product_id, meas_parsed)
+                    _persist_measurements_from_admin_form(request.form, cur, product_id, size_values)
                     conn.commit()
                 session['admin_status'] = {'type': 'success', 'message': t('admin_product_updated')}
             except Exception as exc:

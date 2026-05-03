@@ -28,6 +28,10 @@ class Settings:
     supabase_service_role_key: str
     supabase_bucket: str
     supabase_public_base_url: str
+                                                                                                      
+    collection_nav_tease_site_file: str
+    campaign_nav_tease_site_file: str
+    about_nav_tease_site_file: str
     demo_mode: bool
 
 
@@ -61,6 +65,19 @@ def load_settings() -> Settings:
         supabase_service_role_key=os.getenv('SUPABASE_SERVICE_ROLE_KEY', '').strip(),
         supabase_bucket=os.getenv('SUPABASE_BUCKET', 'media').strip(),
         supabase_public_base_url=os.getenv('SUPABASE_PUBLIC_BASE_URL', '').strip().rstrip('/'),
+        collection_nav_tease_site_file=(
+            os.getenv('COLLECTION_NAV_TEASE_SITE_FILE', '').strip()
+            or os.getenv('ITEMS_NAV_TEASE_SITE_FILE', '').strip()
+            or 'de1b395fd683996f64d13c9caf59e53a.jpg'
+        ),
+        campaign_nav_tease_site_file=(
+            os.getenv('CAMPAIGN_NAV_TEASE_SITE_FILE', '').strip()
+            or 'ef88a65170b81f7b6782159f2d40ad9c.jpg'
+        ),
+        about_nav_tease_site_file=(
+            os.getenv('ABOUT_NAV_TEASE_SITE_FILE', '').strip()
+            or 'image (1).jpeg'
+        ),
         demo_mode=os.getenv('DEMO_MODE', '0').strip().lower() in ('1', 'true', 'yes', 'on'),
     )
 

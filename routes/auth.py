@@ -203,8 +203,8 @@ def register_auth_routes(app, deps):
             ensure_app_users_table()
             existing = user_fetch_by_email(email)
             if existing:
-                # If email exists but is not verified yet, allow resending code
-                # instead of blocking user with "email already used".
+                                                                               
+                                                                     
                 if len(existing) > 5 and not bool(existing[5]):
                     if email_delivery_disabled:
                         mark_email_verified(int(existing[0]))
@@ -232,8 +232,8 @@ def register_auth_routes(app, deps):
             if '23000' in str(e) or 'UNIQUE' in err or '2627' in str(e):
                 flash(t('acc_err_email_used'), 'error')
                 return redirect(url_for('account'))
-            # Most common non-DB failure here is SMTP send failure after user insert.
-            # Keep pending user and ask user to retry/resend after fixing SMTP.
+                                                                                     
+                                                                               
             msg = str(e).lower()
             if (
                 'smtp' in msg

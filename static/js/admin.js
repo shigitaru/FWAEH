@@ -401,6 +401,270 @@
         });
     }
 
+    function initMeasurementsEditor() {
+        var root = document.getElementById("admin-measurements-editor");
+        var garmentTbody = document.getElementById("admin-measurements-garment-tbody");
+        if (!root || !garmentTbody) return;
+
+        var sizesInput = document.getElementById("admin-product-sizes");
+        var panelGarment = document.getElementById("admin-measurements-panel-garment");
+        var panelFoot = document.getElementById("admin-measurements-panel-footwear");
+        var garmentThead = document.getElementById("admin-measurements-garment-thead");
+        var footwearTbody = document.getElementById("admin-measurements-footwear-tbody");
+        var addGarmentBtn = document.getElementById("admin-measurements-add-garment");
+        var addFootBtn = document.getElementById("admin-measurements-add-footwear");
+
+        try {
+            var mij = document.getElementById("admin-measurements-editor-i18n");
+            JSON.parse(mij ? mij.textContent : "{}");
+        } catch (eIgn) {}
+
+        var snapshot = null;
+        try {
+            var sj = document.getElementById("admin-measurements-snapshot");
+            snapshot = JSON.parse(sj ? sj.textContent : "null");
+        } catch (eS) {
+            snapshot = null;
+        }
+
+        var nextGarmentIx = 0;
+
+        function kindValue() {
+            var r = root.querySelector('input[name="measurements_kind"]:checked');
+            return r ? r.value : "none";
+        }
+
+        function parseSizesCsv() {
+            var raw = (sizesInput && sizesInput.value) || "";
+            return raw
+                .split(",")
+                .map(function (s) {
+                    return s.trim();
+                })
+                .filter(Boolean);
+        }
+
+        function garmentColumnLabels() {
+            var fromSizes = parseSizesCsv();
+            if (fromSizes.length) return fromSizes;
+            if (snapshot && snapshot.kind === "garment" && Array.isArray(snapshot.columns) && snapshot.columns.length) {
+                return snapshot.columns.map(function (x) {
+                    return String(x);
+                });
+            }
+            return [];
+        }
+
+        function effectiveGarmentCols() {
+            var g = garmentColumnLabels();
+            return g.length ? g : [""];
+        }
+
+        function rebuildGarmentHeader(labels) {
+            if (!garmentThead) return;
+            garmentThead.innerHTML = "";
+            var tr = document.createElement("tr");
+            var thP = document.createElement("th");
+            thP.setAttribute("scope", "col");
+            thP.textContent = root.getAttribute("data-label-parameter") || "";
+            tr.appendChild(thP);
+            if (labels.length) {
+                labels.forEach(function (lbl) {
+                    var th = document.createElement("th");
+                    th.setAttribute("scope", "col");
+                    th.textContent = lbl;
+                    tr.appendChild(th);
+                });
+            } else {
+                var th0 = document.createElement("th");
+                th0.setAttribute("scope", "col");
+                th0.textContent = "…";
+                tr.appendChild(th0);
+            }
+            garmentThead.appendChild(tr);
+        }
+
+        function garmentRowIx(tr) {
+            var ix = parseInt(tr.getAttribute("data-garment-ix"), 10);
+            return isNaN(ix) ? 0 : ix;
+        }
+
+        function gatherRowVals(tr) {
+            var out = [];
+            for (var c = 1; c < tr.cells.length; c++) {
+                var inp = tr.cells[c].querySelector("input");
+                out.push(inp ? inp.value : "");
+            }
+            return out;
+        }
+
+        function ensureGarmentValueCells(tr, ix, colCount, preset) {
+            while (tr.cells.length > 1) {
+                tr.deleteCell(1);
+            }
+            var n = Math.max(1, colCount || 0);
+            for (var j = 0; j < n; j++) {
+                var td = document.createElement("td");
+                var inp = document.createElement("input");
+                inp.type = "text";
+                inp.className = "search-input";
+                inp.autocomplete = "off";
+                inp.name = "garment_meas_" + ix + "_v_" + j;
+                if (preset && preset[j] !== undefined && preset[j] !== null && preset[j] !== "") {
+                    inp.value = String(preset[j]);
+                }
+                td.appendChild(inp);
+                tr.appendChild(td);
+            }
+        }
+
+        function addGarmentRow(labelRu, valuesPreset) {
+            var ix = nextGarmentIx++;
+            var tr = document.createElement("tr");
+            tr.setAttribute("data-garment-ix", String(ix));
+
+            var tdLb = document.createElement("td");
+            var inpLb = document.createElement("input");
+            inpLb.type = "text";
+            inpLb.className = "search-input";
+            inpLb.autocomplete = "off";
+            inpLb.name = "garment_meas_" + ix + "_label";
+            inpLb.value = labelRu || "";
+            tdLb.appendChild(inpLb);
+            tr.appendChild(tdLb);
+
+            var cols = effectiveGarmentCols();
+            ensureGarmentValueCells(tr, ix, cols.length, valuesPreset || []);
+            garmentTbody.appendChild(tr);
+        }
+
+        function hydrateGarmentFromSnapshotOnce() {
+            if (!snapshot || snapshot.kind !== "garment") return false;
+            if (garmentTbody.rows.length) return false;
+            var rows = Array.isArray(snapshot.rows) ? snapshot.rows : [];
+            if (!rows.length) return false;
+            rows.forEach(function (r) {
+                if (!r || typeof r !== "object") return;
+                var vals = Array.isArray(r.values) ? r.values : [];
+                var lab = String(r.label || r.ru || r.en || "");
+                addGarmentRow(lab, vals);
+            });
+            return garmentTbody.rows.length > 0;
+        }
+
+        function refreshGarmentGrid() {
+            if (kindValue() !== "garment" || !garmentTbody) return;
+            var labels = garmentColumnLabels();
+            rebuildGarmentHeader(labels.length ? labels : []);
+            var colCount = effectiveGarmentCols().length;
+            Array.from(garmentTbody.rows).forEach(function (tr) {
+                var preset = gatherRowVals(tr);
+                var ix = garmentRowIx(tr);
+                ensureGarmentValueCells(tr, ix, colCount, preset);
+            });
+            if (!garmentTbody.rows.length) {
+                hydrateGarmentFromSnapshotOnce();
+            }
+            if (!garmentTbody.rows.length) {
+                addGarmentRow("", []);
+            }
+        }
+
+        function footwearI18n() {
+            try {
+                var mij = document.getElementById("admin-measurements-editor-i18n");
+                return JSON.parse(mij ? mij.textContent : "{}") || {};
+            } catch (eFi) {
+                return {};
+            }
+        }
+
+        function addFootwearRow(euVal, insVal) {
+            if (!footwearTbody) return;
+            var i18nf = footwearI18n();
+            var tr = document.createElement("tr");
+
+            var td1 = document.createElement("td");
+            var inp1 = document.createElement("input");
+            inp1.type = "text";
+            inp1.className = "search-input";
+            inp1.name = "footwear_meas_eu";
+            inp1.autocomplete = "off";
+            inp1.placeholder = i18nf.euPlaceholder || "";
+            inp1.value = euVal || "";
+            td1.appendChild(inp1);
+
+            var td2 = document.createElement("td");
+            var inp2 = document.createElement("input");
+            inp2.type = "text";
+            inp2.className = "search-input";
+            inp2.name = "footwear_meas_insole";
+            inp2.autocomplete = "off";
+            inp2.placeholder = i18nf.insolePlaceholder || "";
+            inp2.value = insVal || "";
+            td2.appendChild(inp2);
+
+            var td3 = document.createElement("td");
+            var rm = document.createElement("button");
+            rm.type = "button";
+            rm.className = "admin-measurements-rm-row";
+            rm.textContent = i18nf.rm || "×";
+            rm.addEventListener("click", function () {
+                tr.remove();
+                if (footwearTbody && !footwearTbody.rows.length) addFootwearRow("", "");
+            });
+            td3.appendChild(rm);
+
+            tr.appendChild(td1);
+            tr.appendChild(td2);
+            tr.appendChild(td3);
+            footwearTbody.appendChild(tr);
+        }
+
+        function hydrateFootwearFromSnapshot() {
+            if (!footwearTbody || !snapshot || snapshot.kind !== "footwear") return false;
+            var rows = Array.isArray(snapshot.rows) ? snapshot.rows : [];
+            footwearTbody.innerHTML = "";
+            if (!rows.length) {
+                addFootwearRow("", "");
+                return true;
+            }
+            rows.forEach(function (r) {
+                if (!r || typeof r !== "object") return;
+                addFootwearRow(String(r.eu || ""), String(r.insole_cm || ""));
+            });
+            return true;
+        }
+
+        function refreshFootwearTable() {
+            if (kindValue() !== "footwear" || !footwearTbody) return;
+            if (!footwearTbody.rows.length) {
+                hydrateFootwearFromSnapshot() || addFootwearRow("", "");
+            }
+        }
+
+        function syncPanels() {
+            var k = kindValue();
+            if (panelGarment) panelGarment.classList.toggle("is-hidden", k !== "garment");
+            if (panelFoot) panelFoot.classList.toggle("is-hidden", k !== "footwear");
+            if (k === "garment") refreshGarmentGrid();
+            else if (k === "footwear") refreshFootwearTable();
+        }
+
+        root.querySelectorAll('input[name="measurements_kind"]').forEach(function (inp) {
+            inp.addEventListener("change", syncPanels);
+        });
+        if (sizesInput) {
+            sizesInput.addEventListener("input", function () {
+                if (kindValue() === "garment") refreshGarmentGrid();
+            });
+        }
+        if (addGarmentBtn) addGarmentBtn.addEventListener("click", function () { addGarmentRow("", []); });
+        if (addFootBtn) addFootBtn.addEventListener("click", function () { addFootwearRow("", ""); });
+
+        syncPanels();
+    }
+
     var brands = readBrands();
     var i18n = readI18n();
     initBrandAutocomplete(brands);
@@ -408,4 +672,5 @@
     initUploadZones(i18n);
     initAdminImageSort();
     initConfirmSubmit();
+    initMeasurementsEditor();
 })();

@@ -332,11 +332,17 @@
         });
         window.paSetCartCount = function (n) {
             var c = document.getElementById("header-cart-count");
-            if (c) c.textContent = String(n);
+            if (!c) return;
+            var inner = c.querySelector(".header-icon-badge-n");
+            if (inner) inner.textContent = String(n);
+            else c.textContent = String(n);
         };
         window.paSetWishlistCount = function (n) {
             var w = document.getElementById("header-wish-count");
-            if (w) w.textContent = String(n);
+            if (!w) return;
+            var inner = w.querySelector(".header-icon-badge-n");
+            if (inner) inner.textContent = String(n);
+            else w.textContent = String(n);
         };
         window.paShowCartToast = function (productName) {
             var i18n = window.paCartToastI18n;
@@ -463,7 +469,7 @@
             }, 220);
         }
 
-        /** Активная карточка: тач — только по стрелке (.is-expanded); десктоп — наведение на строку (peek) или тот же .is-expanded */
+        
         function syncFlyoutState() {
             if (!split) return;
             var expanded = root.querySelector(".pa-nav-tease.is-expanded");
@@ -655,7 +661,12 @@
             (m.rows || []).forEach(function (row) {
                 var tr = document.createElement("tr");
                 var td0 = document.createElement("td");
-                td0.textContent = lang === "ru" ? (row.ru || row.en || "") : (row.en || row.ru || "");
+                td0.textContent =
+                    row.parameter_display != null && row.parameter_display !== ""
+                        ? String(row.parameter_display)
+                        : lang === "ru"
+                          ? row.ru || row.en || row.label || ""
+                          : row.en || row.ru || row.label || "";
                 tr.appendChild(td0);
                 (row.values || []).forEach(function (v) {
                     var td = document.createElement("td");

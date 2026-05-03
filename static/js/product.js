@@ -24,7 +24,7 @@
     var nextBtn = document.getElementById("gallery-next");
     var occupancyCalendar = document.getElementById("product-occupancy-calendar");
     var occupancyPeriods = [];
-    /** Половинчатый интервал [start, end) в формате YYYY-MM-DD — текущий выбор даёт unavailable из /availability */
+    
     var lastUnavailableRange = null;
     if (cfg.initial_unavailable && cfg.initial_range_start && cfg.initial_range_end) {
         lastUnavailableRange = { start: cfg.initial_range_start, end: cfg.initial_range_end };
@@ -81,7 +81,7 @@
     function pad2(n) {
         return n < 10 ? "0" + n : String(n);
     }
-    /** Локальная дата YYYY-MM-DD (без UTC-сдвига toISOString). */
+    
     function isoDateLocal(d) {
         return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
     }

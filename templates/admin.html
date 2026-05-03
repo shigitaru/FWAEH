@@ -54,7 +54,10 @@
             <input class="search-input" type="text" name="material" placeholder="{{ t('material_placeholder') }}">
             <input class="search-input" type="text" name="origin" placeholder="{{ t('origin_placeholder') }}">
             <input class="search-input" type="text" name="condition" placeholder="{{ t('condition_label_placeholder') }}">
-            <input class="search-input" type="text" name="sizes" placeholder="{{ t('sizes_placeholder') }}">
+            <input class="search-input" type="text" name="sizes" placeholder="{{ t('sizes_placeholder') }}" autocomplete="off" id="admin-product-sizes">
+            {% with measurements_mode='create' %}
+            {% include 'includes/admin_measurements_fieldset.html' %}
+            {% endwith %}
         </div>
         <div class="upload-grid">
             <label class="upload-dropzone">

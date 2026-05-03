@@ -1,0 +1,55 @@
+{% if measurements_mode == 'create' %}
+    {% set snap = none %}
+    {% set meas_kind_show = 'none' %}
+{% else %}
+    {% set snap = meas %}
+    {% set meas_kind_show = (snap.kind if snap and snap.kind else 'none') %}
+{% endif %}
+<fieldset
+    class="admin-measurements-editor"
+    id="admin-measurements-editor"
+    aria-labelledby="admin-measurements-legend"
+    data-label-parameter="{{ t('admin_measurements_th_param') }}"
+    data-measurements-mode="{{ measurements_mode }}"
+>
+    <legend id="admin-measurements-legend" class="admin-measurements-legend">{{ t('admin_measurements_section_title') }}</legend>
+    <div class="admin-measurements-kind-row" role="radiogroup">
+        <label class="admin-measurements-radio"><input type="radio" name="measurements_kind" value="none" {% if meas_kind_show == 'none' %}checked{% endif %}>{{ t('admin_measurements_kind_none') }}</label>
+        <label class="admin-measurements-radio"><input type="radio" name="measurements_kind" value="garment" {% if meas_kind_show == 'garment' %}checked{% endif %}>{{ t('admin_measurements_kind_garment') }}</label>
+        <label class="admin-measurements-radio"><input type="radio" name="measurements_kind" value="footwear" {% if meas_kind_show == 'footwear' %}checked{% endif %}>{{ t('admin_measurements_kind_footwear') }}</label>
+    </div>
+    <div id="admin-measurements-panel-garment" class="admin-measurements-panel{% if meas_kind_show != 'garment' %} is-hidden{% endif %}">
+        <p class="admin-measurements-hint">{{ t('admin_measurements_garment_hint') }}</p>
+        <div class="admin-measurements-table-scroll">
+            <table class="admin-measurements-table" aria-label="{{ t('admin_measurements_kind_garment') }}">
+                <thead id="admin-measurements-garment-thead"></thead>
+                <tbody id="admin-measurements-garment-tbody"></tbody>
+            </table>
+        </div>
+        <button type="button" class="btn-primary admin-measurements-add-btn" id="admin-measurements-add-garment">{{ t('admin_measurements_add_garment_row') }}</button>
+    </div>
+    <div id="admin-measurements-panel-footwear" class="admin-measurements-panel{% if meas_kind_show != 'footwear' %} is-hidden{% endif %}">
+        <p class="admin-measurements-hint">{{ t('admin_measurements_footwear_hint') }}</p>
+        <div class="admin-measurements-table-scroll">
+            <table class="admin-measurements-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ t('product_measure_col_size') }}</th>
+                        <th scope="col">{{ t('product_measure_col_insole') }}</th>
+                        <th class="admin-measurements-remove-col"><span aria-hidden="true">{{ t('admin_measurements_remove_row') }}</span></th>
+                    </tr>
+                </thead>
+                <tbody id="admin-measurements-footwear-tbody"></tbody>
+            </table>
+        </div>
+        <button type="button" class="btn-primary admin-measurements-add-btn" id="admin-measurements-add-footwear">{{ t('admin_measurements_add_footwear_row') }}</button>
+    </div>
+</fieldset>
+<script type="application/json" id="admin-measurements-snapshot">{{ snap | tojson }}</script>
+<script type="application/json" id="admin-measurements-editor-i18n">{{ {
+    'eu': t('product_measure_col_size'),
+    'insole': t('product_measure_col_insole'),
+    'rm': t('admin_measurements_remove_row'),
+    'euPlaceholder': t('admin_measurements_placeholder_eu'),
+    'insolePlaceholder': t('admin_measurements_placeholder_insole')
+} | tojson }}</script>

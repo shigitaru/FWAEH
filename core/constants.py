@@ -21,7 +21,7 @@ BRANDS = [
     {'name': 'Schiaparelli', 'slug': 'Schiaparelli', 'css_class': 'brand-schiaparelli'},
 ]
 
-# Имя бренда (lower) → CSS-класс для тайла на Search; пополняется вместе с BRANDS / новыми брендами в style.css.
+                                                                                                                
 BRAND_CSS_BY_NAME = {b['name'].strip().lower(): b['css_class'] for b in BRANDS}
 BRAND_CSS_BY_NAME.update({
     'gucci': 'brand-gucci',
@@ -29,7 +29,7 @@ BRAND_CSS_BY_NAME.update({
     'raf simons': 'brand-raf-simons',
 })
 
-# Тип вещи для витрины (не путать с category rtw/couture в БД)
+                                                              
 ITEM_CATEGORIES = [
     {'slug': 'bags', 'en': 'Bags', 'ru': 'Сумки'},
     {'slug': 'boots', 'en': 'Boots', 'ru': 'Ботинки'},

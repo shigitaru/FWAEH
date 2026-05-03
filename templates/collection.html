@@ -396,11 +396,6 @@
             }
         }, true);
 
-        /*
-         * FAB после выхода из hero: низ hero выше края экрана.
-         * Плюс: якорь #collection-catalog / #collection-grid не всегда даёт событие scroll —
-         * дублируем проверкой hash, load, таймерами и IntersectionObserver.
-         */
         var hero = document.querySelector('.pa-landing') || document.querySelector('.collection-hero');
         function syncRefineFab() {
             if (!hero) {
@@ -421,7 +416,6 @@
                 if (jumpedToCatalog) {
                     catVisible = r.top < vh * 0.98 && r.bottom > 0;
                 }
-                /* Скролл колесом без смены hash: «вещи» уже у верхней части экрана */
                 if (sy > 64) {
                     catInUpperView = r.top < vh * 0.38;
                 }
@@ -449,7 +443,6 @@
         }
     }
 
-    /* Аккордеон + живое обновление подписей выбранных фильтров (работает без FAB, если есть форма) */
     var refineFormMult = document.getElementById('refine-form');
     if (refineFormMult) {
         var refineI18nEl = document.getElementById('refine-live-i18n');
@@ -699,7 +692,6 @@
             hls.attachMedia(video);
             hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
                 if (forceHighQuality && hls.levels && hls.levels.length) {
-                    // Pick the best rendition by bitrate (safer than relying on level order).
                     var best = 0;
                     for (var i = 1; i < hls.levels.length; i++) {
                         var currBitrate = (hls.levels[i] && hls.levels[i].bitrate) || 0;
@@ -707,7 +699,6 @@
                         if (currBitrate > bestBitrate) best = i;
                     }
                     lockedLevel = best;
-                    // Manual mode: disable ABR oscillation for this section.
                     hls.autoLevelCapping = -1;
                     hls.nextLevel = best;
                     hls.loadLevel = best;
@@ -718,7 +709,6 @@
             if (forceHighQuality) {
                 hls.on(window.Hls.Events.LEVEL_SWITCHED, function (_, data) {
                     if (lockedLevel >= 0 && data && data.level !== lockedLevel) {
-                        // Lock the start section to one quality level so ABR doesn't pump quality up/down.
                         hls.nextLevel = lockedLevel;
                     }
                 });

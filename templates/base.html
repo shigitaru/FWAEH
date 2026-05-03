@@ -77,7 +77,7 @@
                     <a href="{{ url_for('wishlist_page') }}" class="header-icon-link {% if active_page == 'wishlist' %}active{% endif %}" aria-label="{{ t('aria_wishlist_page') }}">
                         <span class="header-icon-wrap">
                             <svg class="header-icon-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 21s-7-4.6-9.6-9.2C-.2 8.4 2.6 4 7.5 4c2.4 0 4 1.2 4.5 3C12.5 5.2 14 4 16.5 4 21.4 4 24.2 8.4 21.6 11.8 19 16.4 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                            <span class="header-icon-badge" id="header-wish-count">{{ wishlist_count }}</span>
+                            <span class="header-icon-badge" id="header-wish-count"><span class="header-icon-badge-n">{{ wishlist_count }}</span></span>
                         </span>
                     </a>
                     <a href="{{ url_for('cart') }}" class="header-icon-link" id="header-bag-link" aria-label="{{ t('aria_bag') }}">
@@ -86,7 +86,7 @@
                                 <path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M6.5 7h14.5l-1.4 13.5H8L6.5 7z"/>
                                 <path fill="none" stroke="currentColor" stroke-width="1.5" d="M9 7V5.5a3 3 0 016 0V7"/>
                             </svg>
-                            <span class="header-icon-badge" id="header-cart-count">{{ cart_count }}</span>
+                            <span class="header-icon-badge" id="header-cart-count"><span class="header-icon-badge-n">{{ cart_count }}</span></span>
                         </span>
                     </a>
                     <a href="{{ url_for('set_lang', lang='ru' if current_lang == 'en' else 'en') }}" class="lang-toggle" lang="{{ current_lang }}" aria-label="{{ t('aria_lang_switch_to_ru') if current_lang == 'en' else t('aria_lang_switch_to_en') }}">{{ 'RU' if current_lang == 'ru' else 'EN' }}</a>
@@ -106,7 +106,14 @@
                         <span>{{ t('menu_close') }}</span>
                     </button>
                     <nav class="pa-drawer-nav" aria-label="Main">
-                        <a href="{{ url_for('home') }}" class="{% if active_page == 'collection' %}is-active{% endif %}">{{ t('collection') }}</a>
+                        <div class="pa-nav-tease" data-tease-id="collection">
+                            <div class="pa-nav-tease-head">
+                                <a href="{{ url_for('home') }}" class="pa-nav-tease-main{% if active_page == 'collection' %} is-active{% endif %}">{{ t('collection') }}</a>
+                                <button type="button" class="pa-nav-tease-toggle" aria-expanded="false" aria-controls="pa-tease-collection-panel" aria-label="{{ t('nav_tease_toggle_aria') }}">
+                                    <span class="pa-nav-tease-chevron" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        </div>
                         <div class="pa-nav-tease{% if current_user %} pa-nav-tease--signed-in{% endif %}" data-tease-id="couture">
                             <div class="pa-nav-tease-head">
                                 <a href="{{ url_for('couture') }}" class="pa-nav-tease-main{% if active_page == 'couture' %} is-active{% endif %}">{{ t('couture') }}</a>
@@ -115,8 +122,22 @@
                                 </button>
                             </div>
                         </div>
-                        <a href="{{ url_for('campaign') }}" class="{% if active_page == 'campaign' %}is-active{% endif %}">{{ t('campaign') }}</a>
-                        <a href="{{ url_for('about') }}" class="{% if active_page == 'about' %}is-active{% endif %}">{{ t('about') }}</a>
+                        <div class="pa-nav-tease" data-tease-id="campaign">
+                            <div class="pa-nav-tease-head">
+                                <a href="{{ url_for('campaign') }}" class="pa-nav-tease-main{% if active_page == 'campaign' %} is-active{% endif %}">{{ t('campaign') }}</a>
+                                <button type="button" class="pa-nav-tease-toggle" aria-expanded="false" aria-controls="pa-tease-campaign-panel" aria-label="{{ t('nav_tease_toggle_aria') }}">
+                                    <span class="pa-nav-tease-chevron" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="pa-nav-tease" data-tease-id="about">
+                            <div class="pa-nav-tease-head">
+                                <a href="{{ url_for('about') }}" class="pa-nav-tease-main{% if active_page == 'about' %} is-active{% endif %}">{{ t('about') }}</a>
+                                <button type="button" class="pa-nav-tease-toggle" aria-expanded="false" aria-controls="pa-tease-about-panel" aria-label="{{ t('nav_tease_toggle_aria') }}">
+                                    <span class="pa-nav-tease-chevron" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        </div>
                         <div class="pa-nav-tease{% if current_user %} pa-nav-tease--signed-in{% endif %}" data-tease-id="members">
                             <div class="pa-nav-tease-head">
                                 <a href="{{ url_for('members') }}" class="pa-nav-tease-main{% if active_page == 'members' %} is-active{% endif %}">{{ t('members_open') }}</a>
@@ -126,7 +147,7 @@
                             </div>
                         </div>
                         {% if current_user and current_user.is_admin %}
-                        <a href="{{ url_for('admin_panel') }}" class="pa-drawer-nav-secondary">{{ t('admin') }}</a>
+                        <a href="{{ url_for('admin_panel') }}" class="pa-drawer-nav-secondary{% if active_page == 'admin' %} is-active{% endif %}">{{ t('admin') }}</a>
                         {% endif %}
                     </nav>
                     <div class="pa-drawer-divider" role="presentation"></div>
@@ -137,6 +158,18 @@
                     </div>
                 </div>
                 <div class="pa-drawer-flyout" id="pa-drawer-flyout" aria-hidden="true">
+                    <div class="pa-nav-tease-panel" id="pa-tease-collection-panel" data-tease-id="collection" role="region" aria-label="{{ t('collection') }}">
+                        <div class="pa-nav-tease-card">
+                            <div class="pa-nav-tease-card-head">
+                                <span class="pa-nav-tease-kicker">{{ t('collection') }}</span>
+                            </div>
+                            <p class="pa-nav-tease-desc">{{ t('nav_tease_collection_desc') }}</p>
+                            <div class="pa-nav-tease-img-wrap">
+                                <img src="{{ collection_nav_tease_img_url }}" alt="" class="pa-nav-tease-img" width="640" height="360" loading="eager" decoding="async" fetchpriority="low">
+                            </div>
+                            <a href="{{ url_for('home') }}" class="pa-nav-tease-cta pa-nav-tease-cta--outline">{{ t('nav_tease_cta_open_collection') }}</a>
+                        </div>
+                    </div>
                     <div class="pa-nav-tease-panel" id="pa-tease-couture-panel" data-tease-id="couture" role="region" aria-label="{{ t('couture_title') }}">
                         <div class="pa-nav-tease-card">
                             <div class="pa-nav-tease-card-head">
@@ -156,6 +189,30 @@
                             {% else %}
                             <a href="{{ url_for('couture') }}" class="pa-nav-tease-cta pa-nav-tease-cta--outline">{{ t('nav_tease_cta_open_couture') }}</a>
                             {% endif %}
+                        </div>
+                    </div>
+                    <div class="pa-nav-tease-panel" id="pa-tease-campaign-panel" data-tease-id="campaign" role="region" aria-label="{{ t('campaign') }}">
+                        <div class="pa-nav-tease-card">
+                            <div class="pa-nav-tease-card-head">
+                                <span class="pa-nav-tease-kicker">{{ t('campaign') }}</span>
+                            </div>
+                            <p class="pa-nav-tease-desc">{{ t('nav_tease_campaign_desc') }}</p>
+                            <div class="pa-nav-tease-img-wrap">
+                                <img src="{{ campaign_nav_tease_img_url }}" alt="" class="pa-nav-tease-img" width="640" height="360" loading="lazy" decoding="async">
+                            </div>
+                            <a href="{{ url_for('campaign') }}" class="pa-nav-tease-cta pa-nav-tease-cta--outline">{{ t('nav_tease_cta_open_campaign') }}</a>
+                        </div>
+                    </div>
+                    <div class="pa-nav-tease-panel" id="pa-tease-about-panel" data-tease-id="about" role="region" aria-label="{{ t('about') }}">
+                        <div class="pa-nav-tease-card">
+                            <div class="pa-nav-tease-card-head">
+                                <span class="pa-nav-tease-kicker">{{ t('about') }}</span>
+                            </div>
+                            <p class="pa-nav-tease-desc">{{ t('nav_tease_about_desc') }}</p>
+                            <div class="pa-nav-tease-img-wrap">
+                                <img src="{{ about_nav_tease_img_url }}" alt="" class="pa-nav-tease-img" width="640" height="360" loading="eager" decoding="async" fetchpriority="low">
+                            </div>
+                            <a href="{{ url_for('about') }}" class="pa-nav-tease-cta pa-nav-tease-cta--outline">{{ t('nav_tease_cta_open_about') }}</a>
                         </div>
                     </div>
                     <div class="pa-nav-tease-panel" id="pa-tease-members-panel" data-tease-id="members" role="region" aria-label="{{ t('members_title') }}">
