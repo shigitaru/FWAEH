@@ -131,7 +131,10 @@
         'occupancy_url': url_for('api_product_occupancy', product_id=product.id),
         'calendar_booked_text': t('product_calendar_booked'),
         'calendar_free_text': t('product_calendar_free'),
-        'calendar_locale': 'en-US' if current_lang == 'en' else 'ru-RU'
+        'calendar_locale': 'en-US' if current_lang == 'en' else 'ru-RU',
+        'initial_unavailable': (not selected_available),
+        'initial_range_start': selected_start_date,
+        'initial_range_end': selected_end_date
     } | tojson
 }}</script>
 <script src="{{ url_for('static', filename='js/product.js') }}"></script>

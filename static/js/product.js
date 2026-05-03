@@ -23,6 +23,12 @@
     var prevBtn = document.getElementById("gallery-prev");
     var nextBtn = document.getElementById("gallery-next");
     var occupancyCalendar = document.getElementById("product-occupancy-calendar");
+    var occupancyPeriods = [];
+    /** Половинчатый интервал [start, end) в формате YYYY-MM-DD — текущий выбор даёт unavailable из /availability */
+    var lastUnavailableRange = null;
+    if (cfg.initial_unavailable && cfg.initial_range_start && cfg.initial_range_end) {
+        lastUnavailableRange = { start: cfg.initial_range_start, end: cfg.initial_range_end };
+    }
     var images = thumbs.length ? thumbs.map(function (t) { return t.dataset.src; }) : [mainImg ? mainImg.src : ""];
     var currentIndex = 0;
 
@@ -63,29 +69,56 @@
             .then(function (data) {
                 if (!data || !data.ok) return;
                 setAvailabilityState(data.available, data.start_date, data.end_date, data.next_available);
+                if (data.available) {
+                    lastUnavailableRange = null;
+                } else {
+                    lastUnavailableRange = { start: data.start_date, end: data.end_date };
+                }
+                renderOccupancyCalendar();
             })
             .catch(function () {});
     }
-    function isoDate(d) {
-        return d.toISOString().slice(0, 10);
+    function pad2(n) {
+        return n < 10 ? "0" + n : String(n);
     }
-    function renderOccupancyCalendar(periods) {
+    /** Локальная дата YYYY-MM-DD (без UTC-сдвига toISOString). */
+    function isoDateLocal(d) {
+        return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+    }
+    function parseYmdLocal(s) {
+        var part = String(s || "").split("T")[0].split("-");
+        if (part.length !== 3) return null;
+        var y = parseInt(part[0], 10);
+        var m = parseInt(part[1], 10) - 1;
+        var day = parseInt(part[2], 10);
+        if (isNaN(y) || isNaN(m) || isNaN(day)) return null;
+        return new Date(y, m, day);
+    }
+    function markHalfOpenRange(occupied, startStr, endStr) {
+        if (!startStr || !endStr) return;
+        var cursor = parseYmdLocal(startStr);
+        var end = parseYmdLocal(endStr);
+        if (!cursor || !end) return;
+        while (cursor < end) {
+            occupied[isoDateLocal(cursor)] = true;
+            cursor.setDate(cursor.getDate() + 1);
+        }
+    }
+    function renderOccupancyCalendar() {
         if (!occupancyCalendar) return;
         var occupied = {};
-        (periods || []).forEach(function (p) {
+        (occupancyPeriods || []).forEach(function (p) {
             if (!p.start_date || !p.end_date) return;
-            var cursor = new Date(p.start_date + "T00:00:00");
-            var end = new Date(p.end_date + "T00:00:00");
-            while (cursor < end) {
-                occupied[isoDate(cursor)] = true;
-                cursor.setDate(cursor.getDate() + 1);
-            }
+            markHalfOpenRange(occupied, p.start_date, p.end_date);
         });
+        if (lastUnavailableRange && lastUnavailableRange.start && lastUnavailableRange.end) {
+            markHalfOpenRange(occupied, lastUnavailableRange.start, lastUnavailableRange.end);
+        }
         var groups = {};
         for (var i = 0; i < 60; i++) {
             var day = new Date();
             day.setDate(day.getDate() + i);
-            var key = isoDate(day);
+            var key = isoDateLocal(day);
             var monthKey = String(day.getFullYear()) + "-" + String(day.getMonth());
             if (!groups[monthKey]) {
                 groups[monthKey] = {
@@ -125,7 +158,8 @@
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data || !data.ok) return;
-                renderOccupancyCalendar(data.periods || []);
+                occupancyPeriods = data.periods || [];
+                renderOccupancyCalendar();
             })
             .catch(function () {});
     }
@@ -204,6 +238,7 @@
 
     if (inp) setDays(inp.value);
     setImage(0);
+    renderOccupancyCalendar();
     refreshAvailability();
     loadOccupancyCalendar();
 

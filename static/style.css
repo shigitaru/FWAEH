@@ -2361,9 +2361,15 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     color: var(--text-secondary);
 }
 .occupancy-day.is-booked {
-    border-color: rgba(190, 60, 60, 0.5);
-    background: rgba(190, 60, 60, 0.12);
-    color: var(--text);
+    border-color: rgba(220, 70, 70, 0.85);
+    background: rgba(190, 45, 45, 0.22);
+    color: #fff;
+    box-shadow: 0 0 0 1px rgba(220, 70, 70, 0.35) inset;
+}
+html[data-theme="dark"] .occupancy-day.is-booked {
+    border-color: rgba(255, 100, 100, 0.75);
+    background: rgba(200, 50, 50, 0.28);
+    box-shadow: 0 0 0 1px rgba(255, 120, 120, 0.25) inset;
 }
 .occupancy-day.is-free {
     background: rgba(45, 160, 90, 0.05);
