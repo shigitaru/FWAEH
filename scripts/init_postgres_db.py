@@ -7,6 +7,7 @@ Run after setting POSTGRES_CONNECTION_STRING/SUPABASE_DB_URL:
 Optional:
     SEED_RESET_DEMO=1 python scripts/init_postgres_db.py
 """
+import json
 import os
 import sys
 
@@ -55,6 +56,9 @@ def _seed_products(cur):
     for item in wired_demo_products():
         brand_id = _ensure_brand_id(cur, item["brand"])
         main_image, gallery = resolve_demo_item_images(item)
+        mj = None
+        if item.get("measurements"):
+            mj = json.dumps(item["measurements"], ensure_ascii=False)
         cur.execute(
             """
             INSERT INTO Products (
@@ -88,6 +92,7 @@ def _seed_products(cur):
             product_id = int(cur.fetchone()[0])
         cur.execute("DELETE FROM ProductImages WHERE product_id = ?", (product_id,))
         cur.execute("DELETE FROM ProductSizes WHERE product_id = ?", (product_id,))
+        cur.execute("DELETE FROM ProductMeasurements WHERE product_id = ?", (product_id,))
         for sort_order, url in enumerate(gallery):
             cur.execute(
                 "INSERT INTO ProductImages (product_id, image_url, sort_order) VALUES (?, ?, ?)",
@@ -98,22 +103,44 @@ def _seed_products(cur):
                 "INSERT INTO ProductSizes (product_id, size_label) VALUES (?, ?)",
                 (product_id, size_label),
             )
+        if mj:
+            cur.execute(
+                """
+                INSERT INTO ProductMeasurements (product_id, payload_json)
+                VALUES (?, ?)
+                ON CONFLICT (product_id) DO UPDATE SET payload_json = EXCLUDED.payload_json
+                """,
+                (product_id, mj),
+            )
 
 
 def _seed_campaign(cur):
     d = DEFAULT_CAMPAIGN_SETTINGS
+    hero_seed = (d.get("members_area_hero_url") or "").strip()
     cur.execute(
         """
-        INSERT INTO CampaignSettings (id, intro_en, intro_ru, tagline_en, tagline_ru)
-        VALUES (1, ?, ?, ?, ?)
+        INSERT INTO CampaignSettings (id, intro_en, intro_ru, tagline_en, tagline_ru, members_area_hero_url)
+        VALUES (1, ?, ?, ?, ?, ?)
         ON CONFLICT (id) DO UPDATE SET
             intro_en = EXCLUDED.intro_en,
             intro_ru = EXCLUDED.intro_ru,
             tagline_en = EXCLUDED.tagline_en,
             tagline_ru = EXCLUDED.tagline_ru
         """,
-        (d["intro_en"], d["intro_ru"], d["tagline_en"], d["tagline_ru"]),
+        (d["intro_en"], d["intro_ru"], d["tagline_en"], d["tagline_ru"], hero_seed or None),
     )
+    if hero_seed:
+        cur.execute(
+            """
+            UPDATE CampaignSettings SET members_area_hero_url = ?
+            WHERE id = 1
+              AND (
+                  members_area_hero_url IS NULL
+                  OR TRIM(COALESCE(members_area_hero_url, '')) = ''
+              )
+            """,
+            (hero_seed,),
+        )
     cur.execute("SELECT COUNT(*) FROM CampaignStories")
     if int(cur.fetchone()[0] or 0) > 0 and not RESET_DEMO:
         return

@@ -20,6 +20,7 @@ from core.campaign_service import (
     _list_campaign_stories_admin,
     get_campaign_index_data,
     get_campaign_story_detail,
+    get_members_area_hero_url_from_db,
 )
 from core.catalog import (
     filter_products,
@@ -84,6 +85,7 @@ from routes.api import register_api_routes
 from routes.auth import register_auth_routes
 from routes.public import register_public_routes
 from services.rental_service import RentalAvailabilityError, CoutureAccessError
+from core.product_measurements import idle_backfill_missing_measurements
 from core.session_cart import (
     ACC_EMAIL_RE,
     _clear_user_session,
@@ -110,6 +112,13 @@ def _run_brand_coture_typo_fix_once():
         return
     _brand_coture_typo_fixed = True
     ensure_legacy_balenciaga_coture_brand_rename()
+
+
+@app.before_request
+def _lazy_measurements_backfill():
+    if getattr(request, 'path', '').startswith('/static'):
+        return
+    idle_backfill_missing_measurements()
 
 
 register_auth_routes(
@@ -255,6 +264,7 @@ def inject_globals():
     showcase_image_1_url = f'{site_media_base}/1.png'
     showcase_image_2_url = f'{site_media_base}/2.png'
     couture_hero_url = f'{site_media_base}/couture-hero.jpg'
+    members_area_hero_url = get_members_area_hero_url_from_db() or ''
 
     return {
         'current_year': datetime.now().year,
@@ -272,6 +282,7 @@ def inject_globals():
         'showcase_image_1_url': showcase_image_1_url,
         'showcase_image_2_url': showcase_image_2_url,
         'couture_hero_url': couture_hero_url,
+        'members_area_hero_url': members_area_hero_url,
         'demo_mode': settings.demo_mode,
     }
 

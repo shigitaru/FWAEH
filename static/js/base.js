@@ -435,6 +435,13 @@
             openBtn.setAttribute("aria-expanded", on ? "true" : "false");
             document.documentElement.classList.toggle("pa-drawer-open", on);
             document.body.style.overflow = on ? "hidden" : "";
+            if (!on) {
+                document.querySelectorAll(".pa-nav-tease.is-expanded").forEach(function (tease) {
+                    tease.classList.remove("is-expanded");
+                    var tb = tease.querySelector(".pa-nav-tease-toggle");
+                    if (tb) tb.setAttribute("aria-expanded", "false");
+                });
+            }
             if (on) {
                 try {
                     closeBtn && closeBtn.focus();
@@ -460,6 +467,160 @@
             if (e.key === "Escape" && root.classList.contains("is-open")) {
                 setOpen(false);
             }
+        });
+    })();
+
+    (function () {
+        document.querySelectorAll(".pa-nav-tease-toggle").forEach(function (btn) {
+            btn.addEventListener("click", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var wrap = btn.closest(".pa-nav-tease");
+                if (!wrap) return;
+                var next = !wrap.classList.contains("is-expanded");
+                document.querySelectorAll(".pa-nav-tease.is-expanded").forEach(function (o) {
+                    if (o !== wrap) {
+                        o.classList.remove("is-expanded");
+                        var t = o.querySelector(".pa-nav-tease-toggle");
+                        if (t) t.setAttribute("aria-expanded", "false");
+                    }
+                });
+                wrap.classList.toggle("is-expanded", next);
+                btn.setAttribute("aria-expanded", next ? "true" : "false");
+            });
+        });
+    })();
+
+    (function () {
+        var root = document.getElementById("pa-measure-drawer");
+        if (!root) return;
+        var panelBody = document.getElementById("pa-measure-drawer-body");
+        var productEl = document.getElementById("pa-measure-drawer-product");
+        var i18n = {};
+        try {
+            var ij = document.getElementById("pa-measure-i18n");
+            if (ij && ij.textContent) i18n = JSON.parse(ij.textContent);
+        } catch (e1) {
+            i18n = {};
+        }
+        var lang = (i18n.lang || "en").toLowerCase();
+
+        function setOpen(on) {
+            root.classList.toggle("is-open", !!on);
+            root.setAttribute("aria-hidden", on ? "false" : "true");
+            document.documentElement.classList.toggle("pa-measure-open", !!on);
+        }
+
+        function cellText(v) {
+            if (v === null || v === undefined || v === "") return "—";
+            return String(v);
+        }
+
+        function renderGarment(m) {
+            var kick = document.createElement("p");
+            kick.className = "pa-measure-kicker";
+            kick.textContent = i18n.garmentKicker || "";
+            var wrap = document.createElement("div");
+            wrap.className = "pa-measure-table-wrap";
+            var table = document.createElement("table");
+            table.className = "pa-measure-table";
+            var thead = document.createElement("thead");
+            var trh = document.createElement("tr");
+            var th0 = document.createElement("th");
+            th0.textContent = "";
+            trh.appendChild(th0);
+            (m.columns || []).forEach(function (c) {
+                var th = document.createElement("th");
+                th.textContent = c;
+                trh.appendChild(th);
+            });
+            thead.appendChild(trh);
+            table.appendChild(thead);
+            var tbody = document.createElement("tbody");
+            (m.rows || []).forEach(function (row) {
+                var tr = document.createElement("tr");
+                var td0 = document.createElement("td");
+                td0.textContent = lang === "ru" ? (row.ru || row.en || "") : (row.en || row.ru || "");
+                tr.appendChild(td0);
+                (row.values || []).forEach(function (v) {
+                    var td = document.createElement("td");
+                    td.textContent = cellText(v);
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            wrap.appendChild(table);
+            panelBody.appendChild(kick);
+            panelBody.appendChild(wrap);
+        }
+
+        function renderFootwear(m) {
+            var kick = document.createElement("p");
+            kick.className = "pa-measure-kicker";
+            kick.textContent = i18n.footwearKicker || "";
+            var wrap = document.createElement("div");
+            wrap.className = "pa-measure-table-wrap";
+            var table = document.createElement("table");
+            table.className = "pa-measure-table";
+            var thead = document.createElement("thead");
+            var trh = document.createElement("tr");
+            var th1 = document.createElement("th");
+            th1.textContent = i18n.colEu || "EU";
+            var th2 = document.createElement("th");
+            th2.textContent = i18n.colInsole || "";
+            trh.appendChild(th1);
+            trh.appendChild(th2);
+            thead.appendChild(trh);
+            table.appendChild(thead);
+            var tbody = document.createElement("tbody");
+            (m.rows || []).forEach(function (row) {
+                var tr = document.createElement("tr");
+                var td1 = document.createElement("td");
+                td1.textContent = cellText(row.eu);
+                var td2 = document.createElement("td");
+                td2.textContent = cellText(row.insole_cm);
+                tr.appendChild(td1);
+                tr.appendChild(td2);
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            wrap.appendChild(table);
+            panelBody.appendChild(kick);
+            panelBody.appendChild(wrap);
+        }
+
+        function openMeasure(name, data) {
+            if (!panelBody || !productEl) return;
+            panelBody.innerHTML = "";
+            productEl.textContent = name || "";
+            if (!data || typeof data !== "object") return;
+            if (data.kind === "footwear") renderFootwear(data);
+            else if (data.kind === "garment") renderGarment(data);
+            setOpen(true);
+        }
+
+        document.addEventListener("click", function (e) {
+            var btn = e.target.closest("[data-pa-measure-open]");
+            if (!btn) return;
+            e.preventDefault();
+            var name = btn.getAttribute("data-product-name") || "";
+            var raw = btn.getAttribute("data-measurements");
+            var data = null;
+            try {
+                data = raw ? JSON.parse(raw) : null;
+            } catch (e2) {
+                data = null;
+            }
+            if (!data) return;
+            openMeasure(name, data);
+        });
+
+        root.addEventListener("click", function (e) {
+            if (e.target.closest("[data-pa-measure-close]")) setOpen(false);
+        });
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && root.classList.contains("is-open")) setOpen(false);
         });
     })();
 })();

@@ -106,10 +106,68 @@
                 </button>
                 <nav class="pa-drawer-nav" aria-label="Main">
                     <a href="{{ url_for('home') }}" class="{% if active_page == 'collection' %}is-active{% endif %}">{{ t('collection') }}</a>
-                    <a href="{{ url_for('couture') }}" class="{% if active_page == 'couture' %}is-active{% endif %}">{{ t('couture') }}</a>
+                    <div class="pa-nav-tease{% if current_user %} pa-nav-tease--signed-in{% endif %}">
+                        <div class="pa-nav-tease-head">
+                            <a href="{{ url_for('couture') }}" class="pa-nav-tease-main{% if active_page == 'couture' %} is-active{% endif %}">{{ t('couture') }}</a>
+                            <button type="button" class="pa-nav-tease-toggle" aria-expanded="false" aria-controls="pa-tease-couture-panel" aria-label="{{ t('nav_tease_toggle_aria') }}">
+                                <span class="pa-nav-tease-chevron" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                        <div class="pa-nav-tease-panel" id="pa-tease-couture-panel" role="region" aria-label="{{ t('couture_title') }}">
+                            <div class="pa-nav-tease-card">
+                                <div class="pa-nav-tease-card-head">
+                                    <span class="pa-nav-tease-kicker">{{ t('couture_title') }}</span>
+                                    {% if not current_user %}
+                                    <span class="pa-nav-tease-badge">{{ t('nav_tease_badge_members_only') }}</span>
+                                    {% else %}
+                                    <span class="pa-nav-tease-badge pa-nav-tease-badge--soft">{{ t('nav_tease_badge_signed_in') }}</span>
+                                    {% endif %}
+                                </div>
+                                <p class="pa-nav-tease-desc">{% if current_user %}{{ t('nav_tease_couture_desc_member') }}{% else %}{{ t('nav_tease_couture_desc_guest') }}{% endif %}</p>
+                                <div class="pa-nav-tease-img-wrap">
+                                    <img src="{{ couture_hero_url }}" alt="" class="pa-nav-tease-img" width="640" height="360" loading="lazy" decoding="async">
+                                </div>
+                                {% if not current_user %}
+                                <a href="{{ url_for('account') }}" class="pa-nav-tease-cta">{{ t('nav_tease_cta_sign_in') }}</a>
+                                {% else %}
+                                <a href="{{ url_for('couture') }}" class="pa-nav-tease-cta pa-nav-tease-cta--outline">{{ t('nav_tease_cta_open_couture') }}</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                     <a href="{{ url_for('campaign') }}" class="{% if active_page == 'campaign' %}is-active{% endif %}">{{ t('campaign') }}</a>
                     <a href="{{ url_for('about') }}" class="{% if active_page == 'about' %}is-active{% endif %}">{{ t('about') }}</a>
-                    <a href="{{ url_for('members') }}" class="{% if active_page == 'members' %}is-active{% endif %}">{{ t('members_open') }}</a>
+                    <div class="pa-nav-tease{% if current_user %} pa-nav-tease--signed-in{% endif %}">
+                        <div class="pa-nav-tease-head">
+                            <a href="{{ url_for('members') }}" class="pa-nav-tease-main{% if active_page == 'members' %} is-active{% endif %}">{{ t('members_open') }}</a>
+                            <button type="button" class="pa-nav-tease-toggle" aria-expanded="false" aria-controls="pa-tease-members-panel" aria-label="{{ t('nav_tease_toggle_aria') }}">
+                                <span class="pa-nav-tease-chevron" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                        <div class="pa-nav-tease-panel" id="pa-tease-members-panel" role="region" aria-label="{{ t('members_title') }}">
+                            <div class="pa-nav-tease-card">
+                                <div class="pa-nav-tease-card-head">
+                                    <span class="pa-nav-tease-kicker">{{ t('members_title') }}</span>
+                                    {% if not current_user %}
+                                    <span class="pa-nav-tease-badge">{{ t('nav_tease_badge_members_only') }}</span>
+                                    {% else %}
+                                    <span class="pa-nav-tease-badge pa-nav-tease-badge--soft">{{ t('nav_tease_badge_signed_in') }}</span>
+                                    {% endif %}
+                                </div>
+                                <p class="pa-nav-tease-desc">{% if current_user %}{{ t('nav_tease_members_desc_member') }}{% else %}{{ t('nav_tease_members_desc_guest') }}{% endif %}</p>
+                                {% if members_area_hero_url %}
+                                <div class="pa-nav-tease-img-wrap">
+                                    <img src="{{ members_area_hero_url }}" alt="" class="pa-nav-tease-img" width="640" height="360" loading="lazy" decoding="async">
+                                </div>
+                                {% endif %}
+                                {% if not current_user %}
+                                <a href="{{ url_for('account') }}" class="pa-nav-tease-cta">{{ t('nav_tease_cta_sign_in') }}</a>
+                                {% else %}
+                                <a href="{{ url_for('members') }}" class="pa-nav-tease-cta pa-nav-tease-cta--outline">{{ t('nav_tease_cta_open_members') }}</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                     {% if current_user and current_user.is_admin %}
                     <a href="{{ url_for('admin_panel') }}" class="pa-drawer-nav-secondary">{{ t('admin') }}</a>
                     {% endif %}
@@ -133,6 +191,27 @@
         <span>{{ t('authenticated') }}</span>
     </footer>
 
+    <div id="pa-measure-drawer" class="pa-measure-drawer" aria-hidden="true">
+        <div class="pa-measure-drawer-backdrop" data-pa-measure-close tabindex="-1"></div>
+        <aside class="pa-measure-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="pa-measure-drawer-title">
+            <header class="pa-measure-drawer-head">
+                <h2 id="pa-measure-drawer-title" class="pa-measure-drawer-title">{{ t('product_measure_drawer_title') }}</h2>
+                <button type="button" class="pa-measure-drawer-close" data-pa-measure-close aria-label="{{ t('product_measure_close') }}">×</button>
+            </header>
+            <div class="pa-measure-drawer-product" id="pa-measure-drawer-product"></div>
+            <div class="pa-measure-drawer-body" id="pa-measure-drawer-body"></div>
+        </aside>
+    </div>
+
+    <script type="application/json" id="pa-measure-i18n">{{ {
+        'lang': current_lang,
+        'drawerTitle': t('product_measure_drawer_title'),
+        'garmentKicker': t('product_measure_garment_kicker'),
+        'footwearKicker': t('product_measure_footwear_kicker'),
+        'colEu': t('product_measure_col_size'),
+        'colInsole': t('product_measure_col_insole'),
+        'close': t('product_measure_close'),
+    } | tojson }}</script>
     <script type="application/json" id="pa-cart-toast-i18n">{{ {'title': t('added_to_bag_title'), 'viewBag': t('view_bag'), 'close': t('close'), 'cartHref': url_for('cart')} | tojson }}</script>
     <script type="application/json" id="pa-wishlist-i18n">{{ {'add': t('aria_add_wishlist'), 'remove': t('aria_remove_wishlist'), 'toggleUrl': url_for('wishlist_toggle')} | tojson }}</script>
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>

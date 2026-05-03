@@ -10,6 +10,32 @@ from .media_uploads import _save_campaign_upload
 
 logger = logging.getLogger(__name__)
 
+
+def get_members_area_hero_url_from_db():
+    """
+    URL изображения для зоны участника (меню + страница /members): CampaignSettings.members_area_hero_url.
+    Пустое в БД — None; шаблоны не показывают блок с картинкой.
+    """
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT members_area_hero_url FROM CampaignSettings WHERE id=1')
+            row = cur.fetchone()
+        if not row:
+            return None
+        raw = getattr(row, 'members_area_hero_url', None)
+        if raw is None and hasattr(row, '__getitem__'):
+            try:
+                raw = row[0]
+            except (IndexError, TypeError):
+                raw = None
+        s = (raw or '').strip()
+        return s if s else None
+    except Exception:
+        logger.exception('Failed to read members_area_hero_url')
+        return None
+
+
 def get_campaign_index_data():
     """Главная страница кампании: интро + список историй с обложкой."""
     try:
@@ -102,18 +128,25 @@ def _fetch_campaign_settings_admin():
         'intro_ru': d_ru.get('campaign_intro', ''),
         'tagline_en': d_en.get('campaign_tagline', ''),
         'tagline_ru': d_ru.get('campaign_tagline', ''),
+        'members_area_hero_url': '',
     }
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT intro_en, intro_ru, tagline_en, tagline_ru FROM CampaignSettings WHERE id=1')
+            cur.execute(
+                'SELECT intro_en, intro_ru, tagline_en, tagline_ru, members_area_hero_url FROM CampaignSettings WHERE id=1'
+            )
             srow = cur.fetchone()
         if srow:
+            hero = getattr(srow, 'members_area_hero_url', None)
+            if hero is None:
+                hero = (srow[4] if len(srow) > 4 else '') or ''
             return {
-                'intro_en': (srow[0] or ''),
-                'intro_ru': (srow[1] or ''),
-                'tagline_en': (srow[2] or ''),
-                'tagline_ru': (srow[3] or ''),
+                'intro_en': (srow.intro_en if hasattr(srow, 'intro_en') else (srow[0] or '')) or '',
+                'intro_ru': (srow.intro_ru if hasattr(srow, 'intro_ru') else (srow[1] or '')) or '',
+                'tagline_en': (srow.tagline_en if hasattr(srow, 'tagline_en') else (srow[2] or '')) or '',
+                'tagline_ru': (srow.tagline_ru if hasattr(srow, 'tagline_ru') else (srow[3] or '')) or '',
+                'members_area_hero_url': (hero or ''),
             }
         return defaults.copy()
     except Exception:

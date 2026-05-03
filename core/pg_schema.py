@@ -1,7 +1,11 @@
 """PostgreSQL schema helpers for Supabase/Render deployments."""
+import logging
 import threading
 
 from .db import get_db_connection
+from .product_measurements import migrate_legacy_measurements_to_table, sync_missing_product_measurements
+
+_logger = logging.getLogger(__name__)
 
 _schema_lock = threading.Lock()
 _schema_initialized = False
@@ -72,6 +76,14 @@ def _ensure_postgres_schema_once():
         )
         cur.execute(
             """
+            CREATE TABLE IF NOT EXISTS ProductMeasurements (
+                product_id INTEGER NOT NULL PRIMARY KEY REFERENCES Products(id) ON DELETE CASCADE,
+                payload_json TEXT NOT NULL
+            )
+            """
+        )
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS CampaignSettings (
                 id INTEGER PRIMARY KEY,
                 intro_en TEXT NULL,
@@ -81,6 +93,8 @@ def _ensure_postgres_schema_once():
             )
             """
         )
+        cur.execute("ALTER TABLE CampaignSettings ADD COLUMN IF NOT EXISTS members_area_hero_url TEXT NULL")
+        cur.execute("INSERT INTO CampaignSettings (id) VALUES (1) ON CONFLICT (id) DO NOTHING")
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS CampaignLooks (
@@ -196,4 +210,38 @@ def _ensure_postgres_schema_once():
         cur.execute("ALTER TABLE RentalOrders ADD COLUMN IF NOT EXISTS rental_end_date DATE NULL")
         cur.execute("ALTER TABLE RentalOrderItems ADD COLUMN IF NOT EXISTS rental_start_date DATE NULL")
         cur.execute("ALTER TABLE RentalOrderItems ADD COLUMN IF NOT EXISTS rental_end_date DATE NULL")
+        cur.execute("ALTER TABLE Products ADD COLUMN IF NOT EXISTS measurements_json TEXT NULL")
+        cur.execute(
+            """
+            UPDATE CampaignSettings
+            SET members_area_hero_url = NULL
+            WHERE id = 1
+              AND members_area_hero_url IS NOT NULL
+              AND TRIM(members_area_hero_url) LIKE '/static%%'
+            """
+        )
+        try:
+            from seed_defaults import DEFAULT_CAMPAIGN_SETTINGS
+
+            _hero = (DEFAULT_CAMPAIGN_SETTINGS.get('members_area_hero_url') or '').strip()
+            if _hero:
+                cur.execute(
+                    """
+                    UPDATE CampaignSettings
+                    SET members_area_hero_url = ?
+                    WHERE id = 1
+                      AND (
+                          members_area_hero_url IS NULL
+                          OR TRIM(COALESCE(members_area_hero_url, '')) = ''
+                      )
+                    """,
+                    (_hero,),
+                )
+        except Exception as exc:
+            _logger.debug('members_area_hero_url default skipped: %s', exc)
+        try:
+            migrate_legacy_measurements_to_table(cur)
+            sync_missing_product_measurements(cur)
+        except Exception as exc:
+            _logger.warning('Could not sync ProductMeasurements: %s', exc)
         conn.commit()

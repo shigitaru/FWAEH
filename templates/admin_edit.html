@@ -73,6 +73,9 @@
             <input class="search-input" type="text" name="origin" placeholder="{{ t('origin_placeholder') }}" value="{{ product.origin or '' }}">
             <input class="search-input" type="text" name="condition" placeholder="{{ t('condition_label_placeholder') }}" value="{{ product.condition or '' }}">
             <input class="search-input" type="text" name="sizes" placeholder="{{ t('sizes_placeholder') }}" value="{{ product.sizes | default([]) | join(', ') }}">
+            <label class="admin-select-label" for="admin-measurements-json">{{ t('admin_measurements_json_label') }}</label>
+            <textarea id="admin-measurements-json" class="search-input admin-measurements-json" name="measurements_json" rows="6" placeholder="{{ t('admin_measurements_json_hint') }}">{{ product.measurements_json or '' }}</textarea>
+            <p class="admin-measurements-hint">{{ t('admin_measurements_json_hint') }}</p>
         </div>
         <div class="upload-grid">
             {% if not (product_images and product_images|length) %}

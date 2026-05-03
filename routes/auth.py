@@ -378,7 +378,7 @@ def register_auth_routes(app, deps):
     def members():
         user = get_current_user()
         if not user:
-            flash(t('acc_login_required'), 'error')
+            flash(t('acc_members_members_only'), 'error')
             return redirect(url_for('account'))
         level_code = (session.get('user_level_code') or 'bronze').strip().lower()
         level = get_loyalty_level(level_code)

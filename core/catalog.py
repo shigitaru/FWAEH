@@ -6,6 +6,7 @@ from .db import get_db_connection
 from datetime import date, timedelta
 
 from .constants import ACTIVE_RENTAL_STATUSES, BRANDS, PRODUCTS, _resolve_brand_css
+from .product_measurements import enrich_product_dict
 
 logger = logging.getLogger(__name__)
 
@@ -197,9 +198,11 @@ def find_products_by_ids(product_ids):
     placeholders = ','.join('?' for _ in ids)
     sql = f'''
                 SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
-                       p.condition_score, p.material, p.origin, p.condition, p.main_image
+                       p.condition_score, p.material, p.origin, p.condition, p.main_image,
+                       COALESCE(pm.payload_json, p.measurements_json) AS measurements_json
                 FROM Products p
                 JOIN Brands b ON b.id = p.brand_id
+                LEFT JOIN ProductMeasurements pm ON pm.product_id = p.id
                 WHERE p.id IN ({placeholders})
                 '''
     try:
@@ -209,7 +212,7 @@ def find_products_by_ids(product_ids):
             rows = cur.fetchall()
             products = []
             for row in rows:
-                products.append({
+                prod = {
                     'id': row.id,
                     'category': row.category,
                     'item_category': getattr(row, 'item_category', None),
@@ -223,7 +226,9 @@ def find_products_by_ids(product_ids):
                     'origin': row.origin,
                     'condition': row.condition,
                     'image': row.main_image,
-                })
+                }
+                enrich_product_dict(prod, getattr(row, 'measurements_json', None))
+                products.append(prod)
             _attach_related_data(products, conn=conn)
             return {p['id']: p for p in products}
     except Exception:
@@ -264,9 +269,11 @@ def filter_products(
     try:
         sql = '''
             SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
-                   p.condition_score, p.material, p.origin, p.condition, p.main_image
+                   p.condition_score, p.material, p.origin, p.condition, p.main_image,
+                   COALESCE(pm.payload_json, p.measurements_json) AS measurements_json
             FROM Products p
             JOIN Brands b ON b.id = p.brand_id
+            LEFT JOIN ProductMeasurements pm ON pm.product_id = p.id
             WHERE 1=1
         '''
         params = []
@@ -332,21 +339,25 @@ def filter_products(
             cur = conn.cursor()
             cur.execute(sql, params)
             rows = cur.fetchall()
-            results = [{
-                'id': row.id,
-                'category': row.category,
-                'item_category': getattr(row, 'item_category', None),
-                'serial': row.serial,
-                'brand': row.brand,
-                'name': row.name,
-                'price': row.price,
-                'max_days': row.max_days,
-                'condition_score': row.condition_score,
-                'material': row.material,
-                'origin': row.origin,
-                'condition': row.condition,
-                'image': row.main_image,
-            } for row in rows]
+            results = []
+            for row in rows:
+                item = {
+                    'id': row.id,
+                    'category': row.category,
+                    'item_category': getattr(row, 'item_category', None),
+                    'serial': row.serial,
+                    'brand': row.brand,
+                    'name': row.name,
+                    'price': row.price,
+                    'max_days': row.max_days,
+                    'condition_score': row.condition_score,
+                    'material': row.material,
+                    'origin': row.origin,
+                    'condition': row.condition,
+                    'image': row.main_image,
+                }
+                enrich_product_dict(item, getattr(row, 'measurements_json', None))
+                results.append(item)
             _attach_related_data(results, conn=conn)
             _attach_availability_badges(results, available_start, available_end, conn=conn)
         return results
@@ -418,9 +429,11 @@ def get_related_products(product, limit=4):
             cur.execute(
                 '''
                 SELECT p.id, p.category, p.item_category, p.serial, b.name AS brand, p.name, p.price, p.max_days,
-                       p.condition_score, p.material, p.origin, p.condition, p.main_image
+                       p.condition_score, p.material, p.origin, p.condition, p.main_image,
+                       COALESCE(pm.payload_json, p.measurements_json) AS measurements_json
                 FROM Products p
                 JOIN Brands b ON b.id = p.brand_id
+                LEFT JOIN ProductMeasurements pm ON pm.product_id = p.id
                 WHERE p.category = ? AND p.id <> ?
                 ORDER BY (
                     (CASE WHEN LOWER(TRIM(b.name)) = LOWER(?) THEN 4 ELSE 0 END)
@@ -443,21 +456,25 @@ def get_related_products(product, limit=4):
                 ),
             )
             rows = cur.fetchall()
-            candidates = [{
-                'id': row.id,
-                'category': row.category,
-                'item_category': getattr(row, 'item_category', None),
-                'serial': row.serial,
-                'brand': row.brand,
-                'name': row.name,
-                'price': row.price,
-                'max_days': row.max_days,
-                'condition_score': row.condition_score,
-                'material': row.material,
-                'origin': row.origin,
-                'condition': row.condition,
-                'image': row.main_image,
-            } for row in rows]
+            candidates = []
+            for row in rows:
+                c = {
+                    'id': row.id,
+                    'category': row.category,
+                    'item_category': getattr(row, 'item_category', None),
+                    'serial': row.serial,
+                    'brand': row.brand,
+                    'name': row.name,
+                    'price': row.price,
+                    'max_days': row.max_days,
+                    'condition_score': row.condition_score,
+                    'material': row.material,
+                    'origin': row.origin,
+                    'condition': row.condition,
+                    'image': row.main_image,
+                }
+                enrich_product_dict(c, getattr(row, 'measurements_json', None))
+                candidates.append(c)
             _attach_related_data(candidates, conn=conn)
     except Exception:
         logger.exception('Failed to load related products from database; using fallback catalog')

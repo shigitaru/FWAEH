@@ -2,6 +2,8 @@ from flask import request, session, redirect, url_for, render_template, flash
 from werkzeug.security import check_password_hash
 import secrets
 
+from core.product_measurements import default_measurements_payload, parse_measurements_payload, upsert_product_measurement
+
 
 def register_admin_routes(app, deps):
     t = deps['t']
@@ -169,6 +171,9 @@ def register_admin_routes(app, deps):
                         )
                     for size_label in size_values:
                         cur.execute('INSERT INTO ProductSizes (product_id, size_label) VALUES (?, ?)', (product_id, size_label))
+                    payload = default_measurements_payload(item_category, size_values, product_id=product_id)
+                    if payload:
+                        upsert_product_measurement(cur, product_id, payload)
                     conn.commit()
                 session['admin_status'] = {'type': 'success', 'message': t('admin_product_created')}
             except Exception as exc:
@@ -342,6 +347,13 @@ def register_admin_routes(app, deps):
                 origin = nullable_str(request.form.get('origin'))
                 condition = nullable_str(request.form.get('condition'))
                 sizes_raw = request.form.get('sizes', '').strip()
+                measurements_json_raw = (request.form.get('measurements_json') or '').strip()
+                meas_parsed = None
+                if measurements_json_raw:
+                    meas_parsed = parse_measurements_payload(measurements_json_raw)
+                    if meas_parsed is None:
+                        session['admin_status'] = {'type': 'error', 'message': t('admin_measurements_invalid')}
+                        return redirect(url_for('admin_edit_product', product_id=product_id))
                 if not all([serial, brand_name, name, max_days_raw, condition_score_raw]):
                     session['admin_status'] = {'type': 'error', 'message': t('admin_required_fields')}
                     return redirect(url_for('admin_edit_product', product_id=product_id))
@@ -433,6 +445,7 @@ def register_admin_routes(app, deps):
                             'INSERT INTO ProductSizes (product_id, size_label) VALUES (?, ?)',
                             (product_id, size_label),
                         )
+                    upsert_product_measurement(cur, product_id, meas_parsed)
                     conn.commit()
                 session['admin_status'] = {'type': 'success', 'message': t('admin_product_updated')}
             except Exception as exc:
@@ -466,19 +479,23 @@ def register_admin_routes(app, deps):
             intro_ru = request.form.get('intro_ru', '').strip()
             tagline_en = request.form.get('tagline_en', '').strip()
             tagline_ru = request.form.get('tagline_ru', '').strip()
+            uploaded_hero = save_campaign_upload(request.files.get('members_area_hero_file'))
+            members_area_hero_url = uploaded_hero if uploaded_hero else nullable_str(request.form.get('members_area_hero_url'))
             try:
                 with get_db_connection() as conn:
                     cur = conn.cursor()
                     cur.execute('SELECT COUNT(*) FROM CampaignSettings WHERE id=1')
                     if cur.fetchone()[0]:
                         cur.execute(
-                            'UPDATE CampaignSettings SET intro_en=?, intro_ru=?, tagline_en=?, tagline_ru=? WHERE id=1',
-                            (intro_en, intro_ru, tagline_en, tagline_ru),
+                            '''UPDATE CampaignSettings SET intro_en=?, intro_ru=?, tagline_en=?, tagline_ru=?,
+                               members_area_hero_url=? WHERE id=1''',
+                            (intro_en, intro_ru, tagline_en, tagline_ru, members_area_hero_url),
                         )
                     else:
                         cur.execute(
-                            'INSERT INTO CampaignSettings (id, intro_en, intro_ru, tagline_en, tagline_ru) VALUES (1, ?, ?, ?, ?)',
-                            (intro_en, intro_ru, tagline_en, tagline_ru),
+                            '''INSERT INTO CampaignSettings (id, intro_en, intro_ru, tagline_en, tagline_ru, members_area_hero_url)
+                               VALUES (1, ?, ?, ?, ?, ?)''',
+                            (intro_en, intro_ru, tagline_en, tagline_ru, members_area_hero_url),
                         )
                     conn.commit()
                 session['admin_status'] = {'type': 'success', 'message': t('admin_campaign_settings_saved')}

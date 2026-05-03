@@ -13,9 +13,15 @@
     </div>
     {% endif %}
 
-    <form action="{{ url_for('admin_campaign') }}" method="POST" class="admin-form admin-campaign-form">
+    <form action="{{ url_for('admin_campaign') }}" method="POST" class="admin-form admin-campaign-form" enctype="multipart/form-data">
         <div class="section-title">{{ t('admin_campaign_header_section') }}</div>
         <div class="admin-campaign-text-grid">
+            <label class="admin-campaign-field admin-campaign-field-full">
+                <span class="admin-campaign-label">{{ t('admin_members_area_hero_label') }}</span>
+                <input class="search-input" type="url" name="members_area_hero_url" value="{{ settings.members_area_hero_url or '' }}" placeholder="https://…supabase…/storage/v1/object/public/…">
+                <span class="admin-campaign-hint admin-campaign-hero-upload-hint">{{ t('admin_members_area_hero_hint') }}</span>
+                <input class="admin-campaign-file" type="file" name="members_area_hero_file" accept="image/*">
+            </label>
             <label class="admin-campaign-field">
                 <span class="admin-campaign-label">{{ t('admin_campaign_intro_en') }}</span>
                 <textarea name="intro_en" rows="3" class="search-input admin-campaign-textarea">{{ settings.intro_en }}</textarea>

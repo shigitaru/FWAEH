@@ -5,8 +5,108 @@
 """
 from __future__ import annotations
 
+import json
 import os
 import re
+
+from core.product_measurements import enrich_product_dict
+
+# Демо-замеры для карточек / JSON в БД (garment = сетка по размерам; footwear = EU + см по стельке)
+_MEAS_DEMO_COAT = {
+    "kind": "garment",
+    "columns": ["S", "M", "L", "XL"],
+    "rows": [
+        {"en": "Length (cm)", "ru": "Длина (см)", "values": [108, 112, 116, 120]},
+        {"en": "Chest (cm)", "ru": "Грудь (см)", "values": [52, 56, 60, 64]},
+        {"en": "Shoulders (cm)", "ru": "Плечи (см)", "values": [46, 48, 50, 52]},
+        {"en": "Sleeve (cm)", "ru": "Рукав (см)", "values": [62, 63, 64, 65]},
+    ],
+}
+_MEAS_DEMO_BLAZER = {
+    "kind": "garment",
+    "columns": ["XS", "S", "M", "L", "XL"],
+    "rows": [
+        {"en": "Length (cm)", "ru": "Длина (см)", "values": [68, 70, 72, 74, 76]},
+        {"en": "Chest (cm)", "ru": "Грудь (см)", "values": [48, 50, 52, 54, 56]},
+        {"en": "Sleeve (cm)", "ru": "Рукав (см)", "values": [60, 61, 62, 63, 64]},
+    ],
+}
+_MEAS_DEMO_BOMBER = {
+    "kind": "garment",
+    "columns": ["XL"],
+    "rows": [
+        {"en": "Length (cm)", "ru": "Длина (см)", "values": [72]},
+        {"en": "Chest (cm)", "ru": "Грудь (см)", "values": [124]},
+        {"en": "Sleeve (cm)", "ru": "Рукав (см)", "values": [68]},
+        {"en": "Shoulders (cm)", "ru": "Плечи (см)", "values": [54]},
+    ],
+}
+_MEAS_DEMO_HEELS = {
+    "kind": "footwear",
+    "rows": [
+        {"eu": "39", "insole_cm": "25.0"},
+        {"eu": "40", "insole_cm": "26.2"},
+        {"eu": "41", "insole_cm": "26.9"},
+    ],
+}
+_MEAS_DEMO_JEANS_XS = {
+    "kind": "garment",
+    "columns": ["XS"],
+    "rows": [
+        {"en": "Waist (cm)", "ru": "Талия (см)", "values": [38]},
+        {"en": "Hip (cm)", "ru": "Бёдра (см)", "values": [52]},
+        {"en": "Inseam (cm)", "ru": "Внутренний шов (см)", "values": [78]},
+        {"en": "Length outseam (cm)", "ru": "Длина по боковому шву (см)", "values": [108]},
+    ],
+}
+_MEAS_DEMO_BAG_OS = {
+    "kind": "garment",
+    "columns": ["OS"],
+    "rows": [
+        {"en": "Width (cm)", "ru": "Ширина (см)", "values": [28]},
+        {"en": "Height (cm)", "ru": "Высота (см)", "values": [18]},
+        {"en": "Depth (cm)", "ru": "Глубина (см)", "values": [8]},
+        {"en": "Handle drop (cm)", "ru": "Плечевой ремень (см)", "values": [22]},
+    ],
+}
+_MEAS_DEMO_JEWELRY_OS = {
+    "kind": "garment",
+    "columns": ["OS"],
+    "rows": [
+        {"en": "Piece width (cm)", "ru": "Ширина изделия (см)", "values": [6.2]},
+        {"en": "Piece height (cm)", "ru": "Высота изделия (см)", "values": [1.1]},
+    ],
+}
+_MEAS_DEMO_DRESS_XSM = {
+    "kind": "garment",
+    "columns": ["XS", "S", "M"],
+    "rows": [
+        {"en": "Length (cm)", "ru": "Длина (см)", "values": [118, 122, 126]},
+        {"en": "Chest (cm)", "ru": "Грудь (см)", "values": [44, 46, 48]},
+        {"en": "Waist (cm)", "ru": "Талия (см)", "values": [42, 44, 46]},
+        {"en": "Sleeve (cm)", "ru": "Рукав (см)", "values": [58, 59, 60]},
+    ],
+}
+_MEAS_DEMO_JACKET_SML = {
+    "kind": "garment",
+    "columns": ["S", "M", "L"],
+    "rows": [
+        {"en": "Length (cm)", "ru": "Длина (см)", "values": [70, 72, 74]},
+        {"en": "Chest (cm)", "ru": "Грудь (см)", "values": [54, 58, 62]},
+        {"en": "Sleeve (cm)", "ru": "Рукав (см)", "values": [64, 65, 66]},
+        {"en": "Shoulders (cm)", "ru": "Плечи (см)", "values": [48, 50, 52]},
+    ],
+}
+_MEAS_DEMO_GOWN_OS = {
+    "kind": "garment",
+    "columns": ["One size"],
+    "rows": [
+        {"en": "Length (cm)", "ru": "Длина (см)", "values": [165]},
+        {"en": "Chest (cm)", "ru": "Грудь (см)", "values": [46]},
+        {"en": "Waist (cm)", "ru": "Талия (см)", "values": [38]},
+        {"en": "Hip (cm)", "ru": "Бёдра (см)", "values": [52]},
+    ],
+}
 
 _ROOT = os.path.dirname(os.path.abspath(__file__))
 STATIC_PRODUCTS_DIR = os.path.join(_ROOT, "static", "products")
@@ -294,6 +394,7 @@ DEMO_PRODUCTS: list[dict] = [
         "condition": "Excellent",
         "sizes": ["S", "M", "L", "XL"],
         "image": "https://images.unsplash.com/photo-1544022613-e87ca75a784a?q=80&w=1974&auto=format&fit=crop",
+        "measurements": _MEAS_DEMO_COAT,
     },
     {
         "category": "rtw",
@@ -309,6 +410,7 @@ DEMO_PRODUCTS: list[dict] = [
         "condition": "Very good",
         "sizes": ["XS", "S", "M", "L", "XL"],
         "image": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=2071&auto=format&fit=crop",
+        "measurements": _MEAS_DEMO_BLAZER,
     },
     {
         "category": "rtw",
@@ -325,6 +427,7 @@ DEMO_PRODUCTS: list[dict] = [
         "sizes": ["EU 40"],
         "image": "/static/products/kiss-heels-1.png",
         "images": [],
+        "measurements": _MEAS_DEMO_HEELS,
     },
     {
         "category": "rtw",
@@ -341,6 +444,7 @@ DEMO_PRODUCTS: list[dict] = [
         "sizes": ["XL"],
         "image": "/static/products/raf-bomber-1.png",
         "images": [],
+        "measurements": _MEAS_DEMO_BOMBER,
     },
     {
         "category": "rtw",
@@ -357,6 +461,7 @@ DEMO_PRODUCTS: list[dict] = [
         "sizes": [],
         "image": "/static/products/yzy-1.jpg",
         "images": [],
+        "measurements": _MEAS_DEMO_JEWELRY_OS,
     },
     {
         "category": "rtw",
@@ -373,6 +478,7 @@ DEMO_PRODUCTS: list[dict] = [
         "sizes": ["XS"],
         "image": "/static/products/balenciaga-1.jpg",
         "images": [],
+        "measurements": _MEAS_DEMO_JEANS_XS,
     },
     {
         "category": "couture",
@@ -389,6 +495,7 @@ DEMO_PRODUCTS: list[dict] = [
         "sizes": [],
         "image": "/static/products/couturebag.jpg",
         "images": [],
+        "measurements": _MEAS_DEMO_BAG_OS,
     },
     {
         "category": "rtw",
@@ -404,6 +511,7 @@ DEMO_PRODUCTS: list[dict] = [
         "condition": "Pristine",
         "sizes": ["XS", "S", "M"],
         "image": "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?q=80&w=1974&auto=format&fit=crop",
+        "measurements": _MEAS_DEMO_DRESS_XSM,
     },
     {
         "category": "rtw",
@@ -419,6 +527,7 @@ DEMO_PRODUCTS: list[dict] = [
         "condition": "Excellent",
         "sizes": ["S", "M", "L"],
         "image": "https://images.unsplash.com/photo-1550614000-4b95d4ed79cf?q=80&w=2000&auto=format&fit=crop",
+        "measurements": _MEAS_DEMO_JACKET_SML,
     },
     {
         "category": "rtw",
@@ -434,6 +543,7 @@ DEMO_PRODUCTS: list[dict] = [
         "condition": "Good",
         "sizes": ["S", "M", "L"],
         "image": "https://images.unsplash.com/photo-1520639888713-7851133b1ed0?q=80&w=1974&auto=format&fit=crop",
+        "measurements": _MEAS_DEMO_JACKET_SML,
     },
     {
         "category": "couture",
@@ -449,6 +559,7 @@ DEMO_PRODUCTS: list[dict] = [
         "condition": "Museum grade",
         "sizes": ["One size"],
         "image": "https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?q=80&w=2071&auto=format&fit=crop",
+        "measurements": _MEAS_DEMO_GOWN_OS,
     },
     {
         "category": "couture",
@@ -464,6 +575,7 @@ DEMO_PRODUCTS: list[dict] = [
         "condition": "Exhibition piece",
         "sizes": ["One size"],
         "image": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=1983&auto=format&fit=crop",
+        "measurements": _MEAS_DEMO_GOWN_OS,
     },
 ]
 
@@ -484,6 +596,10 @@ DEFAULT_CAMPAIGN_SETTINGS = {
     "intro_ru": "Силуэт, материал и свет — визуальный ряд для Protocol Archive.",
     "tagline_en": "Editorial series",
     "tagline_ru": "Редакционная серия",
+    "members_area_hero_url": (
+        "https://zxpcxfcmqfgzufcuvyyw.supabase.co/storage/v1/object/public/media/"
+        "protocol_archive/site/14a650ccb04209cfc3e5e793782643f8.jpg"
+    ),
 }
 
 _CAMPAIGN_IMAGE_NAME = re.compile(r"^campaign-(\d+)\.(png|jpg|jpeg|webp)$", re.I)
@@ -579,23 +695,27 @@ def fallback_products_list() -> list[dict]:
     out: list[dict] = []
     for i, item in enumerate(DEMO_PRODUCTS, start=1):
         main, gallery = resolve_demo_item_images(item)
-        out.append(
-            {
-                "id": i,
-                "category": item["category"],
-                "item_category": item.get("item_category"),
-                "serial": item["serial"],
-                "brand": item["brand"],
-                "name": item["name"],
-                "price": item["price"],
-                "max_days": item["max_days"],
-                "condition_score": item["condition_score"],
-                "material": item["material"],
-                "origin": item["origin"],
-                "condition": item["condition"],
-                "sizes": list(item.get("sizes") or []),
-                "image": main,
-                "images": gallery,
-            }
-        )
+        mj = None
+        if item.get("measurements") is not None:
+            mj = json.dumps(item["measurements"], ensure_ascii=False)
+        row = {
+            "id": i,
+            "category": item["category"],
+            "item_category": item.get("item_category"),
+            "serial": item["serial"],
+            "brand": item["brand"],
+            "name": item["name"],
+            "price": item["price"],
+            "max_days": item["max_days"],
+            "condition_score": item["condition_score"],
+            "material": item["material"],
+            "origin": item["origin"],
+            "condition": item["condition"],
+            "sizes": list(item.get("sizes") or []),
+            "image": main,
+            "images": gallery,
+            "measurements_json": mj,
+        }
+        enrich_product_dict(row, mj)
+        out.append(row)
     return out

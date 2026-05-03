@@ -59,6 +59,14 @@
             <div class="spec-row"><span class="label">{{ t('made_in') }}</span><span class="value">{{ tv(product.origin) }}</span></div>
             <div class="spec-row"><span class="label">{{ t('condition') }}</span><span class="value">{{ tv(product.condition) }} ({{ product.condition_score }}/10)</span></div>
         </div>
+        {% if product.measurements %}
+        <div class="product-detail-measure-wrap">
+            <button type="button" class="product-card-measure-btn product-card-measure-btn--detail" data-pa-measure-open data-product-name="{{ product.name | e }}" data-measurements='{{ product.measurements | tojson }}'>
+                <svg class="product-card-measure-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M4 20V4h2v16M8 18V6h2v12M12 16V8h2v8M16 14v-4h2v4M20 12h-1"/></svg>
+                <span class="product-card-measure-label">{{ t('product_measure_link') }}</span>
+            </button>
+        </div>
+        {% endif %}
         <form id="add-to-bag-form" action="{{ url_for('add_to_cart') }}" method="POST">
             <input type="hidden" name="product_id" value="{{ product.id }}">
             {% if product.sizes %}
