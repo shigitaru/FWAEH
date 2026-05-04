@@ -3,13 +3,15 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from flask import render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 logger = logging.getLogger(__name__)
 
 
 def register_auth_routes(app, deps):
+    bp = Blueprint('auth', __name__)
+
     t = deps['t']
     get_current_user = deps['get_current_user']
     get_cart_count = deps['get_cart_count']
@@ -81,7 +83,7 @@ def register_auth_routes(app, deps):
         upsert_demo_user(email, password_hash, display_name, is_admin, level_code, orders_count, spend_amount)
         return user_fetch_by_email(email)
 
-    @app.route('/account', methods=['GET'])
+    @bp.route('/account', methods=['GET'])
     def account():
         history_orders = []
         history_stats = None
@@ -108,7 +110,7 @@ def register_auth_routes(app, deps):
             t=t,
         )
 
-    @app.route('/account/verify', methods=['GET'])
+    @bp.route('/account/verify', methods=['GET'])
     def account_verify_page():
         if not session.get('pending_verify_user_id') or not session.get('pending_verify_email'):
             flash(t('acc_verify_no_pending'), 'error')
@@ -121,7 +123,7 @@ def register_auth_routes(app, deps):
             t=t,
         )
 
-    @app.route('/account/verify/cancel', methods=['GET'])
+    @bp.route('/account/verify/cancel', methods=['GET'])
     def account_verify_cancel():
         """Выход из шага кода без подтверждения почты — иначе /account снова редиректит сюда."""
         for k in _PENDING_VERIFY_KEYS:
@@ -130,7 +132,7 @@ def register_auth_routes(app, deps):
         flash(t('acc_verify_abandoned'), 'success')
         return redirect(url_for('account'))
 
-    @app.route('/account/login', methods=['POST'])
+    @bp.route('/account/login', methods=['POST'])
     def account_login():
         email = (request.form.get('email') or '').strip().lower()
         password = request.form.get('password') or ''
@@ -154,7 +156,7 @@ def register_auth_routes(app, deps):
         flash(t('acc_ok_login'), 'success')
         return redirect(url_for('account'))
 
-    @app.route('/account/demo-login', methods=['POST'])
+    @bp.route('/account/demo-login', methods=['POST'])
     def account_demo_login():
         if not demo_mode:
             flash(t('demo_login_disabled'), 'error')
@@ -168,7 +170,7 @@ def register_auth_routes(app, deps):
         flash(t('demo_login_success'), 'success')
         return redirect(url_for('account'))
 
-    @app.route('/account/register', methods=['GET', 'POST'])
+    @bp.route('/account/register', methods=['GET', 'POST'])
     def account_register():
         if request.method == 'GET':
             if get_current_user():
@@ -253,7 +255,7 @@ def register_auth_routes(app, deps):
         flash(t('acc_code_sent_next_step'), 'success')
         return redirect(url_for('account_verify_page'))
 
-    @app.route('/account/verify-email', methods=['POST'])
+    @bp.route('/account/verify-email', methods=['POST'])
     def account_verify_email():
         pending_user_id = session.get('pending_verify_user_id')
         pending_email = (session.get('pending_verify_email') or '').strip().lower()
@@ -301,7 +303,7 @@ def register_auth_routes(app, deps):
             flash(t('acc_db_unavailable'), 'error')
             return redirect(url_for('account_verify_page'))
 
-    @app.route('/account/resend-verification', methods=['POST'])
+    @bp.route('/account/resend-verification', methods=['POST'])
     def account_resend_verification():
         pending_user_id = session.get('pending_verify_user_id')
         pending_email = (session.get('pending_verify_email') or '').strip().lower()
@@ -325,14 +327,14 @@ def register_auth_routes(app, deps):
             flash(t('acc_resend_failed'), 'error')
         return redirect(url_for('account_verify_page'))
 
-    @app.route('/account/logout', methods=['POST'])
+    @bp.route('/account/logout', methods=['POST'])
     def account_logout():
         clear_user_session()
         for k in ('is_admin', 'user_level_code'):
             session.pop(k, None)
         return redirect(url_for('account'))
 
-    @app.route('/account/order/<int:order_id>/cancel', methods=['POST'])
+    @bp.route('/account/order/<int:order_id>/cancel', methods=['POST'])
     def account_cancel_order(order_id):
         user_id = session.get('user_id')
         if not user_id:
@@ -352,7 +354,7 @@ def register_auth_routes(app, deps):
             flash(t('acc_db_unavailable'), 'error')
         return redirect(url_for('account'))
 
-    @app.route('/account/order/<int:order_id>', methods=['GET'])
+    @bp.route('/account/order/<int:order_id>', methods=['GET'])
     def account_order_detail(order_id):
         user_id = session.get('user_id')
         if not user_id:
@@ -382,7 +384,7 @@ def register_auth_routes(app, deps):
             flash(t('acc_db_unavailable'), 'error')
             return redirect(url_for('account'))
 
-    @app.route('/account/order/<int:order_id>/review', methods=['POST'])
+    @bp.route('/account/order/<int:order_id>/review', methods=['POST'])
     def account_order_review(order_id):
         user_id = session.get('user_id')
         if not user_id:
@@ -413,7 +415,7 @@ def register_auth_routes(app, deps):
             flash(t('acc_db_unavailable'), 'error')
             return redirect(url_for('account_order_detail', order_id=order_id))
 
-    @app.route('/members')
+    @bp.route('/members')
     def members():
         user = get_current_user()
         if not user:
@@ -439,3 +441,5 @@ def register_auth_routes(app, deps):
             couture_min_level=couture_min_level,
             t=t,
         )
+
+    app.register_blueprint(bp)

@@ -155,7 +155,9 @@ flask run --port 5000
 
 | Путь | Назначение |
 |------|------------|
-| `app.py` | Точка входа Flask, регистрация роутов, контекст шаблонов |
+| `app.py` | Точка входа Flask для локального запуска |
+| `app_factory.py` | Фабрика приложения `create_app`, инициализация схемы и bootstrap |
+| `core/app_bootstrap.py` | Регистрация blueprint-групп, хуков и контекста шаблонов |
 | `core/config.py` | Настройки из переменных окружения и `.env` |
 | `core/db.py` | Пул подключений PostgreSQL (`psycopg2`), `get_db_connection` |
 | `core/pg_schema.py` | DDL таблиц для PostgreSQL |

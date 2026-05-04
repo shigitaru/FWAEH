@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import request, session, redirect, url_for, render_template, flash
+from flask import Blueprint, request, session, redirect, url_for, render_template, flash
 from werkzeug.security import check_password_hash
 import secrets
 
@@ -33,6 +33,8 @@ def _persist_measurements_from_admin_form(form, cur, product_id: int, size_value
 
 
 def register_admin_routes(app, deps):
+    bp = Blueprint('admin', __name__)
+
     t = deps['t']
     tv = deps['tv']
     order_status_flow = deps['ORDER_STATUS_FLOW']
@@ -70,7 +72,7 @@ def register_admin_routes(app, deps):
             return redirect(url_for('admin_login'))
         return None
 
-    @app.route('/admin/login', methods=['GET', 'POST'])
+    @bp.route('/admin/login', methods=['GET', 'POST'])
     def admin_login():
         if request.method == 'POST':
             email = (request.form.get('email') or '').strip().lower()
@@ -94,7 +96,7 @@ def register_admin_routes(app, deps):
             return redirect(url_for('admin_panel', section='products'))
         return render_template('admin_login.html', active_page='admin', cart_count=get_cart_count(), t=t)
 
-    @app.route('/admin', methods=['GET', 'POST'])
+    @bp.route('/admin', methods=['GET', 'POST'])
     def admin_panel():
         denied = _require_admin()
         if denied:
@@ -239,7 +241,7 @@ def register_admin_routes(app, deps):
             tv=tv
         )
 
-    @app.route('/admin/order/<int:order_id>/status', methods=['POST'])
+    @bp.route('/admin/order/<int:order_id>/status', methods=['POST'])
     def admin_update_order_status(order_id):
         denied = _require_admin()
         if denied:
@@ -313,7 +315,7 @@ def register_admin_routes(app, deps):
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
         return _orders_redirect()
 
-    @app.route('/admin/product/<int:product_id>/delete', methods=['POST'])
+    @bp.route('/admin/product/<int:product_id>/delete', methods=['POST'])
     def admin_delete_product(product_id):
         denied = _require_admin()
         if denied:
@@ -332,7 +334,7 @@ def register_admin_routes(app, deps):
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
         return redirect(url_for('admin_panel', section='inventory'))
 
-    @app.route('/admin/brand/<int:brand_id>/delete', methods=['POST'])
+    @bp.route('/admin/brand/<int:brand_id>/delete', methods=['POST'])
     def admin_delete_brand(brand_id):
         denied = _require_admin()
         if denied:
@@ -356,7 +358,7 @@ def register_admin_routes(app, deps):
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
         return redirect(url_for('admin_panel', section='brands'))
 
-    @app.route('/admin/product/<int:product_id>/edit', methods=['GET', 'POST'])
+    @bp.route('/admin/product/<int:product_id>/edit', methods=['GET', 'POST'])
     def admin_edit_product(product_id):
         denied = _require_admin()
         if denied:
@@ -499,7 +501,7 @@ def register_admin_routes(app, deps):
             tv=tv,
         )
 
-    @app.route('/admin/campaign', methods=['GET', 'POST'])
+    @bp.route('/admin/campaign', methods=['GET', 'POST'])
     def admin_campaign():
         denied = _require_admin()
         if denied:
@@ -545,7 +547,7 @@ def register_admin_routes(app, deps):
             t=t,
         )
 
-    @app.route('/admin/campaign/story/new', methods=['GET', 'POST'])
+    @bp.route('/admin/campaign/story/new', methods=['GET', 'POST'])
     def admin_campaign_story_new():
         denied = _require_admin()
         if denied:
@@ -603,7 +605,7 @@ def register_admin_routes(app, deps):
             t=t,
         )
 
-    @app.route('/admin/campaign/story/<int:story_id>', methods=['GET', 'POST'])
+    @bp.route('/admin/campaign/story/<int:story_id>', methods=['GET', 'POST'])
     def admin_campaign_story_edit(story_id):
         denied = _require_admin()
         if denied:
@@ -676,7 +678,7 @@ def register_admin_routes(app, deps):
             t=t,
         )
 
-    @app.route('/admin/users/<int:user_id>/set-admin', methods=['POST'])
+    @bp.route('/admin/users/<int:user_id>/set-admin', methods=['POST'])
     def admin_set_user_admin(user_id):
         denied = _require_admin()
         if denied:
@@ -694,7 +696,7 @@ def register_admin_routes(app, deps):
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
         return redirect(url_for('admin_panel', section='users'))
 
-    @app.route('/admin/users/<int:user_id>/level', methods=['POST'])
+    @bp.route('/admin/users/<int:user_id>/level', methods=['POST'])
     def admin_set_user_level(user_id):
         denied = _require_admin()
         if denied:
@@ -726,3 +728,5 @@ def register_admin_routes(app, deps):
         except Exception as exc:
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
         return redirect(url_for('admin_panel', section='users'))
+
+    app.register_blueprint(bp)

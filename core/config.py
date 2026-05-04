@@ -9,6 +9,8 @@ load_dotenv(os.path.join(_ROOT_DIR, '.env'), override=True)
 
 @dataclass(frozen=True)
 class Settings:
+    flask_secret_key: str
+    flask_debug: bool
     postgres_connection_string: str
     upload_dir: str
     campaign_upload_dir: str
@@ -43,6 +45,8 @@ def load_settings() -> Settings:
         or os.getenv('DATABASE_URL', '')
     ).strip()
     return Settings(
+        flask_secret_key=os.getenv('FLASK_SECRET_KEY', 'protocol-archive-2024').strip() or 'protocol-archive-2024',
+        flask_debug=os.getenv('FLASK_DEBUG', '1').strip().lower() in ('1', 'true', 'yes', 'on'),
         postgres_connection_string=postgres_connection_string,
         upload_dir=os.path.join(base_dir, 'static', 'products', 'uploads'),
         campaign_upload_dir=os.path.join(base_dir, 'static', 'campaign', 'uploads'),

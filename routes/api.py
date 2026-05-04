@@ -1,9 +1,11 @@
 from datetime import date, timedelta
 
-from flask import request, jsonify
+from flask import Blueprint, request, jsonify
 
 
 def register_api_routes(app, deps):
+    bp = Blueprint('api', __name__)
+
     parse_iso_date = deps['_parse_iso_date']
     find_product = deps['find_product']
     filter_products = deps['filter_products']
@@ -21,7 +23,7 @@ def register_api_routes(app, deps):
                 return candidate_start, candidate_end
         return None, None
 
-    @app.route('/api/calculate', methods=['POST'])
+    @bp.route('/api/calculate', methods=['POST'])
     def api_calculate():
         data = request.get_json()
         price = int(data.get('price', 0))
@@ -30,7 +32,7 @@ def register_api_routes(app, deps):
         days = min(max(days, 1), max_days)
         return jsonify({'total': price * days, 'days': days})
 
-    @app.route('/api/product/<int:product_id>/availability', methods=['POST'])
+    @bp.route('/api/product/<int:product_id>/availability', methods=['POST'])
     def api_product_availability(product_id):
         data = request.get_json(silent=True) or {}
         requested_start = parse_iso_date(data.get('start_date')) or date.today()
@@ -63,7 +65,7 @@ def register_api_routes(app, deps):
             }
         )
 
-    @app.route('/api/product/<int:product_id>/occupancy', methods=['GET'])
+    @bp.route('/api/product/<int:product_id>/occupancy', methods=['GET'])
     def api_product_occupancy(product_id):
         product = find_product(product_id)
         if not product:
@@ -77,7 +79,7 @@ def register_api_routes(app, deps):
             }
         )
 
-    @app.route('/api/search-suggestions', methods=['GET'])
+    @bp.route('/api/search-suggestions', methods=['GET'])
     def api_search_suggestions():
         q = (request.args.get('q') or '').strip()
         if len(q) < 2:
@@ -116,3 +118,5 @@ def register_api_routes(app, deps):
             if len(suggestions) >= 6:
                 break
         return jsonify({'ok': True, 'suggestions': suggestions})
+
+    app.register_blueprint(bp)

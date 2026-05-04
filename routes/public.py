@@ -1,10 +1,12 @@
 import time
 from datetime import date, timedelta
 
-from flask import render_template, session, redirect, url_for, request, jsonify, flash
+from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, flash
 
 
 def register_public_routes(app, deps):
+    bp = Blueprint('public', __name__)
+
     t = deps['t']
     tv = deps['tv']
     tc = deps['tc']
@@ -33,13 +35,13 @@ def register_public_routes(app, deps):
     couture_gate_message_key = deps['couture_gate_message_key']
     format_couture_message = deps['format_couture_message']
 
-    @app.route('/set-lang/<lang>')
+    @bp.route('/set-lang/<lang>')
     def set_lang(lang):
         if lang in translations:
             session['lang'] = lang
         return redirect(request.referrer or url_for('home'))
 
-    @app.route('/')
+    @bp.route('/')
     def home():
         kw = collection_listing_data(for_home=True)
         return render_template(
@@ -53,7 +55,7 @@ def register_public_routes(app, deps):
             **kw,
         )
 
-    @app.route('/collection')
+    @bp.route('/collection')
     def collection():
         kw = collection_listing_data(for_home=False)
         return render_template(
@@ -67,7 +69,7 @@ def register_public_routes(app, deps):
             **kw,
         )
 
-    @app.route('/couture')
+    @bp.route('/couture')
     def couture():
         if not get_current_user():
             flash(t('acc_couture_members_only'), 'error')
@@ -75,7 +77,7 @@ def register_public_routes(app, deps):
         products = filter_products(category='couture')
         return render_template('couture.html', products=products, active_page='couture', cart_count=get_cart_count(), t=t, tv=tv)
 
-    @app.route('/product/<int:product_id>')
+    @bp.route('/product/<int:product_id>')
     def product_detail(product_id):
         product = find_product(product_id)
         if not product:
@@ -113,7 +115,7 @@ def register_public_routes(app, deps):
             tv=tv,
         )
 
-    @app.route('/wishlist/toggle', methods=['POST'])
+    @bp.route('/wishlist/toggle', methods=['POST'])
     def wishlist_toggle():
         if not request.is_json:
             return jsonify(ok=False, error='json'), 400
@@ -136,7 +138,7 @@ def register_public_routes(app, deps):
         session.modified = True
         return jsonify(ok=True, in_wishlist=in_wish, count=len(ids))
 
-    @app.route('/wishlist')
+    @bp.route('/wishlist')
     def wishlist_page():
         ids = get_wishlist_ids()
         by_id = find_products_by_ids(ids)
@@ -155,7 +157,7 @@ def register_public_routes(app, deps):
             return True
         return request.accept_mimetypes.best_match(['application/json', 'text/html']) == 'application/json'
 
-    @app.route('/cart/add', methods=['POST'])
+    @bp.route('/cart/add', methods=['POST'])
     def add_to_cart():
         product_id = int(request.form.get('product_id'))
         days = int(request.form.get('days', 1))
@@ -204,13 +206,13 @@ def register_public_routes(app, deps):
         flash(product['name'], 'cart_added')
         return redirect(url_for('product_detail', product_id=product_id, days=days, start_date=start_date.isoformat()))
 
-    @app.route('/cart/remove/<int:cart_id>')
+    @bp.route('/cart/remove/<int:cart_id>')
     def remove_from_cart(cart_id):
         cart = [i for i in get_cart() if i['cart_id'] != cart_id]
         session['cart'] = cart
         return redirect(url_for('cart'))
 
-    @app.route('/cart')
+    @bp.route('/cart')
     def cart():
         user = get_current_user()
         level_code = (user or {}).get('level_code', 'bronze')
@@ -227,12 +229,12 @@ def register_public_routes(app, deps):
             t=t,
         )
 
-    @app.route('/cart/clear')
+    @bp.route('/cart/clear')
     def clear_cart():
         session['cart'] = []
         return redirect(url_for('cart'))
 
-    @app.route('/cart/checkout', methods=['POST'])
+    @bp.route('/cart/checkout', methods=['POST'])
     def cart_checkout():
         user = get_current_user()
         if not user:
@@ -266,7 +268,7 @@ def register_public_routes(app, deps):
         flash(t('acc_checkout_success'), 'success')
         return redirect(url_for('account'))
 
-    @app.route('/search')
+    @bp.route('/search')
     def search():
         q = request.args.get('q', '').strip()
         category = (request.args.get('category') or '').strip().lower()
@@ -317,7 +319,7 @@ def register_public_routes(app, deps):
             tv=tv,
         )
 
-    @app.route('/campaign')
+    @bp.route('/campaign')
     def campaign():
         data = get_campaign_index_data()
         return render_template(
@@ -331,7 +333,7 @@ def register_public_routes(app, deps):
             tc=tc,
         )
 
-    @app.route('/campaign/story/<int:story_id>')
+    @bp.route('/campaign/story/<int:story_id>')
     def campaign_story(story_id):
         story = get_campaign_story_detail(story_id)
         if not story:
@@ -344,6 +346,8 @@ def register_public_routes(app, deps):
             t=t,
         )
 
-    @app.route('/about')
+    @bp.route('/about')
     def about():
         return render_template('about.html', active_page='about', cart_count=get_cart_count(), t=t)
+
+    app.register_blueprint(bp)
