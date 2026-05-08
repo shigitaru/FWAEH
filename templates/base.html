@@ -17,6 +17,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body{% if admin_site|default(false) %} class="admin-site"{% endif %}>
+    <div class="global-loader is-visible" id="global-loader" aria-hidden="true">
+        <span class="global-loader-spinner" aria-hidden="true"></span>
+    </div>
     {% with msgs = get_flashed_messages(with_categories=true) %}
     {% for category, message in msgs %}
     {% if category == 'cart_added' %}

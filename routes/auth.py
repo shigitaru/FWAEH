@@ -26,6 +26,8 @@ def register_auth_routes(app, deps):
     send_verification_email = deps['_send_verification_email']
     email_delivery_disabled = deps.get('email_delivery_disabled', False)
     clear_user_session = deps['_clear_user_session']
+    set_user_session_state = deps['_set_user_session_state']
+    clear_user_session_state = deps['_clear_user_session_state']
     acc_email_re = deps['ACC_EMAIL_RE']
     demo_mode = deps['demo_mode']
     get_loyalty_level = deps['get_loyalty_level']
@@ -61,11 +63,20 @@ def register_auth_routes(app, deps):
         session.modified = True
 
     def _apply_user_session_from_row(row):
+        auth_key = secrets.token_urlsafe(32)
+        expires_at_utc = datetime.now(timezone.utc) + timedelta(days=1)
+        set_user_session_state(
+            int(row[0]),
+            hashlib.sha256(auth_key.encode('utf-8')).hexdigest(),
+            expires_at_utc.replace(tzinfo=None),
+        )
         session['user_id'] = int(row[0])
         session['user_email'] = row[1]
         session['user_display_name'] = row[3]
         session['is_admin'] = bool(row[4]) if len(row) > 4 else False
         session['user_level_code'] = (row[9] if len(row) > 9 else 'bronze') or 'bronze'
+        session['user_session_key'] = auth_key
+        session['user_session_expires_at'] = expires_at_utc.isoformat()
         session.modified = True
 
     def _ensure_demo_user(role):
@@ -329,6 +340,12 @@ def register_auth_routes(app, deps):
 
     @bp.route('/account/logout', methods=['POST'])
     def account_logout():
+        current_uid = session.get('user_id')
+        try:
+            if current_uid is not None:
+                clear_user_session_state(int(current_uid))
+        except Exception:
+            logger.exception('Failed to clear persistent session state for user %s', current_uid)
         clear_user_session()
         for k in ('is_admin', 'user_level_code'):
             session.pop(k, None)

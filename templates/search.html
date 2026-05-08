@@ -7,7 +7,7 @@
         <div class="search-main-row">
             <input type="text" name="q" value="{{ query }}" class="search-input" autofocus
                 placeholder="{{ t('search_placeholder') }}" autocomplete="off" data-search-suggest>
-            <button type="submit" class="search-submit-btn">{{ t('filters_apply') }}</button>
+            <button type="submit" class="search-submit-btn" data-loading-button>{{ t('filters_apply') }}</button>
         </div>
         <div class="search-suggestions" data-search-suggestions hidden></div>
         <div class="search-filter-grid" aria-label="{{ t('search_filters_title') }}">
@@ -59,7 +59,7 @@
         <div class="brands-grid">
             <a href="{{ url_for('collection') }}#collection-catalog" class="brand-card brand-card--all"><span class="all-brands-link">{{ t('all_brands') }}</span></a>
             {% for brand in brands %}
-            <a href="{{ url_for('collection', brand=brand.slug) }}#collection-catalog" class="brand-card"><span class="{{ brand.css_class }}">{{ brand.name }}</span></a>
+            <a href="{{ url_for('collection', brand=brand.slug) }}#collection-catalog" class="brand-card"><span class="{{ brand.css_class }} brand-font-{{ brand.brand_font_key }}">{{ brand.name }}</span></a>
             {% endfor %}
         </div>
     </div>

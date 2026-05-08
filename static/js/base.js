@@ -31,6 +31,78 @@
     setInterval(updateClock, 37);
     updateClock();
 
+    (function initGlobalLoader() {
+        var el = document.getElementById("global-loader");
+        if (!el) return;
+        var inflight = 0;
+        var showTimer = 0;
+        function revealNow() {
+            el.classList.add("is-visible");
+        }
+        function hideNow() {
+            el.classList.remove("is-visible");
+        }
+        function show() {
+            inflight += 1;
+            if (showTimer || el.classList.contains("is-visible")) return;
+            showTimer = window.setTimeout(function () {
+                showTimer = 0;
+                if (inflight > 0) revealNow();
+            }, 140);
+        }
+        function hide() {
+            inflight = Math.max(0, inflight - 1);
+            if (inflight > 0) return;
+            if (showTimer) {
+                clearTimeout(showTimer);
+                showTimer = 0;
+            }
+            hideNow();
+        }
+        window.paLoading = {
+            show: show,
+            hide: hide,
+            withPromise: function (promise) {
+                if (!promise || typeof promise.then !== "function") return promise;
+                show();
+                return promise.finally(hide);
+            },
+        };
+        if (document.readyState !== "complete") {
+            inflight = 1;
+            revealNow();
+            window.addEventListener("load", function () {
+                inflight = 0;
+                hideNow();
+            }, { once: true });
+        } else {
+            hideNow();
+            inflight = 0;
+        }
+        window.addEventListener("pageshow", function () {
+            inflight = 0;
+            hideNow();
+        });
+        document.addEventListener("click", function (e) {
+            if (e.defaultPrevented) return;
+            var a = e.target.closest("a[href]");
+            if (!a) return;
+            var href = a.getAttribute("href") || "";
+            if (!href || href[0] === "#") return;
+            if (a.hasAttribute("download") || a.target === "_blank") return;
+            if (a.getAttribute("data-no-global-loader") != null) return;
+            if (href.indexOf("mailto:") === 0 || href.indexOf("tel:") === 0) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            show();
+        });
+        document.addEventListener("submit", function (e) {
+            var form = e.target;
+            if (!form || form.getAttribute("data-no-global-loader") != null) return;
+            if (e.defaultPrevented) return;
+            show();
+        });
+    })();
+
     (function initThemeToggle() {
         var t = document.getElementById("theme-toggle");
         var root = document.documentElement;
@@ -747,6 +819,17 @@
         });
         document.addEventListener("keydown", function (e) {
             if (e.key === "Escape" && root.classList.contains("is-open")) setOpen(false);
+        });
+    })();
+
+    (function () {
+        document.addEventListener("submit", function (e) {
+            var form = e.target;
+            if (!form || typeof form.querySelector !== "function") return;
+            var submitBtn = form.querySelector('[type="submit"][data-loading-button]');
+            if (!submitBtn || submitBtn.disabled) return;
+            submitBtn.disabled = true;
+            submitBtn.classList.add("is-loading");
         });
     })();
 })();

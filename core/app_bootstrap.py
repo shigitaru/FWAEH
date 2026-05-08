@@ -4,9 +4,11 @@ from urllib.parse import quote
 from flask import request, url_for
 
 from core.account_service import (
+    _clear_user_session_state,
     _increment_verification_attempt,
     _list_users_for_admin,
     _mark_email_verified,
+    _set_user_session_state,
     _set_admin_flag,
     _set_user_verification_code,
     _update_user_loyalty,
@@ -24,6 +26,7 @@ from core.campaign_service import (
     get_members_area_hero_url_from_db,
 )
 from core.catalog import (
+    BRAND_FONT_OPTIONS,
     filter_products,
     find_product,
     find_products_by_ids,
@@ -124,6 +127,8 @@ def register_routes(app):
             '_send_verification_email': send_verification_email,
             'email_delivery_disabled': settings.email_delivery_disabled,
             '_clear_user_session': _clear_user_session,
+            '_set_user_session_state': _set_user_session_state,
+            '_clear_user_session_state': _clear_user_session_state,
             'ACC_EMAIL_RE': ACC_EMAIL_RE,
             'demo_mode': settings.demo_mode,
             'get_loyalty_level': get_loyalty_level,
@@ -215,10 +220,12 @@ def register_routes(app):
             '_list_users_for_admin': _list_users_for_admin,
             '_set_admin_flag': _set_admin_flag,
             '_update_user_loyalty': _update_user_loyalty,
+            '_set_user_session_state': _set_user_session_state,
             'LOYALTY_LEVELS': LOYALTY_LEVELS,
             'recalculate_user_loyalty': recalculate_user_loyalty,
             '_user_fetch_by_email': _user_fetch_by_email,
             '_send_rental_approved_email': send_rental_approved_email,
+            'brand_font_options': BRAND_FONT_OPTIONS,
         },
     )
 

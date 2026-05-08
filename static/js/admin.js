@@ -401,6 +401,33 @@
         });
     }
 
+    function initBrandFontPreview() {
+        var fontClassWhitelist = [
+            "brand-font-inter",
+            "brand-font-instrument-serif",
+            "brand-font-cormorant-garamond",
+            "brand-font-cinzel",
+            "brand-font-bodoni-moda",
+            "brand-font-space-grotesk",
+            "brand-font-archivo-black",
+        ];
+        document.querySelectorAll(".admin-brand-font-form").forEach(function (formEl) {
+            var select = formEl.querySelector(".admin-brand-font-select");
+            if (!select) return;
+            var row = formEl.closest(".admin-brand-row");
+            if (!row) return;
+            var preview = row.querySelector("[data-brand-font-preview]");
+            if (!preview) return;
+            function syncPreview() {
+                fontClassWhitelist.forEach(function (cls) { preview.classList.remove(cls); });
+                var key = String(select.value || "inter").trim().toLowerCase();
+                preview.classList.add("brand-font-" + key);
+            }
+            select.addEventListener("change", syncPreview);
+            syncPreview();
+        });
+    }
+
     function initMeasurementsEditor() {
         var root = document.getElementById("admin-measurements-editor");
         var garmentTbody = document.getElementById("admin-measurements-garment-tbody");
@@ -672,5 +699,6 @@
     initUploadZones(i18n);
     initAdminImageSort();
     initConfirmSubmit();
+    initBrandFontPreview();
     initMeasurementsEditor();
 })();

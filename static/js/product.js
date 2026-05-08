@@ -59,12 +59,13 @@
     function refreshAvailability() {
         if (!startDateInp || !availabilityText || !window.fetch || !inp) return;
         var payload = { start_date: startDateInp.value, days: clampDays(inp.value) };
-        fetch(cfg.availability_url, {
+        var req = fetch(cfg.availability_url, {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             credentials: "same-origin",
             body: JSON.stringify(payload),
-        })
+        });
+        (window.paLoading && window.paLoading.withPromise ? window.paLoading.withPromise(req) : req)
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data || !data.ok) return;
@@ -154,7 +155,8 @@
     }
     function loadOccupancyCalendar() {
         if (!occupancyCalendar || !cfg.occupancy_url || !window.fetch) return;
-        fetch(cfg.occupancy_url, { credentials: "same-origin", headers: { Accept: "application/json" } })
+        var req = fetch(cfg.occupancy_url, { credentials: "same-origin", headers: { Accept: "application/json" } });
+        (window.paLoading && window.paLoading.withPromise ? window.paLoading.withPromise(req) : req)
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data || !data.ok) return;
@@ -244,6 +246,7 @@
 
     var form = document.getElementById("add-to-bag-form");
     if (!form || !window.fetch) return;
+    var submitBtn = form.querySelector('[type="submit"][data-loading-button]');
     form.addEventListener("submit", function (e) {
         e.preventDefault();
         var daysInp = document.getElementById("days-input");
@@ -272,8 +275,16 @@
                     if (window.paSetCartCount) window.paSetCartCount(data.cart_count);
                     if (window.paShowCartToast) window.paShowCartToast(data.product_name);
                 }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove("is-loading");
+                }
             })
             .catch(function () {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove("is-loading");
+                }
                 form.submit();
             });
     });

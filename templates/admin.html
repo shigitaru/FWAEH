@@ -79,11 +79,20 @@
                 <div class="admin-brand-meta">
                     <span class="admin-brand-name">{{ b.name }}</span>
                     <span class="admin-brand-count">{{ b.products_count }} {{ t('admin_brand_products_count') }}</span>
+                    <span class="admin-brand-font-preview brand-font-{{ b.brand_font_key }}" data-brand-font-preview>{{ b.name }}</span>
                 </div>
+                <form method="post" action="{{ url_for('admin_set_brand_font', brand_id=b.id) }}" class="admin-brand-font-form">
+                    <select name="brand_font_key" class="search-input admin-brand-font-select" aria-label="Brand font">
+                        {% for font_key, font_label in brand_font_options.items() %}
+                        <option value="{{ font_key }}" {% if font_key == b.brand_font_key %}selected{% endif %}>{{ font_label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="admin-brand-delete-btn admin-brand-action-btn">Set font</button>
+                </form>
                 <form method="post" action="{{ url_for('admin_delete_brand', brand_id=b.id) }}" class="js-confirm-submit" data-confirm="{{ t('admin_delete_brand_confirm') }}">
                     <button
                         type="submit"
-                        class="admin-brand-delete-btn"
+                        class="admin-brand-delete-btn admin-brand-action-btn"
                         {% if b.products_count > 0 %}disabled{% endif %}
                     >{{ t('admin_delete_brand') }}</button>
                 </form>
@@ -208,11 +217,11 @@
                         <option value="{{ level.code }}" {% if level.code == u.level_code %}selected{% endif %}>{{ level.title }}</option>
                         {% endfor %}
                     </select>
-                    <button type="submit" class="admin-brand-delete-btn">{{ t('admin_user_level_set') }}</button>
+                    <button type="submit" class="admin-brand-delete-btn admin-user-action-btn">{{ t('admin_user_level_set') }}</button>
                 </form>
                 <form method="post" action="{{ url_for('admin_set_user_admin', user_id=u.id) }}">
                     <input type="hidden" name="is_admin" value="{{ 0 if u.is_admin else 1 }}">
-                    <button type="submit" class="admin-brand-delete-btn">{{ t('admin_user_demote') if u.is_admin else t('admin_user_promote') }}</button>
+                    <button type="submit" class="admin-brand-delete-btn admin-user-action-btn">{{ t('admin_user_demote') if u.is_admin else t('admin_user_promote') }}</button>
                 </form>
             </div>
             {% endfor %}

@@ -10,6 +10,23 @@ from .product_measurements import enrich_product_dict
 
 logger = logging.getLogger(__name__)
 
+BRAND_FONT_OPTIONS = {
+    'inter': 'Inter',
+    'instrument-serif': 'Instrument Serif',
+    'cormorant-garamond': 'Cormorant Garamond',
+    'cinzel': 'Cinzel',
+    'bodoni-moda': 'Bodoni Moda',
+    'space-grotesk': 'Space Grotesk',
+    'archivo-black': 'Archivo Black',
+}
+
+
+def _normalize_brand_font_key(font_key):
+    key = str(font_key or '').strip().lower()
+    if key in BRAND_FONT_OPTIONS:
+        return key
+    return 'inter'
+
 
 def _search_rank(product, query):
     q = (query or '').strip().lower()
@@ -130,7 +147,7 @@ def get_brands():
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT name, slug, css_class FROM Brands ORDER BY name')
+            cur.execute('SELECT name, slug, css_class, brand_font_key FROM Brands ORDER BY name')
             rows = cur.fetchall()
         out = []
         for r in rows:
@@ -142,11 +159,19 @@ def get_brands():
                 'name': name,
                 'slug': slug,
                 'css_class': _resolve_brand_css(name, db_css),
+                'brand_font_key': _normalize_brand_font_key(getattr(r, 'brand_font_key', None)),
             })
         return out
     except Exception:
         logger.exception('Failed to load brands from database; using fallback brands')
-        return [dict(b, css_class=_resolve_brand_css(b['name'], b.get('css_class'))) for b in BRANDS]
+        return [
+            dict(
+                b,
+                css_class=_resolve_brand_css(b['name'], b.get('css_class')),
+                brand_font_key='inter',
+            )
+            for b in BRANDS
+        ]
 
 
 def get_admin_brands():
@@ -156,9 +181,10 @@ def get_admin_brands():
             cur.execute(
                 """
                 SELECT b.id, b.name, b.slug, b.css_class, COUNT(p.id) AS products_count
+                     , b.brand_font_key
                 FROM Brands b
                 LEFT JOIN Products p ON p.brand_id = b.id
-                GROUP BY b.id, b.name, b.slug, b.css_class
+                GROUP BY b.id, b.name, b.slug, b.css_class, b.brand_font_key
                 ORDER BY b.name
                 """
             )
@@ -174,6 +200,7 @@ def get_admin_brands():
                 'name': name,
                 'slug': slug,
                 'css_class': _resolve_brand_css(name, db_css),
+                'brand_font_key': _normalize_brand_font_key(getattr(r, 'brand_font_key', None)),
                 'products_count': int(r.products_count or 0),
             })
         return out

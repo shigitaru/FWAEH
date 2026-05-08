@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash
 from werkzeug.security import check_password_hash
 import secrets
@@ -61,10 +63,16 @@ def register_admin_routes(app, deps):
     list_users_for_admin = deps['_list_users_for_admin']
     set_admin_flag = deps['_set_admin_flag']
     update_user_loyalty = deps['_update_user_loyalty']
+    set_user_session_state = deps['_set_user_session_state']
     loyalty_levels = deps['LOYALTY_LEVELS']
     recalculate_user_loyalty = deps['recalculate_user_loyalty']
     user_fetch_by_email = deps['_user_fetch_by_email']
     send_rental_approved_email = deps['_send_rental_approved_email']
+    brand_font_options = deps['brand_font_options']
+
+    def _normalize_brand_font_key(raw):
+        key = str(raw or '').strip().lower()
+        return key if key in brand_font_options else 'inter'
 
     def _require_admin():
         if not session.get('user_id') or not bool(session.get('is_admin')):
@@ -92,6 +100,15 @@ def register_admin_routes(app, deps):
             session['user_display_name'] = row[3]
             session['is_admin'] = bool(row[4])
             session['user_level_code'] = (row[9] if len(row) > 9 else 'bronze') or 'bronze'
+            auth_key = secrets.token_urlsafe(32)
+            expires_at_utc = datetime.now(timezone.utc) + timedelta(days=1)
+            set_user_session_state(
+                int(row[0]),
+                hashlib.sha256(auth_key.encode('utf-8')).hexdigest(),
+                expires_at_utc.replace(tzinfo=None),
+            )
+            session['user_session_key'] = auth_key
+            session['user_session_expires_at'] = expires_at_utc.isoformat()
             session.modified = True
             return redirect(url_for('admin_panel', section='products'))
         return render_template('admin_login.html', active_page='admin', cart_count=get_cart_count(), t=t)
@@ -162,11 +179,11 @@ def register_admin_routes(app, deps):
                     else:
                         cur.execute(
                             '''
-                            INSERT INTO Brands (name, slug, css_class)
-                            VALUES (?, ?, ?)
+                            INSERT INTO Brands (name, slug, css_class, brand_font_key)
+                            VALUES (?, ?, ?, ?)
                             RETURNING id
                             ''',
-                            (brand_name, brand_name, '')
+                            (brand_name, brand_name, '', 'inter')
                         )
                         out_row = cur.fetchone()
                         brand_id = int(out_row[0]) if out_row and out_row[0] is not None else None
@@ -235,6 +252,7 @@ def register_admin_routes(app, deps):
             inventory_query=inventory_query,
             orders_status_filter=orders_status_filter,
             admin_status=admin_status,
+            brand_font_options=brand_font_options,
             active_page='admin',
             cart_count=get_cart_count(),
             t=t,
@@ -358,6 +376,26 @@ def register_admin_routes(app, deps):
             session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
         return redirect(url_for('admin_panel', section='brands'))
 
+    @bp.route('/admin/brand/<int:brand_id>/font', methods=['POST'])
+    def admin_set_brand_font(brand_id):
+        denied = _require_admin()
+        if denied:
+            return denied
+        font_key = _normalize_brand_font_key(request.form.get('brand_font_key'))
+        try:
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT id FROM Brands WHERE id = ?', (brand_id,))
+                if not cur.fetchone():
+                    session['admin_status'] = {'type': 'error', 'message': t('admin_brand_not_found')}
+                    return redirect(url_for('admin_panel', section='brands'))
+                cur.execute('UPDATE Brands SET brand_font_key = ? WHERE id = ?', (font_key, brand_id))
+                conn.commit()
+            session['admin_status'] = {'type': 'success', 'message': 'Brand font updated'}
+        except Exception as exc:
+            session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+        return redirect(url_for('admin_panel', section='brands'))
+
     @bp.route('/admin/product/<int:product_id>/edit', methods=['GET', 'POST'])
     def admin_edit_product(product_id):
         denied = _require_admin()
@@ -439,11 +477,11 @@ def register_admin_routes(app, deps):
                     else:
                         cur.execute(
                             '''
-                            INSERT INTO Brands (name, slug, css_class)
-                            VALUES (?, ?, ?)
+                            INSERT INTO Brands (name, slug, css_class, brand_font_key)
+                            VALUES (?, ?, ?, ?)
                             RETURNING id
                             ''',
-                            (brand_name, brand_name, '')
+                            (brand_name, brand_name, '', 'inter')
                         )
                         out_row = cur.fetchone()
                         brand_id = int(out_row[0]) if out_row and out_row[0] is not None else None

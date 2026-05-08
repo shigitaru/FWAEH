@@ -46,6 +46,32 @@ body {
     width: 100%;
     max-width: 100%;
 }
+.global-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .18s ease, visibility .18s ease;
+}
+.global-loader.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+.global-loader-spinner {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--text-secondary);
+    border-right-color: transparent;
+    animation: pa-spin .7s linear infinite;
+}
 
 a { color: inherit; text-decoration: none; }
 button, input { font-family: inherit; }
@@ -2488,8 +2514,12 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     justify-content: center;
     border: 1px solid var(--border);
     border-radius: 999px;
-    font-size: 11px;
-    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    color: color-mix(in srgb, var(--text) 82%, #6fc8ff 18%);
+    text-shadow: 0 0 0.2px currentColor;
 }
 .occupancy-day.is-booked {
     border-color: rgba(220, 70, 70, 0.85);
@@ -2504,6 +2534,9 @@ html[data-theme="dark"] .occupancy-day.is-booked {
 }
 .occupancy-day.is-free {
     background: rgba(45, 160, 90, 0.05);
+}
+html[data-theme="dark"] .occupancy-day {
+    color: #cdeaff;
 }
 .product-occupancy-note {
     margin: 14px 0 0;
@@ -4101,6 +4134,20 @@ a.account-btn-primary {
     padding: 10px;
     background: var(--bg);
 }
+.brand-card > span {
+    font-family: var(--brand-font-family, 'Inter', sans-serif);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 500;
+}
+.brand-font-inter { --brand-font-family: 'Inter', sans-serif; }
+.brand-font-instrument-serif { --brand-font-family: 'Instrument Serif', serif; }
+.brand-font-cormorant-garamond { --brand-font-family: 'Cormorant Garamond', serif; }
+.brand-font-cinzel { --brand-font-family: 'Cinzel', serif; }
+.brand-font-bodoni-moda { --brand-font-family: 'Bodoni Moda', serif; }
+.brand-font-space-grotesk { --brand-font-family: 'Space Grotesk', sans-serif; }
+.brand-font-archivo-black { --brand-font-family: 'Archivo Black', sans-serif; }
 .brand-card:hover {
     border-color: var(--text-secondary);
     background: var(--bg-alt);
@@ -4128,73 +4175,22 @@ a.account-btn-primary {
     font-size: 10px;
 }
 
-.brand-margiela {
-    font-family: 'Bodoni Moda', serif;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    font-size: 14px;
-}
-.brand-balenciaga {
-    font-family: 'Archivo Black', sans-serif;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    font-size: 13px;
-}
-.brand-rickowens {
-    font-family: 'Cinzel', serif;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-size: 12px;
-}
-.brand-yohji {
-    font-family: 'Cormorant Garamond', serif;
-    letter-spacing: 0.04em;
-    font-size: 16px;
-}
-.brand-vetements {
-    font-family: 'Space Grotesk', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-size: 12px;
-}
-.brand-cdg {
-    font-family: 'Bodoni Moda', serif;
-    letter-spacing: 0.03em;
-    font-size: 12px;
-}
-.brand-schiaparelli {
-    font-family: 'Cinzel', serif;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    font-size: 11px;
-}
-.brand-gucci {
-    font-family: 'Cormorant Garamond', serif;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-size: 15px;
-    font-weight: 600;
-}
-.brand-yzy {
-    font-family: 'Space Grotesk', sans-serif;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    font-size: 11px;
-    font-weight: 700;
-}
-.brand-raf-simons {
-    font-family: 'Inter', sans-serif;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    font-size: 10px;
-    font-weight: 500;
-}
-
+.brand-margiela,
+.brand-balenciaga,
+.brand-rickowens,
+.brand-yohji,
+.brand-vetements,
+.brand-cdg,
+.brand-schiaparelli,
+.brand-gucci,
+.brand-yzy,
+.brand-raf-simons,
 .brand-font-fallback {
-    font-family: 'Inter', sans-serif;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    font-size: 11px;
+    font-family: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    font-size: inherit;
+    font-weight: inherit;
     color: var(--text);
 }
 
@@ -5257,9 +5253,9 @@ button.campaign-story-film-btn:focus-visible {
     gap: 8px;
 }
 .admin-brand-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto auto;
+    align-items: start;
     gap: 12px;
     padding: 8px 0;
     border-top: 1px solid var(--border);
@@ -5277,6 +5273,13 @@ button.campaign-story-film-btn:focus-visible {
     font-size: 11px;
     color: var(--text-secondary);
     letter-spacing: 0.05em;
+}
+.admin-brand-font-preview {
+    font-family: var(--brand-font-family, 'Inter', sans-serif);
+    font-size: 14px;
+    line-height: 1.2;
+    color: var(--text);
+    margin-top: 2px;
 }
 .admin-user-level-form {
     display: flex;
@@ -5317,9 +5320,74 @@ button.campaign-story-film-btn:focus-visible {
     color: var(--text);
     border-color: var(--text-secondary);
 }
+.admin-brand-font-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-self: start;
+}
+.admin-brand-font-select {
+    min-width: 220px;
+}
+.admin-brand-font-select + .custom-select {
+    min-width: 220px;
+}
+.admin-brand-font-select + .custom-select .custom-select-btn {
+    min-height: 32px;
+}
+.admin-brand-font-select + .custom-select .custom-select-list {
+    overflow-x: hidden;
+}
+.admin-brand-font-select + .custom-select .custom-select-option {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.admin-brand-action-btn {
+    min-width: 132px;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+@media (max-width: 920px) {
+    .admin-brand-row {
+        grid-template-columns: 1fr;
+    }
+}
 .admin-brand-delete-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
+.admin-user-action-btn {
+    min-width: 132px;
+    min-height: 32px;
+}
+.btn-primary.is-loading,
+.search-submit-btn.is-loading,
+.admin-brand-delete-btn.is-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+.btn-primary.is-loading::after,
+.search-submit-btn.is-loading::after,
+.admin-brand-delete-btn.is-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    border: 2px solid var(--text-secondary);
+    border-right-color: transparent;
+    animation: pa-spin .7s linear infinite;
+}
+@keyframes pa-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 .admin-orders-list {
     gap: 12px;

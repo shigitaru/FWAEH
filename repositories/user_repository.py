@@ -131,6 +131,36 @@ def update_user_loyalty(user_id, level_code, orders_count, spend_amount):
         conn.commit()
 
 
+def set_user_session_state(user_id, session_key_hash, expires_at):
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE AppUsers
+            SET session_key_hash = ?,
+                session_expires_at = ?
+            WHERE id = ?
+            """,
+            (str(session_key_hash), expires_at, int(user_id)),
+        )
+        conn.commit()
+
+
+def clear_user_session_state(user_id):
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE AppUsers
+            SET session_key_hash = NULL,
+                session_expires_at = NULL
+            WHERE id = ?
+            """,
+            (int(user_id),),
+        )
+        conn.commit()
+
+
 def upsert_demo_user(email, password_hash, display_name, is_admin, level_code, orders_count, spend_amount):
     with get_db_connection() as conn:
         cur = conn.cursor()

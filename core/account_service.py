@@ -2,11 +2,13 @@
 from werkzeug.security import generate_password_hash
 
 from repositories.user_repository import (
+    clear_user_session_state,
     fetch_user_by_email,
     increment_verification_attempt,
     insert_user,
     list_users_for_admin,
     mark_email_verified,
+    set_user_session_state,
     set_admin_flag,
     set_user_verification_code,
     update_user_loyalty,
@@ -42,3 +44,11 @@ def _set_admin_flag(user_id, is_admin):
 
 def _update_user_loyalty(user_id, level_code, orders_count, spend_amount):
     update_user_loyalty(user_id, level_code, orders_count, spend_amount)
+
+
+def _set_user_session_state(user_id, session_key_hash, expires_at):
+    set_user_session_state(user_id, session_key_hash, expires_at)
+
+
+def _clear_user_session_state(user_id):
+    clear_user_session_state(user_id)
