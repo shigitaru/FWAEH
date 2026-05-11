@@ -4,7 +4,6 @@
 <div class="search-page admin-page">
     <div class="admin-panel-head">
         <h2 class="section-title">{{ t('admin_panel') }}</h2>
-        <a href="{{ url_for('admin_campaign') }}" class="admin-to-campaign">{{ t('admin_edit_campaign') }}</a>
     </div>
     {% if admin_status %}
     <div class="admin-status admin-status-{{ admin_status.type }}">

@@ -22,21 +22,13 @@
                 <span class="admin-campaign-hint admin-campaign-hero-upload-hint">{{ t('admin_members_area_hero_hint') }}</span>
                 <input class="admin-campaign-file" type="file" name="members_area_hero_file" accept="image/*">
             </label>
-            <label class="admin-campaign-field">
-                <span class="admin-campaign-label">{{ t('admin_campaign_intro_en') }}</span>
-                <textarea name="intro_en" rows="3" class="search-input admin-campaign-textarea">{{ settings.intro_en }}</textarea>
+            <label class="admin-campaign-field admin-campaign-field-full">
+                <span class="admin-campaign-label">{{ t('admin_campaign_intro') }}</span>
+                <textarea name="intro" rows="3" class="search-input admin-campaign-textarea">{{ settings.intro }}</textarea>
             </label>
-            <label class="admin-campaign-field">
-                <span class="admin-campaign-label">{{ t('admin_campaign_intro_ru') }}</span>
-                <textarea name="intro_ru" rows="3" class="search-input admin-campaign-textarea">{{ settings.intro_ru }}</textarea>
-            </label>
-            <label class="admin-campaign-field">
-                <span class="admin-campaign-label">{{ t('admin_campaign_tagline_en') }}</span>
-                <input class="search-input" type="text" name="tagline_en" value="{{ settings.tagline_en }}">
-            </label>
-            <label class="admin-campaign-field">
-                <span class="admin-campaign-label">{{ t('admin_campaign_tagline_ru') }}</span>
-                <input class="search-input" type="text" name="tagline_ru" value="{{ settings.tagline_ru }}">
+            <label class="admin-campaign-field admin-campaign-field-full">
+                <span class="admin-campaign-label">{{ t('admin_campaign_tagline') }}</span>
+                <input class="search-input" type="text" name="tagline" value="{{ settings.tagline }}">
             </label>
         </div>
         <button type="submit" class="btn-primary admin-campaign-submit">{{ t('admin_campaign_save_header') }}</button>

@@ -4,11 +4,73 @@ import logging
 from flask import request
 
 from .db import get_db_connection
-from .i18n import TRANSLATIONS, _campaign_bilingual_display, get_lang, t
+from .i18n import TRANSLATIONS, _campaign_bilingual_display, get_lang, t, _tv_has_cyrillic
 
 from .media_uploads import _save_campaign_upload
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_campaign_content_lang(raw):
+    v = (raw or '').strip().lower()
+    if v in ('en', 'ru', 'auto'):
+        return v
+    return 'auto'
+
+
+def _effective_lang_for_auto(anchor_text):
+    s = (anchor_text or '').strip()
+    if not s:
+        return 'en'
+    return 'ru' if _tv_has_cyrillic(s) else 'en'
+
+
+def bilingual_columns_from_primary(text, resolved_lang):
+    """Одна заполненная колонка (en или ru); вторая пустая — публичный показ переводит через _campaign_bilingual_display."""
+    s = (text or '').strip()
+    if not s:
+        return '', ''
+    if resolved_lang == 'ru':
+        return '', s
+    return s, ''
+
+
+def campaign_header_form_to_db_columns(intro, tagline, source_lang_raw):
+    sl = normalize_campaign_content_lang(source_lang_raw)
+    anchor = ' '.join(
+        x for x in [(intro or '').strip(), (tagline or '').strip()] if x
+    )
+    eff = _effective_lang_for_auto(anchor) if sl == 'auto' else sl
+    intro_en, intro_ru = bilingual_columns_from_primary(intro, eff)
+    tagline_en, tagline_ru = bilingual_columns_from_primary(tagline, eff)
+    return intro_en, intro_ru, tagline_en, tagline_ru
+
+
+def campaign_story_form_to_db_columns(headline, body, credits, source_lang_raw):
+    sl = normalize_campaign_content_lang(source_lang_raw)
+    anchor = ' '.join(
+        x
+        for x in [(headline or '').strip(), (body or '').strip(), (credits or '').strip()]
+        if x
+    )
+    eff = _effective_lang_for_auto(anchor) if sl == 'auto' else sl
+    he, hr = bilingual_columns_from_primary(headline, eff)
+    be, br = bilingual_columns_from_primary(body, eff)
+    ce, cr = bilingual_columns_from_primary(credits, eff)
+    return he, hr, be, br, ce, cr
+
+
+def _admin_bilingual_pick(en_text, ru_text):
+    e, r = (en_text or '').strip(), (ru_text or '').strip()
+    if e and not r:
+        return e, 'en'
+    if r and not e:
+        return r, 'ru'
+    if e and r:
+        if get_lang() == 'ru':
+            return r, 'ru'
+        return e, 'en'
+    return '', 'en'
 
 
 def get_members_area_hero_url_from_db():
@@ -141,17 +203,35 @@ def _fetch_campaign_settings_admin():
             hero = getattr(srow, 'members_area_hero_url', None)
             if hero is None:
                 hero = (srow[4] if len(srow) > 4 else '') or ''
+            intro_en = (srow.intro_en if hasattr(srow, 'intro_en') else (srow[0] or '')) or ''
+            intro_ru = (srow.intro_ru if hasattr(srow, 'intro_ru') else (srow[1] or '')) or ''
+            tagline_en = (srow.tagline_en if hasattr(srow, 'tagline_en') else (srow[2] or '')) or ''
+            tagline_ru = (srow.tagline_ru if hasattr(srow, 'tagline_ru') else (srow[3] or '')) or ''
+            intro_merged, _lang_intro = _admin_bilingual_pick(intro_en, intro_ru)
+            tag_merged, _lang_tag = _admin_bilingual_pick(tagline_en, tagline_ru)
             return {
-                'intro_en': (srow.intro_en if hasattr(srow, 'intro_en') else (srow[0] or '')) or '',
-                'intro_ru': (srow.intro_ru if hasattr(srow, 'intro_ru') else (srow[1] or '')) or '',
-                'tagline_en': (srow.tagline_en if hasattr(srow, 'tagline_en') else (srow[2] or '')) or '',
-                'tagline_ru': (srow.tagline_ru if hasattr(srow, 'tagline_ru') else (srow[3] or '')) or '',
+                'intro_en': intro_en,
+                'intro_ru': intro_ru,
+                'tagline_en': tagline_en,
+                'tagline_ru': tagline_ru,
+                'intro': intro_merged,
+                'tagline': tag_merged,
                 'members_area_hero_url': (hero or ''),
             }
-        return defaults.copy()
+        out = defaults.copy()
+        intro_merged, _lang_intro = _admin_bilingual_pick(out['intro_en'], out['intro_ru'])
+        tag_merged, _lang_tag = _admin_bilingual_pick(out['tagline_en'], out['tagline_ru'])
+        out['intro'] = intro_merged
+        out['tagline'] = tag_merged
+        return out
     except Exception:
         logger.exception('Failed to load campaign settings for admin')
-        return defaults.copy()
+        out = defaults.copy()
+        intro_merged, _lang_intro = _admin_bilingual_pick(out['intro_en'], out['intro_ru'])
+        tag_merged, _lang_tag = _admin_bilingual_pick(out['tagline_en'], out['tagline_ru'])
+        out['intro'] = intro_merged
+        out['tagline'] = tag_merged
+        return out
 
 
 def _list_campaign_stories_admin():
@@ -194,19 +274,23 @@ def _fetch_campaign_story_admin(story_id):
                 (story_id,),
             )
             imgs = [{'url': r[0]} for r in cur.fetchall()]
-        return (
-            {
-                'id': int(srow[0]),
-                'sort_order': int(srow[1]),
-                'headline_en': srow[2] or '',
-                'headline_ru': srow[3] or '',
-                'body_en': srow[4] or '',
-                'body_ru': srow[5] or '',
-                'credits_en': srow[6] or '',
-                'credits_ru': srow[7] or '',
-            },
-            imgs,
-        )
+        st = {
+            'id': int(srow[0]),
+            'sort_order': int(srow[1]),
+            'headline_en': srow[2] or '',
+            'headline_ru': srow[3] or '',
+            'body_en': srow[4] or '',
+            'body_ru': srow[5] or '',
+            'credits_en': srow[6] or '',
+            'credits_ru': srow[7] or '',
+        }
+        h, _lh = _admin_bilingual_pick(st['headline_en'], st['headline_ru'])
+        b, _lb = _admin_bilingual_pick(st['body_en'], st['body_ru'])
+        c, _lc = _admin_bilingual_pick(st['credits_en'], st['credits_ru'])
+        st['form_headline'] = h
+        st['form_body'] = b
+        st['form_credits'] = c
+        return (st, imgs)
     except Exception:
         logger.exception('Failed to fetch campaign story %s for admin', story_id)
         return None, []

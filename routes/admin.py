@@ -57,6 +57,8 @@ def register_admin_routes(app, deps):
     fetch_campaign_settings_admin = deps['_fetch_campaign_settings_admin']
     list_campaign_stories_admin = deps['_list_campaign_stories_admin']
     fetch_campaign_story_admin = deps['_fetch_campaign_story_admin']
+    campaign_header_form_to_db_columns = deps['campaign_header_form_to_db_columns']
+    campaign_story_form_to_db_columns = deps['campaign_story_form_to_db_columns']
     collect_story_image_urls_from_form = deps['_collect_story_image_urls_from_form']
     save_campaign_upload = deps['_save_campaign_upload']
     insert_campaign_story_return_id = deps['_insert_campaign_story_return_id']
@@ -545,10 +547,11 @@ def register_admin_routes(app, deps):
         if denied:
             return denied
         if request.method == 'POST':
-            intro_en = request.form.get('intro_en', '').strip()
-            intro_ru = request.form.get('intro_ru', '').strip()
-            tagline_en = request.form.get('tagline_en', '').strip()
-            tagline_ru = request.form.get('tagline_ru', '').strip()
+            intro = request.form.get('intro', '').strip()
+            tagline = request.form.get('tagline', '').strip()
+            intro_en, intro_ru, tagline_en, tagline_ru = campaign_header_form_to_db_columns(
+                intro, tagline, 'auto'
+            )
             uploaded_hero = save_campaign_upload(request.files.get('members_area_hero_file'))
             members_area_hero_url = uploaded_hero if uploaded_hero else nullable_str(request.form.get('members_area_hero_url'))
             try:
@@ -591,19 +594,19 @@ def register_admin_routes(app, deps):
         if denied:
             return denied
         if request.method == 'POST':
-            headline_en = request.form.get('headline_en', '').strip()
-            headline_ru = request.form.get('headline_ru', '').strip()
-            if not headline_en and not headline_ru:
+            headline = request.form.get('headline', '').strip()
+            if not headline:
                 session['admin_status'] = {'type': 'error', 'message': t('admin_story_need_headline')}
                 return redirect(url_for('admin_campaign_story_new'))
             urls = collect_story_image_urls_from_form()
             if not urls:
                 session['admin_status'] = {'type': 'error', 'message': t('admin_story_need_image')}
                 return redirect(url_for('admin_campaign_story_new'))
-            body_en = request.form.get('body_en', '').strip()
-            body_ru = request.form.get('body_ru', '').strip()
-            credits_en = request.form.get('credits_en', '').strip()
-            credits_ru = request.form.get('credits_ru', '').strip()
+            body = request.form.get('body', '').strip()
+            credits = request.form.get('credits', '').strip()
+            headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru = (
+                campaign_story_form_to_db_columns(headline, body, credits, 'auto')
+            )
             try:
                 with get_db_connection() as conn:
                     cur = conn.cursor()
@@ -613,8 +616,8 @@ def register_admin_routes(app, deps):
                         cur,
                         (
                             next_sort,
-                            headline_en or headline_ru,
-                            headline_ru or headline_en,
+                            headline_en,
+                            headline_ru,
                             body_en,
                             body_ru,
                             credits_en,
@@ -659,19 +662,19 @@ def register_admin_routes(app, deps):
                 except Exception as exc:
                     session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
                 return redirect(url_for('admin_campaign'))
-            headline_en = request.form.get('headline_en', '').strip()
-            headline_ru = request.form.get('headline_ru', '').strip()
-            if not headline_en and not headline_ru:
+            headline = request.form.get('headline', '').strip()
+            if not headline:
                 session['admin_status'] = {'type': 'error', 'message': t('admin_story_need_headline')}
                 return redirect(url_for('admin_campaign_story_edit', story_id=story_id))
             urls = collect_story_image_urls_from_form()
             if not urls:
                 session['admin_status'] = {'type': 'error', 'message': t('admin_story_need_image')}
                 return redirect(url_for('admin_campaign_story_edit', story_id=story_id))
-            body_en = request.form.get('body_en', '').strip()
-            body_ru = request.form.get('body_ru', '').strip()
-            credits_en = request.form.get('credits_en', '').strip()
-            credits_ru = request.form.get('credits_ru', '').strip()
+            body = request.form.get('body', '').strip()
+            credits = request.form.get('credits', '').strip()
+            headline_en, headline_ru, body_en, body_ru, credits_en, credits_ru = (
+                campaign_story_form_to_db_columns(headline, body, credits, 'auto')
+            )
             try:
                 with get_db_connection() as conn:
                     cur = conn.cursor()
@@ -681,8 +684,8 @@ def register_admin_routes(app, deps):
                         WHERE id=?
                         """,
                         (
-                            headline_en or headline_ru,
-                            headline_ru or headline_en,
+                            headline_en,
+                            headline_ru,
                             body_en,
                             body_ru,
                             credits_en,

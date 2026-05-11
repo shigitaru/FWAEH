@@ -15,29 +15,17 @@
 
     <form action="{% if story %}{{ url_for('admin_campaign_story_edit', story_id=story.id) }}{% else %}{{ url_for('admin_campaign_story_new') }}{% endif %}" method="POST" enctype="multipart/form-data" class="admin-form admin-campaign-form">
         <div class="admin-campaign-text-grid">
-            <label class="admin-campaign-field">
-                <span class="admin-campaign-label">{{ t('admin_story_headline_en') }}</span>
-                <input class="search-input" type="text" name="headline_en" value="{{ story.headline_en if story else '' }}">
-            </label>
-            <label class="admin-campaign-field">
-                <span class="admin-campaign-label">{{ t('admin_story_headline_ru') }}</span>
-                <input class="search-input" type="text" name="headline_ru" value="{{ story.headline_ru if story else '' }}">
+            <label class="admin-campaign-field admin-campaign-field-full">
+                <span class="admin-campaign-label">{{ t('admin_story_headline') }}</span>
+                <input class="search-input" type="text" name="headline" value="{{ story.form_headline if story else '' }}" required>
             </label>
             <label class="admin-campaign-field admin-campaign-field-full">
-                <span class="admin-campaign-label">{{ t('admin_story_body_en') }}</span>
-                <textarea name="body_en" rows="5" class="search-input admin-campaign-textarea">{{ story.body_en if story else '' }}</textarea>
+                <span class="admin-campaign-label">{{ t('admin_story_body') }}</span>
+                <textarea name="body" rows="5" class="search-input admin-campaign-textarea">{{ story.form_body if story else '' }}</textarea>
             </label>
             <label class="admin-campaign-field admin-campaign-field-full">
-                <span class="admin-campaign-label">{{ t('admin_story_body_ru') }}</span>
-                <textarea name="body_ru" rows="5" class="search-input admin-campaign-textarea">{{ story.body_ru if story else '' }}</textarea>
-            </label>
-            <label class="admin-campaign-field">
-                <span class="admin-campaign-label">{{ t('admin_story_credits_en') }}</span>
-                <input class="search-input" type="text" name="credits_en" value="{{ story.credits_en if story else '' }}" placeholder="e.g. With … · Photography …">
-            </label>
-            <label class="admin-campaign-field">
-                <span class="admin-campaign-label">{{ t('admin_story_credits_ru') }}</span>
-                <input class="search-input" type="text" name="credits_ru" value="{{ story.credits_ru if story else '' }}">
+                <span class="admin-campaign-label">{{ t('admin_story_credits') }}</span>
+                <input class="search-input" type="text" name="credits" value="{{ story.form_credits if story else '' }}" placeholder="e.g. With … · Photography …">
             </label>
         </div>
 
