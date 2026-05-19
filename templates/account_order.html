@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import 'macros/review_stars.html' as review_stars with context %}
 {% block title %}{{ t('account_order_title') }} #{{ order.id }}{% endblock %}
 {% block content %}
 <div class="account-page">
@@ -35,7 +36,7 @@
                 <p class="account-order-total-caption">{{ t('account_history_total') }}</p>
                 <p class="account-order-total-value">${{ order.total_price }}</p>
                 <p class="account-order-items-count">{{ order.total_items }} {{ t('account_history_items') }}</p>
-                {% if order.status == 'created' %}
+                {% if order.can_cancel %}
                 <form method="post" action="{{ url_for('account_cancel_order', order_id=order.id) }}">
                     <button type="submit" class="account-btn-secondary">{{ t('account_cancel_order') }}</button>
                 </form>
@@ -78,9 +79,14 @@
             <div class="product-section-head">
                 <h2 class="account-panel-title">{{ t('reviews_title') }}</h2>
                 {% if order_review %}
-                <span class="product-review-summary">{{ order_review.rating }}/5</span>
+                {{ review_stars.review_stars(order_review.rating, 'md') }}
                 {% endif %}
             </div>
+            {% if order_review and order_review.review_status == 'pending' %}
+            <p class="product-occupancy-note">{{ t('review_pending_hint') }}</p>
+            {% elif order_review and order_review.review_status == 'rejected' %}
+            <p class="product-occupancy-note">{{ t('review_rejected_hint') }}</p>
+            {% endif %}
             {% if order.status == 'returned' %}
             <form method="post" action="{{ url_for('account_order_review', order_id=order.id) }}" class="review-form review-form--order">
                 <div class="review-rating-block" role="radiogroup" aria-label="{{ t('review_rating_label') }}">

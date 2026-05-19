@@ -63,7 +63,13 @@ from core.media_uploads import (
     _save_campaign_upload,
     _save_uploaded_image,
 )
-from core.product_reviews import get_order_review, upsert_order_review
+from core.product_reviews import (
+    get_order_review,
+    get_product_reviews,
+    list_pending_reviews_admin,
+    set_review_moderation_status,
+    upsert_order_review,
+)
 from core.rental_orders import (
     _create_rental_order,
     _fetch_recent_orders_admin,
@@ -164,6 +170,7 @@ def register_routes(app):
             'find_product': find_product,
             'find_products_by_ids': find_products_by_ids,
             'get_related_products': get_related_products,
+            'get_product_reviews': get_product_reviews,
             '_parse_iso_date': _parse_iso_date,
             '_is_product_available': _is_product_available,
             '_create_rental_order': _create_rental_order,
@@ -230,6 +237,8 @@ def register_routes(app):
             '_user_fetch_by_email': _user_fetch_by_email,
             '_send_rental_approved_email': send_rental_approved_email,
             'brand_font_options': BRAND_FONT_OPTIONS,
+            'list_pending_reviews_admin': list_pending_reviews_admin,
+            'set_review_moderation_status': set_review_moderation_status,
         },
     )
 

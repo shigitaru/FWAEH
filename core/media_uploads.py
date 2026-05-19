@@ -23,6 +23,19 @@ def _nullable_str(value):
     return s if s else None
 
 
+def parse_origin_country(value):
+    """
+    Parse country-of-origin for Products.origin.
+    Returns None if empty, False if digits present, else stripped string.
+    """
+    s = _nullable_str(value)
+    if s is None:
+        return None
+    if any(ch.isdigit() for ch in s):
+        return False
+    return s
+
+
 def _fetch_product_image_rows(product_id):
     """Строки ProductImages для админки (id + url), чтобы можно было удалить по id."""
     try:

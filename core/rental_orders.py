@@ -2,6 +2,8 @@
 import logging
 from datetime import date, timedelta
 
+from repositories.order_repository import order_cancel_allowed
+
 from .catalog import find_product, find_products_by_ids
 from .db import get_db_connection
 from .pg_schema import ensure_postgres_schema
@@ -232,7 +234,7 @@ def _fetch_user_rental_history(user_id, limit=8):
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT id, status, total_items, total_price, rental_start_date, rental_end_date, created_at
+            SELECT id, status, total_items, total_price, rental_start_date, rental_end_date, created_at, confirmed_at
             FROM RentalOrders
             WHERE user_id = ?
             ORDER BY created_at DESC, id DESC
@@ -269,14 +271,19 @@ def _fetch_user_rental_history(user_id, limit=8):
                 })
             for row in order_rows:
                 oid = int(row[0])
+                status = (row[1] or 'created').strip().lower()
+                created_at = row[6]
+                confirmed_at = row[7]
                 orders.append({
                     'id': oid,
-                    'status': (row[1] or 'created').strip().lower(),
+                    'status': status,
                     'total_items': int(row[2]) if row[2] is not None else 0,
                     'total_price': int(row[3]) if row[3] is not None else 0,
                     'rental_start_date': row[4],
                     'rental_end_date': row[5],
-                    'created_at': row[6],
+                    'created_at': created_at,
+                    'confirmed_at': confirmed_at,
+                    'can_cancel': order_cancel_allowed(status, created_at, confirmed_at),
                     'items': items_by_order.get(oid, []),
                 })
         cur.execute(

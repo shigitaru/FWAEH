@@ -692,8 +692,20 @@
         syncPanels();
     }
 
+    function initOriginCountryInputs() {
+        document.querySelectorAll('input[data-origin-country]').forEach(function (inp) {
+            inp.addEventListener('input', function () {
+                var cleaned = inp.value.replace(/\d/g, '');
+                if (cleaned !== inp.value) {
+                    inp.value = cleaned;
+                }
+            });
+        });
+    }
+
     var brands = readBrands();
     var i18n = readI18n();
+    initOriginCountryInputs();
     initBrandAutocomplete(brands);
     initCategoryPicker();
     initUploadZones(i18n);

@@ -425,7 +425,7 @@ def register_auth_routes(app, deps):
                 flash(t('review_returned_only'), 'error')
                 return redirect(url_for('account_order_detail', order_id=order_id) + '#order-review')
             upsert_order_review(order_id, user_id, rating, body)
-            flash(t('review_saved'), 'success')
+            flash(t('review_saved_pending'), 'success')
             return redirect(url_for('account_order_detail', order_id=order_id) + '#order-review')
         except Exception:
             logger.exception('Failed to save review for order %s by user %s', order_id, user_id)

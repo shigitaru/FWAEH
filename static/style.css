@@ -323,6 +323,7 @@ html.pa-hero-home:not(.pa-lux-site):not(.pa-header-solid)[data-theme="dark"] .he
     align-items: flex-end;
     gap: 6px;
     max-width: 100%;
+    overflow: visible;
 }
 .header-utils {
     display: inline-flex;
@@ -331,6 +332,7 @@ html.pa-hero-home:not(.pa-lux-site):not(.pa-header-solid)[data-theme="dark"] .he
     justify-content: flex-end;
     gap: 6px;
     min-width: 0;
+    overflow: visible;
 }
 
 .logo {
@@ -1374,22 +1376,30 @@ html.pa-measure-open body {
     vertical-align: middle;
     line-height: 0;
     flex-shrink: 0;
+    overflow: visible;
 }
 .header-icon-link.active {
     color: var(--text);
 }
 .header-icon-wrap {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    overflow: visible;
 }
 .header-icon-svg {
     display: block;
+    position: relative;
+    z-index: 0;
 }
 .header-icon-badge {
     position: absolute;
-    top: -3px;
-    inset-inline-end: 4px;
+    top: 0;
+    inset-inline-end: 0;
+    transform: translate(50%, -62%);
+    z-index: 1;
+    pointer-events: none;
     box-sizing: border-box;
     min-width: 17px;
     height: 17px;
@@ -2389,6 +2399,7 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     color: var(--text-muted);
 }
 .product-occupancy,
+.product-reviews,
 .related-products {
     width: min(1080px, calc(100% - 40px));
     margin: 34px auto 0;
@@ -2407,6 +2418,59 @@ html.pa-js-layout.pa-wide-store .product-grid:not(.admin-product-grid) > .produc
     gap: 10px;
     color: var(--text-secondary);
     font-size: 12px;
+}
+.product-reviews-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 520px;
+}
+.product-review-card {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 2px;
+}
+.product-review-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin: 0 0 6px;
+}
+.product-review-author {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text);
+}
+.product-review-body {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+.review-stars-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    line-height: 1;
+}
+.review-stars-display--sm .review-star {
+    font-size: 13px;
+}
+.review-stars-display--md .review-star {
+    font-size: 15px;
+}
+.review-star {
+    color: color-mix(in srgb, var(--text-muted) 55%, transparent);
+}
+.review-star.is-filled {
+    color: #d7b46a;
 }
 .order-review-panel {
     margin-top: 12px;
@@ -5466,6 +5530,19 @@ button.campaign-story-film-btn:focus-visible {
     font-size: 12px;
     line-height: 1.5;
 }
+.admin-review-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.admin-review-approve-btn {
+    border-color: rgba(75, 132, 82, 0.6);
+    color: #74b980;
+}
+.admin-review-reject-btn {
+    border-color: rgba(190, 60, 60, 0.55);
+    color: #d58a8a;
+}
 .admin-order-empty {
     padding: 16px 0 4px;
     color: var(--text-secondary);
@@ -8140,11 +8217,15 @@ html.pa-lux-site:not([data-theme="dark"]) .pa-cta-section .pa-cta-heading {
     }
 
     .product-occupancy,
+    .product-reviews,
     .related-products {
         width: calc(100% - 24px);
         margin-left: auto;
         margin-right: auto;
         padding: clamp(14px, 4vw, 20px);
+    }
+    .product-reviews-list {
+        max-width: none;
     }
 
     textarea.search-input,

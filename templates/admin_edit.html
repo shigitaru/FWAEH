@@ -70,7 +70,7 @@
             <input class="search-input" type="number" name="max_days" placeholder="{{ t('max_days_placeholder') }}" required min="1" value="{{ product.max_days }}">
             <input class="search-input" type="number" name="condition_score" placeholder="{{ t('condition_score_placeholder') }}" required min="1" max="10" value="{{ product.condition_score }}">
             <input class="search-input" type="text" name="material" placeholder="{{ t('material_placeholder') }}" value="{{ product.material or '' }}">
-            <input class="search-input" type="text" name="origin" placeholder="{{ t('origin_placeholder') }}" value="{{ product.origin or '' }}">
+            <input class="search-input" type="text" name="origin" placeholder="{{ t('origin_placeholder') }}" value="{{ product.origin or '' }}" inputmode="text" autocomplete="off" data-origin-country>
             <input class="search-input" type="text" name="condition" placeholder="{{ t('condition_label_placeholder') }}" value="{{ product.condition or '' }}">
             <input class="search-input" type="text" name="sizes" placeholder="{{ t('sizes_placeholder') }}" value="{{ product.sizes | default([]) | join(', ') }}" autocomplete="off" id="admin-product-sizes">
             {% with measurements_mode='edit', meas=product.measurements|default(none) %}

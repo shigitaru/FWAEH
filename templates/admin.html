@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import 'macros/review_stars.html' as review_stars with context %}
 {% block title %}{{ t('admin') }}{% endblock %}
 {% block content %}
 <div class="search-page admin-page">
@@ -23,6 +24,7 @@
         <a href="{{ url_for('admin_panel', section='inventory') }}" class="account-quick-link">{{ t('admin_section_inventory') }}</a>
         <a href="{{ url_for('admin_panel', section='brands') }}" class="account-quick-link">{{ t('admin_section_brands') }}</a>
         <a href="{{ url_for('admin_panel', section='orders') }}" class="account-quick-link">{{ t('admin_section_orders') }}</a>
+        <a href="{{ url_for('admin_panel', section='reviews') }}" class="account-quick-link">{{ t('admin_section_reviews') }}{% if pending_reviews %} ({{ pending_reviews|length }}){% endif %}</a>
         <a href="{{ url_for('admin_panel', section='users') }}" class="account-quick-link">{{ t('admin_section_users') }}</a>
         <a href="{{ url_for('admin_campaign') }}" class="account-quick-link">{{ t('admin_section_campaign') }}</a>
     </nav>
@@ -51,7 +53,7 @@
             <input class="search-input" type="number" name="max_days" placeholder="{{ t('max_days_placeholder') }}" required min="1">
             <input class="search-input" type="number" name="condition_score" placeholder="{{ t('condition_score_placeholder') }}" required min="1" max="10">
             <input class="search-input" type="text" name="material" placeholder="{{ t('material_placeholder') }}">
-            <input class="search-input" type="text" name="origin" placeholder="{{ t('origin_placeholder') }}">
+            <input class="search-input" type="text" name="origin" placeholder="{{ t('origin_placeholder') }}" inputmode="text" autocomplete="off" data-origin-country>
             <input class="search-input" type="text" name="condition" placeholder="{{ t('condition_label_placeholder') }}">
             <input class="search-input" type="text" name="sizes" placeholder="{{ t('sizes_placeholder') }}" autocomplete="off" id="admin-product-sizes">
             {% with measurements_mode='create' %}
@@ -159,6 +161,42 @@
             {% endfor %}
             {% if not orders_recent %}
             <div class="admin-order-empty">{{ t('admin_order_empty') }}</div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if admin_section == 'reviews' %}
+    <section class="admin-brands-block admin-reviews-block" aria-labelledby="admin-reviews-title">
+        <h3 id="admin-reviews-title" class="admin-brands-title">{{ t('admin_reviews_title') }}</h3>
+        <div class="admin-brands-list admin-reviews-list">
+            {% for review in pending_reviews %}
+            <div class="admin-brand-row admin-review-row">
+                <div class="admin-brand-meta">
+                    <span class="admin-brand-name">#{{ review.order_id }} В· {{ review.display_name or review.email }}</span>
+                    <span class="admin-brand-count">{{ review.product_names or t('admin_review_products_empty') }}</span>
+                    <div class="admin-order-review">
+                        <div class="admin-order-review-head">
+                            <span>{{ t('reviews_title') }}</span>
+                            {{ review_stars.review_stars(review.rating, 'sm') }}
+                        </div>
+                        <p>{{ review.body or t('admin_order_review_no_text') }}</p>
+                    </div>
+                </div>
+                <div class="admin-review-actions">
+                    <form method="post" action="{{ url_for('admin_moderate_review', review_id=review.id) }}">
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit" class="admin-brand-delete-btn admin-review-approve-btn">{{ t('admin_review_approve') }}</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin_moderate_review', review_id=review.id) }}" class="js-confirm-submit" data-confirm="{{ t('admin_review_reject_confirm') }}">
+                        <input type="hidden" name="action" value="reject">
+                        <button type="submit" class="admin-brand-delete-btn admin-review-reject-btn">{{ t('admin_review_reject') }}</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not pending_reviews %}
+            <div class="admin-order-empty">{{ t('admin_reviews_empty') }}</div>
             {% endif %}
         </div>
     </section>

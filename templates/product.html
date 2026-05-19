@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import 'macros/store_product.html' as store with context %}
+{% import 'macros/review_stars.html' as review_stars with context %}
 {% block title %}{{ product.name }}{% endblock %}
 {% block content %}
 <div class="product-detail">
@@ -104,6 +105,26 @@
         <h2 id="product-occupancy-title" class="product-section-title">{{ t('product_occupancy_title') }}</h2>
         <div class="product-occupancy-calendar" id="product-occupancy-calendar"></div>
         <p class="product-occupancy-note">{{ t('product_occupancy_note') }}</p>
+    </section>
+    <section class="product-reviews" aria-labelledby="product-reviews-title">
+        <h2 id="product-reviews-title" class="product-section-title">{{ t('product_reviews_title') }}</h2>
+        {% if product_reviews %}
+        <ul class="product-reviews-list">
+            {% for review in product_reviews %}
+            <li class="product-review-card">
+                <header class="product-review-card-head">
+                    <span class="product-review-author">{{ review.display_name or '—' }}</span>
+                    {{ review_stars.review_stars(review.rating, 'sm') }}
+                </header>
+                {% if review.body %}
+                <p class="product-review-body">{{ review.body }}</p>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="product-occupancy-note">{{ t('product_reviews_empty') }}</p>
+        {% endif %}
     </section>
     {% if related_products %}
     <section class="related-products" aria-labelledby="related-products-title">

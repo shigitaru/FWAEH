@@ -194,6 +194,8 @@ def _ensure_postgres_schema_once():
                 user_id INTEGER NOT NULL REFERENCES AppUsers(id),
                 rating INTEGER NOT NULL,
                 body VARCHAR(1000) NULL,
+                review_status VARCHAR(20) NOT NULL DEFAULT 'approved',
+                approved_at TIMESTAMP NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NULL,
                 CONSTRAINT uq_rental_order_reviews_order_user UNIQUE (order_id, user_id)
@@ -213,8 +215,11 @@ def _ensure_postgres_schema_once():
         cur.execute("ALTER TABLE RentalOrders ADD COLUMN IF NOT EXISTS pickup_code VARCHAR(40) NULL")
         cur.execute("ALTER TABLE RentalOrders ADD COLUMN IF NOT EXISTS rental_start_date DATE NULL")
         cur.execute("ALTER TABLE RentalOrders ADD COLUMN IF NOT EXISTS rental_end_date DATE NULL")
+        cur.execute("ALTER TABLE RentalOrders ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMP NULL")
         cur.execute("ALTER TABLE RentalOrderItems ADD COLUMN IF NOT EXISTS rental_start_date DATE NULL")
         cur.execute("ALTER TABLE RentalOrderItems ADD COLUMN IF NOT EXISTS rental_end_date DATE NULL")
+        cur.execute("ALTER TABLE RentalOrderReviews ADD COLUMN IF NOT EXISTS review_status VARCHAR(20) NOT NULL DEFAULT 'approved'")
+        cur.execute("ALTER TABLE RentalOrderReviews ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP NULL")
         cur.execute("ALTER TABLE Brands ADD COLUMN IF NOT EXISTS brand_font_key VARCHAR(40) NOT NULL DEFAULT 'inter'")
         cur.execute(
             """

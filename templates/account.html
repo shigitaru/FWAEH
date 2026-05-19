@@ -8,7 +8,6 @@
         <div class="account-welcome-card">
             <p class="account-kicker">{{ t('account_title') }}</p>
             <h1 class="account-hero-name">{{ current_user.display_name }}</h1>
-            <p class="account-signed-line">{{ t('account_signed_in') }}</p>
             <p class="account-email-line">{{ current_user.email }}</p>
             <a href="{{ url_for('members') }}" class="account-btn-primary account-btn-primary--outline account-members-link">{{ t('members_open') }}</a>
             <form action="{{ url_for('account_logout') }}" method="post" class="account-logout-form">
@@ -79,7 +78,7 @@
                         <div class="account-history-actions">
                             <a href="{{ url_for('account_order_detail', order_id=order.id) }}" class="account-quick-link">{{ t('account_open_order') }}</a>
                         </div>
-                        {% if order.status == 'created' %}
+                        {% if order.can_cancel %}
                         <form method="post" action="{{ url_for('account_cancel_order', order_id=order.id) }}" style="margin-top:10px;">
                             <button type="submit" class="account-btn-secondary">{{ t('account_cancel_order') }}</button>
                         </form>

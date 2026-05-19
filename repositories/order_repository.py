@@ -1,9 +1,42 @@
+from datetime import datetime, timedelta, timezone
+
 from core.db import get_db_connection
+
+ORDER_CANCEL_WINDOW = timedelta(hours=1)
+
+
+def _utc_now():
+    return datetime.now(timezone.utc)
+
+
+def _as_utc(dt):
+    if dt is None:
+        return None
+    if getattr(dt, 'tzinfo', None) is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def order_cancel_allowed(status, created_at=None, confirmed_at=None):
+    """
+    User may cancel:
+    - while status is 'created' (before admin confirmation), at any time;
+    - while status is 'confirmed', within one hour of confirmation.
+    """
+    status = (status or 'created').strip().lower()
+    if status == 'created':
+        return True
+    if status == 'confirmed':
+        confirmed = _as_utc(confirmed_at)
+        if confirmed is None:
+            return False
+        return _utc_now() - confirmed <= ORDER_CANCEL_WINDOW
+    return False
 
 
 def try_cancel_user_order(order_id, user_id):
     """
-    Cancel an order in 'created' status for the owning user.
+    Cancel an order for the owning user when order_cancel_allowed applies.
     Returns 'ok', 'not_found', or 'not_allowed'.
     """
     oid = int(order_id)
@@ -12,7 +45,7 @@ def try_cancel_user_order(order_id, user_id):
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT id, status
+            SELECT id, status, created_at, confirmed_at
             FROM RentalOrders
             WHERE id = ? AND user_id = ?
             """,
@@ -22,7 +55,7 @@ def try_cancel_user_order(order_id, user_id):
         if not row:
             return 'not_found'
         status = (row[1] or 'created').strip().lower()
-        if status != 'created':
+        if not order_cancel_allowed(status, row[2], row[3]):
             return 'not_allowed'
         cur.execute("UPDATE RentalOrders SET status = 'cancelled' WHERE id = ?", (oid,))
         conn.commit()
@@ -37,7 +70,7 @@ def fetch_account_order_detail(order_id, user_id):
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT id, status, total_items, total_price, rental_start_date, rental_end_date, created_at, pickup_code
+            SELECT id, status, total_items, total_price, rental_start_date, rental_end_date, created_at, pickup_code, confirmed_at
             FROM RentalOrders
             WHERE id = ? AND user_id = ?
             """,
@@ -67,16 +100,21 @@ def fetch_account_order_detail(order_id, user_id):
             }
             for x in cur.fetchall()
         ]
+    status = (row[1] or 'created').strip().lower()
+    created_at = row[6]
+    confirmed_at = row[8]
     return {
         'id': int(row[0]),
-        'status': (row[1] or 'created').strip().lower(),
+        'status': status,
         'total_items': int(row[2] or 0),
         'total_price': int(row[3] or 0),
         'rental_start_date': row[4],
         'rental_end_date': row[5],
-        'created_at': row[6],
+        'created_at': created_at,
         'pickup_code': row[7] or '',
+        'confirmed_at': confirmed_at,
         'items': items,
+        'can_cancel': order_cancel_allowed(status, created_at, confirmed_at),
     }
 
 

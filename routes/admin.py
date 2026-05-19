@@ -6,6 +6,7 @@ from flask import Blueprint, request, session, redirect, url_for, render_templat
 from werkzeug.security import check_password_hash
 import secrets
 
+from core.media_uploads import parse_origin_country
 from core.product_measurements import parse_measurements_from_admin_form, upsert_product_measurement
 
 
@@ -71,6 +72,8 @@ def register_admin_routes(app, deps):
     user_fetch_by_email = deps['_user_fetch_by_email']
     send_rental_approved_email = deps['_send_rental_approved_email']
     brand_font_options = deps['brand_font_options']
+    list_pending_reviews_admin = deps['list_pending_reviews_admin']
+    set_review_moderation_status = deps['set_review_moderation_status']
 
     def _normalize_brand_font_key(raw):
         key = str(raw or '').strip().lower()
@@ -134,7 +137,10 @@ def register_admin_routes(app, deps):
                 max_days_raw = request.form.get('max_days', '').strip()
                 condition_score_raw = request.form.get('condition_score', '').strip()
                 material = nullable_str(request.form.get('material'))
-                origin = nullable_str(request.form.get('origin'))
+                origin = parse_origin_country(request.form.get('origin'))
+                if origin is False:
+                    session['admin_status'] = {'type': 'error', 'message': t('admin_origin_no_digits')}
+                    return redirect(url_for('admin_panel', section='products'))
                 condition = nullable_str(request.form.get('condition'))
                 main_image = ''
                 sizes_raw = request.form.get('sizes', '').strip()
@@ -246,6 +252,7 @@ def register_admin_routes(app, deps):
             orders_recent=orders_recent,
             admin_dashboard=get_admin_dashboard_stats(),
             admin_users=list_users_for_admin(),
+            pending_reviews=list_pending_reviews_admin(),
             admin_section=section,
             order_status_flow=order_status_flow,
             loyalty_levels=loyalty_levels,
@@ -260,6 +267,26 @@ def register_admin_routes(app, deps):
             t=t,
             tv=tv
         )
+
+    @bp.route('/admin/review/<int:review_id>/moderate', methods=['POST'])
+    def admin_moderate_review(review_id):
+        denied = _require_admin()
+        if denied:
+            return denied
+        action = (request.form.get('action') or '').strip().lower()
+        status = 'approved' if action == 'approve' else 'rejected' if action == 'reject' else ''
+        if not status:
+            session['admin_status'] = {'type': 'error', 'message': t('admin_review_status_invalid')}
+            return redirect(url_for('admin_panel', section='reviews'))
+        try:
+            if set_review_moderation_status(review_id, status):
+                message_key = 'admin_review_approved' if status == 'approved' else 'admin_review_rejected'
+                session['admin_status'] = {'type': 'success', 'message': t(message_key)}
+            else:
+                session['admin_status'] = {'type': 'error', 'message': t('admin_review_not_found')}
+        except Exception as exc:
+            session['admin_status'] = {'type': 'error', 'message': f'{t("admin_error_prefix")}: {exc}'}
+        return redirect(url_for('admin_panel', section='reviews'))
 
     @bp.route('/admin/order/<int:order_id>/status', methods=['POST'])
     def admin_update_order_status(order_id):
@@ -298,7 +325,26 @@ def register_admin_routes(app, deps):
                 user_id = int(order_row[2])
                 user_email = order_row[3] or ''
                 user_name = order_row[4] or ''
-                cur.execute('UPDATE RentalOrders SET status = ? WHERE id = ?', (next_status, order_id))
+                if next_status == 'confirmed' and prev_status != 'confirmed':
+                    cur.execute(
+                        """
+                        UPDATE RentalOrders
+                        SET status = ?, confirmed_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        """,
+                        (next_status, order_id),
+                    )
+                elif prev_status == 'confirmed' and next_status != 'confirmed':
+                    cur.execute(
+                        """
+                        UPDATE RentalOrders
+                        SET status = ?, confirmed_at = NULL
+                        WHERE id = ?
+                        """,
+                        (next_status, order_id),
+                    )
+                else:
+                    cur.execute('UPDATE RentalOrders SET status = ? WHERE id = ?', (next_status, order_id))
                 pickup_code = None
                 if next_status == 'confirmed' and prev_status != 'confirmed':
                     pickup_code = f'PA-{secrets.token_hex(3).upper()}'
@@ -419,7 +465,10 @@ def register_admin_routes(app, deps):
                 max_days_raw = request.form.get('max_days', '').strip()
                 condition_score_raw = request.form.get('condition_score', '').strip()
                 material = nullable_str(request.form.get('material'))
-                origin = nullable_str(request.form.get('origin'))
+                origin = parse_origin_country(request.form.get('origin'))
+                if origin is False:
+                    session['admin_status'] = {'type': 'error', 'message': t('admin_origin_no_digits')}
+                    return redirect(url_for('admin_edit_product', product_id=product_id))
                 condition = nullable_str(request.form.get('condition'))
                 sizes_raw = request.form.get('sizes', '').strip()
                 if not all([serial, brand_name, name, max_days_raw, condition_score_raw]):

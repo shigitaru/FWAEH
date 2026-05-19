@@ -22,6 +22,7 @@ def register_public_routes(app, deps):
     find_product = deps['find_product']
     find_products_by_ids = deps['find_products_by_ids']
     get_related_products = deps['get_related_products']
+    get_product_reviews = deps['get_product_reviews']
     parse_iso_date = deps['_parse_iso_date']
     is_product_available = deps['_is_product_available']
     create_rental_order = deps['_create_rental_order']
@@ -98,9 +99,11 @@ def register_public_routes(app, deps):
         total = product['price'] * days
         available = is_product_available(product['id'], selected_start, selected_end)
         related_products = get_related_products(product, limit=4)
+        product_reviews = get_product_reviews(product_id)
         return render_template(
             'product.html',
             product=product,
+            product_reviews=product_reviews,
             selected_days=days,
             selected_start_date=selected_start.isoformat(),
             selected_end_date=selected_end.isoformat(),
