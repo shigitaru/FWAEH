@@ -34,7 +34,7 @@
 
             <aside class="account-order-total-card">
                 <p class="account-order-total-caption">{{ t('account_history_total') }}</p>
-                <p class="account-order-total-value">${{ order.total_price }}</p>
+                <p class="account-order-total-value">{{ money(order.total_price) }}</p>
                 <p class="account-order-items-count">{{ order.total_items }} {{ t('account_history_items') }}</p>
                 {% if order.can_cancel %}
                 <form method="post" action="{{ url_for('account_cancel_order', order_id=order.id) }}">
@@ -52,7 +52,7 @@
                 <span>{{ t('account_history_status') }}</span>
                 <strong>{{ t('order_status_' ~ order.status) }}</strong>
                 <span>{{ t('account_history_total') }}</span>
-                <strong>${{ order.total_price }}</strong>
+                <strong>{{ money(order.total_price) }}</strong>
                 <span>{{ t('rental_agreement_responsibility') }}</span>
                 <strong>{{ t('rental_agreement_responsibility_value') }}</strong>
             </div>
@@ -68,7 +68,7 @@
                             <p class="account-history-item-title">{{ item.product_name }}</p>
                             <p class="account-history-item-meta">{{ item.serial }} · {{ item.brand_name }}{% if item.size_label %} · {{ t('size') }} {{ item.size_label }}{% endif %}</p>
                         </div>
-                        <p class="account-history-item-price">${{ item.line_total }}</p>
+                        <p class="account-history-item-price">{{ money(item.line_total) }}</p>
                     </div>
                 </article>
                 {% endfor %}

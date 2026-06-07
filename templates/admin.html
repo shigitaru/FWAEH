@@ -122,7 +122,7 @@
             <div class="admin-brand-row admin-order-row {% if o.is_late %}is-late{% endif %}">
                 <div class="admin-brand-meta">
                     <span class="admin-brand-name">#{{ o.id }} · {{ o.user_email }}</span>
-                    <span class="admin-brand-count">{{ t('admin_order_period') }}: {{ o.rental_start_date or '-' }} - {{ o.rental_end_date or '-' }} · {{ o.total_items }} {{ t('admin_order_items') }} · ${{ o.total_price }}</span>
+                    <span class="admin-brand-count">{{ t('admin_order_period') }}: {{ o.rental_start_date or '-' }} - {{ o.rental_end_date or '-' }} · {{ o.total_items }} {{ t('admin_order_items') }} · {{ money(o.total_price) }}</span>
                     {% if o.is_late %}
                     <span class="admin-late-badge">{{ t('admin_order_late') }}</span>
                     {% endif %}
@@ -225,7 +225,7 @@
                         {% elif p.sizes and p.sizes|length > 1 %}
                         <div class="product-card-sizes">{{ t('card_sizes') }}: {{ p.sizes | join(', ') }}</div>
                         {% endif %}
-                        <div class="product-card-price">#{{ p.id }} · {{ p.serial }} · ${{ p.price }}</div>
+                        <div class="product-card-price">#{{ p.id }} · {{ p.serial }} · {{ money(p.price) }}</div>
                     </div>
                 </a>
                 <form method="post" action="{{ url_for('admin_delete_product', product_id=p.id) }}" class="admin-product-delete-form js-confirm-submit" data-confirm="{{ t('admin_delete_product_confirm') }}">
@@ -246,7 +246,7 @@
             <div class="admin-brand-row">
                 <div class="admin-brand-meta">
                     <span class="admin-brand-name">{{ u.display_name }} · {{ u.email }}</span>
-                    <span class="admin-brand-count">{{ t('admin_user_level') }}: {{ u.level_code }} · {{ t('admin_user_verified') }}: {{ t('status_yes') if u.is_email_verified else t('status_no') }} · {{ t('admin_user_orders') }}: {{ u.lifetime_orders_count }} · {{ t('admin_user_spend') }}: ${{ u.lifetime_spend_amount }}</span>
+                    <span class="admin-brand-count">{{ t('admin_user_level') }}: {{ u.level_code }} · {{ t('admin_user_verified') }}: {{ t('status_yes') if u.is_email_verified else t('status_no') }} · {{ t('admin_user_orders') }}: {{ u.lifetime_orders_count }} · {{ t('admin_user_spend') }}: {{ money(u.lifetime_spend_amount) }}</span>
                 </div>
                 <form method="post" action="{{ url_for('admin_set_user_level', user_id=u.id) }}" class="admin-user-level-form">
                     <select name="level_code" class="admin-user-level-select" aria-label="{{ t('admin_user_level') }}">

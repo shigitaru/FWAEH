@@ -15,7 +15,7 @@
             {% elif p.sizes and p.sizes|length > 1 %}
             <div class="product-card-sizes">{{ t('card_sizes') }}: {{ p.sizes | join(', ') }}</div>
             {% endif %}
-            <div class="product-card-price">${{ p.price }} {{ t('per_day') }}{% if price_extra %} · {{ price_extra }}{% endif %}</div>
+            <div class="product-card-price">{{ money(p.price) }} {{ t('per_day') }}{% if price_extra %} · {{ price_extra }}{% endif %}</div>
         </div>
     </a>
     <button type="button" class="wishlist-toggle{% if p.id in wishlist_ids %} is-active{% endif %}"

@@ -82,8 +82,8 @@ def register_auth_routes(app, deps):
     def _ensure_demo_user(role):
         specs = {
             'bronze': ('demo.bronze@protocol.local', 'Demo Bronze', 'bronze', 0, 0, 0),
-            'gold': ('demo.gold@protocol.local', 'Demo Gold', 'gold', 0, 7, 900),
-            'admin': ('demo.admin@protocol.local', 'Demo Admin', 'platinum', 1, 15, 2000),
+            'gold': ('demo.gold@protocol.local', 'Demo Gold', 'gold', 0, 7, 2525),
+            'admin': ('demo.admin@protocol.local', 'Demo Admin', 'platinum', 1, 15, 5612),
         }
         spec = specs.get(role)
         if not spec:

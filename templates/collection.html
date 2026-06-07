@@ -161,7 +161,7 @@
 {% macro refine_brands_summary() %}{% if active_brands %}{% set j = joiner(', ') %}{% for b in brands if b.slug in active_brands %}{{ j() }}{{ b.name }}{% endfor %}{% else %}{{ t('filters_brand_all') }}{% endif %}{% endmacro %}
 {% macro refine_item_categories_summary() %}{% if active_item_categories %}{% set j = joiner(', ') %}{% for ic in item_categories if ic.slug in active_item_categories %}{{ j() }}{{ ic[current_lang] }}{% endfor %}{% else %}{{ t('filters_item_category_all') }}{% endif %}{% endmacro %}
 {% macro refine_condition_summary() %}{% for cl in condition_labels if cl.score == min_condition %}{{ cl[current_lang] }}{% endfor %}{% endmacro %}
-{% macro refine_price_summary() %}{% if max_price_value %}≤ ${{ max_price_value }}{% else %}{{ t('refine_summary_price_any') }}{% endif %}{% endmacro %}
+{% macro refine_price_summary() %}{% if max_price_value %}≤ {{ money(max_price_value) }}{% else %}{{ t('refine_summary_price_any') }}{% endif %}{% endmacro %}
 {% macro refine_availability_summary() %}{% if available_start_value and available_days_value %}{{ available_start_value }} · {{ available_days_value }} {{ t('days_label') }}{% elif available_start_value or available_days_value %}{{ t('refine_summary_dates_incomplete') }}{% else %}{{ t('refine_summary_dates_empty') }}{% endif %}{% endmacro %}
 
 <div class="refine-overlay" id="refine-overlay" hidden aria-hidden="true"></div>
@@ -563,7 +563,7 @@
                 var raw = String(maxIn.value).trim();
                 var num = parseInt(raw, 10);
                 if (raw && !isNaN(num) && num > 0) {
-                    priceEl.textContent = '≤ $' + num;
+                    priceEl.textContent = '≤ ' + num + ' BYN';
                     toggleRefineDot('price', true);
                 } else {
                     priceEl.textContent = refineI18n.priceAny || '';

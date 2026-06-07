@@ -30,7 +30,7 @@
                 </div>
             </div>
             <div class="cart-item-right">
-                <div class="cart-item-price">${{ item.total_price }}</div>
+                <div class="cart-item-price">{{ money(item.total_price) }}</div>
                 <a href="{{ url_for('remove_from_cart', cart_id=item.cart_id) }}" class="cart-remove-link">{{ t('remove') }}</a>
             </div>
         </div>
@@ -46,22 +46,22 @@
                 <span>{{ t('account_history_period') }}</span>
                 <strong>{{ cart_items[0].start_date }} - {{ cart_items[0].end_date }}</strong>
                 <span>{{ t('account_history_total') }}</span>
-                <strong>${{ total }}</strong>
+                <strong>{{ money(total) }}</strong>
             </div>
         </div>
         {% if discount_percent > 0 %}
         <div class="cart-total-row">
             <span>{{ t('cart_subtotal') }}</span>
-            <span>${{ subtotal }}</span>
+            <span>{{ money(subtotal) }}</span>
         </div>
         <div class="cart-total-row">
             <span>{{ t('cart_discount') }} ({{ discount_percent }}%)</span>
-            <span>-${{ discount_amount }}</span>
+            <span>-{{ money(discount_amount) }}</span>
         </div>
         {% endif %}
         <div class="cart-total-row total-display">
             <span>{{ t('total') }}</span>
-            <span>${{ total }}</span>
+            <span>{{ money(total) }}</span>
         </div>
         <form method="post" action="{{ url_for('cart_checkout') }}">
             <label class="cart-terms-check">

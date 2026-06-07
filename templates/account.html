@@ -29,7 +29,7 @@
                     </div>
                     <div class="account-stat-card">
                         <p class="account-stat-label">{{ t('account_summary_spent') }}</p>
-                        <p class="account-stat-value">${{ history_stats.total_spend }}</p>
+                        <p class="account-stat-value">{{ money(history_stats.total_spend) }}</p>
                     </div>
                     <div class="account-stat-card">
                         <p class="account-stat-label">{{ t('account_summary_favorite_brand') }}</p>
@@ -67,13 +67,13 @@
                                     <p class="account-history-item-title">{{ item.product_name }}</p>
                                     <p class="account-history-item-meta">{{ item.serial }} · {{ item.brand_name }}{% if item.size_label %} · {{ t('size') }} {{ item.size_label }}{% endif %}</p>
                                 </div>
-                                <p class="account-history-item-price">${{ item.line_total }}</p>
+                                <p class="account-history-item-price">{{ money(item.line_total) }}</p>
                             </div>
                             {% endfor %}
                         </div>
                         <div class="account-history-foot">
                             <p>{{ order.total_items }} {{ t('account_history_items') }}</p>
-                            <p>{{ t('account_history_total') }}: ${{ order.total_price }}</p>
+                            <p>{{ t('account_history_total') }}: {{ money(order.total_price) }}</p>
                         </div>
                         <div class="account-history-actions">
                             <a href="{{ url_for('account_order_detail', order_id=order.id) }}" class="account-quick-link">{{ t('account_open_order') }}</a>

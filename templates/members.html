@@ -75,7 +75,7 @@
             </div>
             <div class="members-progress-meta">
                 <span>{{ t('members_progress_current_orders').format(count=loyalty_progress.orders_count) }}</span>
-                <span>${{ loyalty_progress.spend_amount }}</span>
+                <span>{{ money(loyalty_progress.spend_amount) }}</span>
             </div>
             {% endif %}
         </section>

@@ -51,6 +51,7 @@ from core.couture_access import (
     format_couture_message,
     is_couture_product,
 )
+from core.currency import format_currency
 from core.db import get_db_connection
 from core.email_service import send_rental_approved_email, send_verification_email
 from core.i18n import TRANSLATIONS, get_lang, t, tc, tv
@@ -299,6 +300,7 @@ def register_template_context(app):
             'current_year': datetime.now().year,
             'current_lang': lang,
             'tc': tc,
+            'money': format_currency,
             'wishlist_ids': frozenset(wids),
             'wishlist_count': len(wids),
             'current_user': get_current_user(),
